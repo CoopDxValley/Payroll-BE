@@ -1,3 +1,14 @@
+import { z } from "zod";
+import {
+  loginSchema,
+  logoutSchema,
+  forgotPasswordSchema,
+} from "./auth.validation";
+
+export type LoginEmployeeInput = z.infer<typeof loginSchema>;
+export type LogoutEmployeeInput = z.infer<typeof logoutSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
 export interface AuthEmployee {
   id: string;
   name: string;
@@ -22,4 +33,14 @@ export interface AuthenticatedRequest extends Request {
 
 interface SmsError extends Error {
   code?: string;
+}
+
+export interface TokenResponse {
+  token: string;
+  expires: Date;
+}
+
+export interface AuthTokensResponse {
+  access: TokenResponse;
+  refresh?: TokenResponse;
 }

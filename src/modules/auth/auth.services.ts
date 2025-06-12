@@ -1,6 +1,8 @@
 import httpStatus from "http-status";
 import { v4 as uuidv4 } from "uuid";
-import { Employee, TokenType } from "@prisma/client";
+import moment, { Moment } from "moment";
+import jwt from "jsonwebtoken";
+import { Employee, Token, TokenType } from "@prisma/client";
 import prisma from "../../client";
 import * as employeeService from "../employee/employee.services";
 import { encryptPassword, isPasswordMatch } from "../../utils/encryption";
@@ -10,6 +12,8 @@ import { forgotPasswordMessage } from "../../templates/sms-template";
 import { formatPhoneNumberForSms } from "../../utils/format-phone-number";
 import { smsQueue } from "../../queues";
 import logger from "../../config/logger";
+import { AuthTokensResponse } from "./auth.type";
+import config from "../../config/config";
 
 /**
  * Login with username and password
@@ -155,4 +159,133 @@ export const forgotPassword = async (username: string) => {
   }
 
   return exclude(updatedEmployee, ["password"]);
+};
+
+/**
+ * Generate token
+ * @param {string} userId
+ * @param {string} companyId
+ * @param {boolean} isSuperAdmin
+ * @param {Moment} expires
+ * @param {string} type
+ * @param {string} [secret]
+ * @returns {string}
+ */
+const generateToken = (
+  employeeId: string,
+  companyId: string,
+  departmentId: string | null,
+  isSuperAdmin: boolean,
+  expires: Moment,
+  type: TokenType,
+  secret = config.jwt.secret
+): string => {
+  const payload = {
+    sub: { employeeId, companyId, departmentId, isSuperAdmin },
+    iat: moment().unix(),
+    exp: expires.unix(),
+    type,
+  };
+  return jwt.sign(payload, secret);
+};
+
+/**
+ * Save a token
+ * @param {string} token
+ * @param {string} employeeId
+ * @param {Moment} expires
+ * @param {string} type
+ * @param {boolean} [blacklisted]
+ * @returns {Promise<Token>}
+ */
+const saveToken = async (
+  token: string,
+  employeeId: string,
+  expires: Moment,
+  type: TokenType,
+  blacklisted = false
+): Promise<Token> => {
+  const createdToken = prisma.token.create({
+    data: {
+      token,
+      employeeId,
+      expires: expires.toDate(),
+      type,
+      blacklisted,
+    },
+  });
+  return createdToken;
+};
+
+/**
+ * Verify token and return token doc (or throw an error if it is not valid)
+ * @param {string} token
+ * @param {string} type
+ * @returns {Promise<Token>}
+ */
+const verifyToken = async (token: string, type: TokenType): Promise<Token> => {
+  const payload = jwt.verify(token, config.jwt.secret);
+  const employeeId = payload.sub as string;
+  const tokenData = await prisma.token.findFirst({
+    where: { token, type, employeeId, blacklisted: false },
+  });
+  if (!tokenData) {
+    throw new Error("Token not found");
+  }
+  return tokenData;
+};
+
+/**
+ * Generate auth tokens
+ * @param {Employee} employee
+ * @returns {Promise<AuthTokensResponse>}
+ */
+export const generateAuthTokens = async (employee: {
+  id: string;
+  companyId: string;
+  isSuperAdmin: boolean;
+  departmentId: string | null;
+}): Promise<AuthTokensResponse> => {
+  const accessTokenExpires = moment().add(
+    config.jwt.accessExpirationMinutes,
+    "minutes"
+  );
+  const accessToken = generateToken(
+    employee.id,
+    employee.companyId,
+    employee.departmentId,
+    employee.isSuperAdmin,
+    accessTokenExpires,
+    TokenType.ACCESS
+  );
+
+  const refreshTokenExpires = moment().add(
+    config.jwt.refreshExpirationDays,
+    "days"
+  );
+  const refreshToken = generateToken(
+    employee.id,
+    employee.companyId,
+    employee.departmentId,
+    employee.isSuperAdmin,
+    refreshTokenExpires,
+    TokenType.REFRESH
+  );
+  await saveToken(
+    refreshToken,
+    employee.id,
+    refreshTokenExpires,
+    TokenType.REFRESH
+  );
+
+  return {
+    access: {
+      token: accessToken,
+      expires: accessTokenExpires.toDate(),
+    },
+    refresh: {
+      token: refreshToken,
+      expires: refreshTokenExpires.toDate(),
+    },
+  };
 };

@@ -1,9 +1,9 @@
 import express from "express";
 import config from "../../config/config";
 import healthRoute from "./health.route";
-import { testController } from "../../controllers";
 import companyRoute from "../../modules/company/company.route";
 import employeeRoute from "../../modules/employee/employee.route";
+import authRoute from "../../modules/auth/auth.route";
 
 const router = express.Router();
 
@@ -15,6 +15,10 @@ const defaultRoutes = [
   {
     path: "/employees",
     route: employeeRoute,
+  },
+  {
+    path: "/auth",
+    route: authRoute,
   },
 ];
 
