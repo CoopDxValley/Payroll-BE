@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id               String             @id @default(uuid())
+  status           CompanyStatus      @default(pending)
+  organizationName String
+  phoneNumber      String
+  companyCode      String
+  email            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  notes            String?
+  accounts         Account[]
+  departments      Department[]
+  positions        Position[]
+  Role             Role[]
+  employees            Employee[]
+}
+
+model Account {
+  id            String     @id @default(uuid())
+  companyId     String
+  accountNumber String
+  isMaster      Boolean    @default(false)
+  isVerified    Boolean    @default(false)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  company       Company    @relation(fields: [companyId], references: [id])
+}
+
+model Department {
+  id                      String   @id @default(uuid())
+  deptName                String
+  location                String?
+  shorthandRepresentation String?
+  companyId               String
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  company                 Company  @relation(fields: [companyId], references: [id])
+  departmentEmployees         Employee[]
+}
+
+model Position {
+  id            String   @id @default(uuid())
+  positionName  String
+  description   String?
+  companyId     String
+  createdAt     DateTime @default(now())
+  isActive      Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+  company       Company  @relation(fields: [companyId], references: [id])
+  employeePositions Employee[]
+}
+///
+model Employee {
+  id                  String                @id @default(uuid())
+  name                String
+  username            String                @unique
+  phoneNumber         String
+  password            String
+  isSuperAdmin        Boolean               @default(false)
+  companyId           String
+  departmentId        String?
+  positionId          String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  isFirstTimeLoggedIn Boolean               @default(true)
+  Token               Token[]
+  company             Company               @relation(fields: [companyId], references: [id])
+  department          Department?           @relation(fields: [departmentId], references: [id])
+  position            Position?             @relation(fields: [positionId], references: [id])
+  employeeRoles           EmployeeRole[]
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  companyId   String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  company     Company          @relation(fields: [companyId], references: [id])
+  permissions RolePermission[]
+  employeeRoles   EmployeeRole[]
+}
+
+model Permission {
+  id             String           @id @default(uuid())
+  action         String
+  subject        String
+  action_subject String           @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  roles          RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model EmployeeRole {
+  id        String   @id @default(uuid())
+  employeeId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id])
+  employee      Employee     @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, roleId])
+}
+
+model Token {
+  id          String    @id @default(uuid())
+  token       String
+  type        TokenType
+  expires     DateTime
+  blacklisted Boolean
+  createdAt   DateTime  @default(now())
+  employeeId      String
+  employee        Employee      @relation(fields: [employeeId], references: [id])
+}
+
+enum TokenType {
+  ACCESS
+  REFRESH
+  RESET_PASSWORD
+  VERIFY_EMAIL
+}
+
+enum CompanyStatus {
+  pending
+  active
+  reject
+  denied
+}
