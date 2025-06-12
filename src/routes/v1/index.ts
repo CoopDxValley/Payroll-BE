@@ -3,6 +3,7 @@ import config from "../../config/config";
 import healthRoute from "./health.route";
 import { testController } from "../../controllers";
 import companyRoute from "../../modules/company/company.route";
+import employeeRoute from "../../modules/employee/employee.route";
 
 const router = express.Router();
 
@@ -10,6 +11,10 @@ const defaultRoutes = [
   {
     path: "/company",
     route: companyRoute,
+  },
+  {
+    path: "/employees",
+    route: employeeRoute,
   },
 ];
 
