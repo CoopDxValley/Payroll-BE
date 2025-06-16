@@ -3,13 +3,67 @@ import config from "../../config/config";
 import healthRoute from "./health.route";
 import { testController } from "../../controllers";
 import companyRoute from "../../modules/company/company.route";
+import departmentRoute from "../../modules/department/department.route";
+import positionRoute from "../../modules/position/position.route";
+// import authRoute from "./auth.routes";
+// import userRoute from "./user.route";
+// import adminRoute from "./admin.route";
 
+import shiftRoute from "../../modules/shift/shift.route";
+import gradeRoute from "../../modules/grades/grade.routes";
+import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
+import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
+import additionalPayment from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 const router = express.Router();
 
 const defaultRoutes = [
   {
     path: "/company",
     route: companyRoute,
+  },
+
+  // {
+  //   path: "/users",
+  //   route: userRoute,
+  // },
+  // {
+  //   path: "/auth",
+  //   route: authRoute,
+  // },
+  {
+    path: "/company",
+    route: companyRoute,
+  },
+
+  {
+    path: "/departments",
+    route: departmentRoute,
+  },
+
+  {
+    path: "/positions",
+    route: positionRoute,
+  },
+
+  {
+    path: "/shifts",
+    route: shiftRoute,
+  },
+  {
+    path: "/grades",
+    route: gradeRoute,
+  },
+  {
+    path: "/leave-requests",
+    route: leaveRequestRoute,
+  },
+  {
+    path: "/additional-deduction-definitions",
+    route: additionalDeductionRoute,
+  },
+  {
+    path: "/additional-pay-definitions",
+    route: additionalDeductionRoute,
   },
 ];
 
