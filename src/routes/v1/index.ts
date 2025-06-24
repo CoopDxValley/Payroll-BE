@@ -1,8 +1,11 @@
 import express from "express";
 import config from "../../config/config";
 import healthRoute from "./health.route";
-import { testController } from "../../controllers";
 import companyRoute from "../../modules/company/company.route";
+import employeeRoute from "../../modules/employee/employee.route";
+import authRoute from "../../modules/auth/auth.route";
+
+import { testController } from "../../controllers";
 import departmentRoute from "../../modules/department/department.route";
 import positionRoute from "../../modules/position/position.route";
 // import authRoute from "./auth.routes";
@@ -14,6 +17,7 @@ import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalPayment from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
+
 const router = express.Router();
 
 const defaultRoutes = [
@@ -64,6 +68,14 @@ const defaultRoutes = [
   {
     path: "/additional-pay-definitions",
     route: additionalDeductionRoute,
+  },
+  {
+    path: "/employees",
+    route: employeeRoute,
+  },
+  {
+    path: "/auth",
+    route: authRoute,
   },
 ];
 

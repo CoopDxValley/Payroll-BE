@@ -6,7 +6,11 @@ import { AuthUser } from "../../types/express";
 import ApiError from "../../utils/api-error";
 
 const createDepartment = catchAsync(async (req: Request, res: Response) => {
+
+  console.log("kfdjssssssssss")
   const user = req.user as AuthUser;
+
+  console.log("kdjajddjdkkkd", user);
 
   if (!user.companyId) {
     throw new ApiError(

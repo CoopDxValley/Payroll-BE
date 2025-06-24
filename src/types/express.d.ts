@@ -11,13 +11,13 @@ export interface AuthUser {
 declare global {
   namespace Express {
     interface Request {
-      user?: AuthUser;
+      employee?: AuthUser;
     }
   }
 }
 
 export interface AuthenticatedRequest extends Request {
-  user: AuthUser;
+  employee: AuthUser;
 }
 
 interface SmsError extends Error {
