@@ -4,9 +4,10 @@ import httpStatus from "http-status";
 import positionService from "./position.service";
 import { AuthUser } from "../../types/express";
 import ApiError from "../../utils/api-error";
+import { AuthEmployee } from "../auth/auth.type";
 
 const createPosition = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
 
   if (!user.companyId) {
     throw new ApiError(
@@ -25,7 +26,7 @@ const createPosition = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllPositions = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const positions = await positionService.getAllPositions(user.companyId);
   res.send({ data: positions });
 });
@@ -50,9 +51,9 @@ const updatePosition = catchAsync(async (req: Request, res: Response) => {
 
 const deletePosition = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id;
-    const user = req.user as AuthUser;
-   const companyId= user.companyId
-  const updated = await positionService.deletePosition(id,companyId);
+  const user = req.user as AuthUser;
+  const companyId = user.companyId;
+  const updated = await positionService.deletePosition(id, companyId);
   res
     .status(httpStatus.OK)
     .send({ message: "Position deactivated", data: updated });

@@ -299,7 +299,27 @@ model Employee {
   department          Department?           @relation(fields: [departmentId], references: [id])
   position            Position?             @relation(fields: [positionId], references: [id])
   employeeRoles           EmployeeRole[]
+  attendanceLogs      Attendance[]
 }
+
+model Attendance {
+  id         String   @id @default(uuid())
+  employeeId String
+  date       DateTime // ✅ The day this record represents (e.g. 2025-06-24)
+  checkTime  DateTime?
+  checkType  String?
+  verifyMode Int?
+  workCode   Int?
+  sensorId   String?
+  deviceIp   String?
+  isAbsent   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date]) // ✅ Prevent duplicate logs per employee per day
+}
+
 
 
 model EmployeeRole {

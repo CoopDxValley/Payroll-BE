@@ -17,7 +17,7 @@ import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalPayment from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
-
+import attendance  from '../../modules/attendance/attendance.route';
 const router = express.Router();
 
 const defaultRoutes = [
@@ -76,6 +76,9 @@ const defaultRoutes = [
   {
     path: "/auth",
     route: authRoute,
+  }, {
+    path: "/attendance",
+    route: attendance,
   },
 ];
 

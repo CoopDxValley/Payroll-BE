@@ -6,6 +6,7 @@ import {
 } from "./auth.validation";
 import { validate } from "../../middlewares/validate";
 import * as authController from "./auth.controller";
+// import auth from "../../middlewares/auth";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
 
