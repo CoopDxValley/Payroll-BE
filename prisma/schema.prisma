@@ -298,8 +298,12 @@ model Employee {
   company             Company               @relation(fields: [companyId], references: [id])
   department          Department?           @relation(fields: [departmentId], references: [id])
   position            Position?             @relation(fields: [positionId], references: [id])
-  employeeRoles           EmployeeRole[]
+  employeeRoles       EmployeeRole[]
   attendanceLogs      Attendance[]
+
+  stageEmployees      StageEmployee[]
+  requests            Request[]
+  stageStatuses       StageStatus[]
 }
 
 model Attendance {
@@ -323,13 +327,133 @@ model Attendance {
 
 
 model EmployeeRole {
-  id        String   @id @default(uuid())
   employeeId    String
-  roleId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  role      Role     @relation(fields: [roleId], references: [id])
+  roleId        String
+  assignedAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  role          Role     @relation(fields: [roleId], references: [id])
   employee      Employee     @relation(fields: [employeeId], references: [id])
 
-  @@unique([employeeId, roleId])
+  @@id([employeeId, roleId])
+}
+
+
+//////
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalStageStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RequestType {
+  ATTENDANCE
+  PAYROLL
+  EXPENSE
+  PROGRAM
+}
+
+model ApprovalWorkflow {
+  id              String   @id @default(uuid())
+  name            String
+  companyId       String
+  departmentId    String?
+  requestType     RequestType
+  isFullyParallel Boolean
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company         Company        @relation(fields: [companyId], references: [id])
+  department      Department?    @relation(fields: [departmentId], references: [id])
+  stages          ApprovalStage[]
+  instances       ApprovalInstance[]
+
+  @@unique([requestType, companyId, departmentId])
+
+}
+
+model ApprovalStage {
+  id                String   @id @default(uuid())
+  name              String
+  workflowId        String
+  isParallel        Boolean
+  approvalRules     Json
+  order             Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workflow          ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  stageEmployees    StageEmployee[]
+  stageStatuses     StageStatus[]
+  instances         ApprovalInstance[] @relation("ActiveStages")
+}
+
+model StageEmployee {
+  id            String   @id @default(uuid())
+  stageId       String
+  employeeId    String
+  weight        Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  stage         ApprovalStage @relation(fields: [stageId], references: [id])
+  employee      Employee      @relation(fields: [employeeId], references: [id])
+
+  @@unique([stageId, employeeId])
+}
+
+model Request {
+  id          String   @id @default(uuid())
+  type        RequestType
+  createdById String
+  moduleId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     Employee              @relation(fields: [createdById], references: [id])
+  instance    ApprovalInstance[]
+}
+
+model ApprovalInstance {
+  id                  String   @id @default(uuid())
+  requestId           String   
+  workflowId          String
+  activeStageIds      String[]
+  status              ApprovalStatus @default(PENDING)
+  version             Int      @default(1)
+  parentInstanceId    String?
+  resubmissionReason  String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  request             Request         @relation(fields: [requestId], references: [id])
+  workflow            ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  parentInstance      ApprovalInstance? @relation("Resubmissions", fields: [parentInstanceId], references: [id])
+  resubmissions       ApprovalInstance[] @relation("Resubmissions")
+  activeStages        ApprovalStage[]     @relation("ActiveStages")
+  stageStatuses       StageStatus[]
+}
+
+model StageStatus {
+  id              String            @id @default(uuid())
+  instanceId      String
+  stageId         String
+  approvedBy      String?
+  status          ApprovalStageStatus
+  comments        String?
+  approvedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  instance        ApprovalInstance @relation(fields: [instanceId], references: [id])
+  stage           ApprovalStage     @relation(fields: [stageId], references: [id])
+  approver        Employee?           @relation(fields: [approvedBy], references: [id])
+
+  @@unique([instanceId, stageId, approvedBy])
 }
