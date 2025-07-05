@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import positionService from "./position.service";
-import { AuthUser } from "../../types/express";
 import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 
@@ -51,7 +50,7 @@ const updatePosition = catchAsync(async (req: Request, res: Response) => {
 
 const deletePosition = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id;
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const companyId = user.companyId;
   const updated = await positionService.deletePosition(id, companyId);
   res

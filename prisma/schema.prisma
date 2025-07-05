@@ -8,99 +8,100 @@ datasource db {
 }
 
 model Company {
-  id               String             @id @default(uuid())
-  status           CompanyStatus      @default(pending)
-  organizationName String
-  phoneNumber      String
-  companyCode      String
-  email            String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  notes            String?
-  accounts         Account[]
-  positions        Position[]
-  Role             Role[]
-  users            User[]
-  Grade            Grade[]
-  Shift            Shift[]
-  AdditionalDeductionDefinition  AdditionalDeductionDefinition[]
-  AdditionalPayDefinition   AdditionalPayDefinition[]
-  employees            Employee[]
-  departments      Department[]
+  id                            String                          @id @default(uuid())
+  status                        CompanyStatus                   @default(pending)
+  organizationName              String
+  phoneNumber                   String
+  companyCode                   String
+  email                         String?
+  createdAt                     DateTime                        @default(now())
+  updatedAt                     DateTime                        @updatedAt
+  notes                         String?
+  accounts                      Account[]
+  positions                     Position[]
+  Role                          Role[]
+  users                         User[]
+  Grade                         Grade[]
+  Shift                         Shift[]
+  AdditionalDeductionDefinition AdditionalDeductionDefinition[]
+  AdditionalPayDefinition       AdditionalPayDefinition[]
+  employees                     Employee[]
+  departments                   Department[]
+  ApprovalWorkflow              ApprovalWorkflow[]
 }
 
 model Account {
-  id            String     @id @default(uuid())
+  id            String   @id @default(uuid())
   companyId     String
   accountNumber String
-  isMaster      Boolean    @default(false)
-  isVerified    Boolean    @default(false)
-  isActive      Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  company       Company    @relation(fields: [companyId], references: [id])
+  isMaster      Boolean  @default(false)
+  isVerified    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  company       Company  @relation(fields: [companyId], references: [id])
 }
 
 model Department {
-  id                      String   @id @default(uuid())
+  id                      String     @id @default(uuid())
   deptName                String
   location                String?
   shorthandRepresentation String?
   companyId               String
-  isActive                Boolean  @default(true)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  company                 Company  @relation(fields: [companyId], references: [id])
+  isActive                Boolean    @default(true)
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+  company                 Company    @relation(fields: [companyId], references: [id])
   departmentUsers         User[]
-  departmentEmployees         Employee[]
+  departmentEmployees     Employee[]
 
-
-
+  approvalWorkflow        ApprovalWorkflow[]
 }
 
 model Position {
-  id            String   @id @default(uuid())
-  positionName  String
-  description   String?
-  companyId     String
-  createdAt     DateTime @default(now())
-  isActive      Boolean  @default(true)
-  updatedAt     DateTime @updatedAt
-  company       Company  @relation(fields: [companyId], references: [id])
-  userPositions User[]
+  id                String     @id @default(uuid())
+  positionName      String
+  description       String?
+  companyId         String
+  createdAt         DateTime   @default(now())
+  isActive          Boolean    @default(true)
+  updatedAt         DateTime   @updatedAt
+  company           Company    @relation(fields: [companyId], references: [id])
+  userPositions     User[]
   employeePositions Employee[]
 }
+
 ///
 model User {
-  id                  String                @id @default(uuid())
+  id                  String      @id @default(uuid())
   name                String
-  username            String                @unique
+  username            String      @unique
   phoneNumber         String
   password            String
-  isSuperAdmin        Boolean               @default(false)
+  isSuperAdmin        Boolean     @default(false)
   companyId           String
   departmentId        String?
   positionId          String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  isFirstTimeLoggedIn Boolean               @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  isFirstTimeLoggedIn Boolean     @default(true)
   //Token               Token[]
-  company             Company               @relation(fields: [companyId], references: [id])
-  department          Department?           @relation(fields: [departmentId], references: [id])
-  position            Position?             @relation(fields: [positionId], references: [id])
+  company             Company     @relation(fields: [companyId], references: [id])
+  department          Department? @relation(fields: [departmentId], references: [id])
+  position            Position?   @relation(fields: [positionId], references: [id])
   userRoles           UserRole[]
 }
 
 model Role {
-  id          String           @id @default(uuid())
-  name        String           @unique
-  companyId   String
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  company     Company          @relation(fields: [companyId], references: [id])
-  permissions RolePermission[]
-  userRoles   UserRole[]
-  employeeRoles   EmployeeRole[]
+  id            String           @id @default(uuid())
+  name          String           @unique
+  companyId     String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  company       Company          @relation(fields: [companyId], references: [id])
+  permissions   RolePermission[]
+  userRoles     UserRole[]
+  employeeRoles EmployeeRole[]
 }
 
 model Permission {
@@ -147,38 +148,37 @@ model Token {
   //userId      String
   //user        User      @relation(fields: [userId], references: [id])
 
-  employeeId      String
-  employee        Employee      @relation(fields: [employeeId], references: [id])
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
 }
-
-
-
 
 model Shift {
   id          String   @id @default(uuid())
   name        String
   startTime   DateTime
   endTime     DateTime
-  breakTime   Int      // Break duration in minutes
-  gracePeriod Int      // Grace period in minutes
+  breakTime   Int // Break duration in minutes
+  gracePeriod Int // Grace period in minutes
   companyId   String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   company     Company  @relation(fields: [companyId], references: [id])
+
   @@index([companyId])
 }
 
 model Grade {
-  id          String   @id @default(uuid())
-  name        String
-  minSalary   Float
-  maxSalary   Float
-  companyId   String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  company     Company  @relation(fields: [companyId], references: [id])
+  id        String   @id @default(uuid())
+  name      String
+  minSalary Float
+  maxSalary Float
+  companyId String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id])
+
   @@index([companyId])
 }
 
@@ -196,7 +196,6 @@ enum CompanyStatus {
   denied
 }
 
-
 enum GENDER {
   MALE
   FEMALE
@@ -207,14 +206,6 @@ enum PaymentMethod {
   ACCOUNTNUMBER
 }
 
-enum StageStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  SKIPPED
-  WAITING
-}
-
 enum PaymentStatus {
   PENDING
   COMPLETED
@@ -222,92 +213,88 @@ enum PaymentStatus {
   REJECTED
 }
 
-
 ///////////////
 
 model LeaveType {
-  id             String   @id @default(uuid())
-  name           String
-  description    String?
-  maxDaysYearly  Int
-  isPaid         Boolean  @default(true)
-  carryForward   Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  isActive       Boolean  @default(true)
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  maxDaysYearly Int
+  isPaid        Boolean  @default(true)
+  carryForward  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isActive      Boolean  @default(true)
 
   // Relations (if any - for example, with LeaveRequest model)
   //leaveRequests  LeaveRequest[]
 }
 
 model AdditionalDeductionDefinition {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   name      String
-  type      DeductionType 
+  type      DeductionType
   companyId String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  company   Company  @relation(fields: [companyId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
 }
 
 model AdditionalPayDefinition {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   name      String
   type      PAYMENTTYPE
   companyId String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  company   Company  @relation(fields: [companyId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
 
   @@unique([name, companyId, isActive])
 }
-
 
 enum PAYMENTTYPE {
   AMOUNT
   PERCENT
 }
 
-
 enum DeductionType {
   AMOUNT
   PERCENT
 }
 
-
 //////
 
 model Employee {
-  id                  String                @id @default(uuid())
+  id                  String         @id @default(uuid())
   name                String
-  username            String                @unique
+  username            String         @unique
   phoneNumber         String
   password            String
-  isSuperAdmin        Boolean               @default(false)
+  isSuperAdmin        Boolean        @default(false)
   companyId           String
   departmentId        String?
   positionId          String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  isFirstTimeLoggedIn Boolean               @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  isFirstTimeLoggedIn Boolean        @default(true)
   Token               Token[]
-  company             Company               @relation(fields: [companyId], references: [id])
-  department          Department?           @relation(fields: [departmentId], references: [id])
-  position            Position?             @relation(fields: [positionId], references: [id])
+  company             Company        @relation(fields: [companyId], references: [id])
+  department          Department?    @relation(fields: [departmentId], references: [id])
+  position            Position?      @relation(fields: [positionId], references: [id])
   employeeRoles       EmployeeRole[]
   attendanceLogs      Attendance[]
 
-  stageEmployees      StageEmployee[]
-  requests            Request[]
-  stageStatuses       StageStatus[]
+  stageEmployees StageEmployee[]
+  requests       Request[]
+  stageStatuses  StageStatus[]
 }
 
 model Attendance {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   employeeId String
   date       DateTime // ✅ The day this record represents (e.g. 2025-06-24)
   checkTime  DateTime?
@@ -316,27 +303,24 @@ model Attendance {
   workCode   Int?
   sensorId   String?
   deviceIp   String?
-  isAbsent   Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  isAbsent   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
 
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
 
   @@unique([employeeId, date]) // ✅ Prevent duplicate logs per employee per day
 }
 
-
-
 model EmployeeRole {
-  employeeId    String
-  roleId        String
-  assignedAt    DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  role          Role     @relation(fields: [roleId], references: [id])
-  employee      Employee     @relation(fields: [employeeId], references: [id])
+  employeeId String
+  roleId     String
+  assignedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  role       Role     @relation(fields: [roleId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id])
 
   @@id([employeeId, roleId])
 }
-
 
 //////
 
@@ -360,100 +344,98 @@ enum RequestType {
 }
 
 model ApprovalWorkflow {
-  id              String   @id @default(uuid())
+  id              String      @id @default(uuid())
   name            String
   companyId       String
   departmentId    String?
   requestType     RequestType
   isFullyParallel Boolean
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  company         Company        @relation(fields: [companyId], references: [id])
-  department      Department?    @relation(fields: [departmentId], references: [id])
-  stages          ApprovalStage[]
-  instances       ApprovalInstance[]
+  company    Company            @relation(fields: [companyId], references: [id])
+  department Department?        @relation(fields: [departmentId], references: [id])
+  stages     ApprovalStage[]
+  instances  ApprovalInstance[]
 
   @@unique([requestType, companyId, departmentId])
-
 }
 
 model ApprovalStage {
-  id                String   @id @default(uuid())
-  name              String
-  workflowId        String
-  isParallel        Boolean
-  approvalRules     Json
-  order             Int
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  workflow          ApprovalWorkflow @relation(fields: [workflowId], references: [id])
-  stageEmployees    StageEmployee[]
-  stageStatuses     StageStatus[]
-  instances         ApprovalInstance[] @relation("ActiveStages")
-}
-
-model StageEmployee {
   id            String   @id @default(uuid())
-  stageId       String
-  employeeId    String
-  weight        Int?
+  workflowId    String
+  isParallel    Boolean
+  approvalRules Json
+  order         Int
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  stage         ApprovalStage @relation(fields: [stageId], references: [id])
-  employee      Employee      @relation(fields: [employeeId], references: [id])
+  workflow       ApprovalWorkflow   @relation(fields: [workflowId], references: [id])
+  stageEmployees StageEmployee[]
+  stageStatuses  StageStatus[]
+  instances      ApprovalInstance[] @relation("ActiveStages")
+}
+
+model StageEmployee {
+  id         String   @id @default(uuid())
+  stageId    String
+  employeeId String
+  weight     Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  stage    ApprovalStage @relation(fields: [stageId], references: [id])
+  employee Employee      @relation(fields: [employeeId], references: [id])
 
   @@unique([stageId, employeeId])
 }
 
 model Request {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   type        RequestType
   createdById String
   moduleId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  creator     Employee              @relation(fields: [createdById], references: [id])
-  instance    ApprovalInstance[]
+  creator  Employee           @relation(fields: [createdById], references: [id])
+  instance ApprovalInstance[]
 }
 
 model ApprovalInstance {
-  id                  String   @id @default(uuid())
-  requestId           String   
-  workflowId          String
-  activeStageIds      String[]
-  status              ApprovalStatus @default(PENDING)
-  version             Int      @default(1)
-  parentInstanceId    String?
-  resubmissionReason  String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String         @id @default(uuid())
+  requestId          String
+  workflowId         String
+  activeStageIds     String[]
+  status             ApprovalStatus @default(PENDING)
+  version            Int            @default(1)
+  parentInstanceId   String?
+  resubmissionReason String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
-  request             Request         @relation(fields: [requestId], references: [id])
-  workflow            ApprovalWorkflow @relation(fields: [workflowId], references: [id])
-  parentInstance      ApprovalInstance? @relation("Resubmissions", fields: [parentInstanceId], references: [id])
-  resubmissions       ApprovalInstance[] @relation("Resubmissions")
-  activeStages        ApprovalStage[]     @relation("ActiveStages")
-  stageStatuses       StageStatus[]
+  request        Request            @relation(fields: [requestId], references: [id])
+  workflow       ApprovalWorkflow   @relation(fields: [workflowId], references: [id])
+  parentInstance ApprovalInstance?  @relation("Resubmissions", fields: [parentInstanceId], references: [id])
+  resubmissions  ApprovalInstance[] @relation("Resubmissions")
+  activeStages   ApprovalStage[]    @relation("ActiveStages")
+  stageStatuses  StageStatus[]
 }
 
 model StageStatus {
-  id              String            @id @default(uuid())
-  instanceId      String
-  stageId         String
-  approvedBy      String?
-  status          ApprovalStageStatus
-  comments        String?
-  approvedAt      DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id         String              @id @default(uuid())
+  instanceId String
+  stageId    String
+  approvedBy String?
+  status     ApprovalStageStatus
+  comments   String?
+  approvedAt DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 
-  instance        ApprovalInstance @relation(fields: [instanceId], references: [id])
-  stage           ApprovalStage     @relation(fields: [stageId], references: [id])
-  approver        Employee?           @relation(fields: [approvedBy], references: [id])
+  instance ApprovalInstance @relation(fields: [instanceId], references: [id])
+  stage    ApprovalStage    @relation(fields: [stageId], references: [id])
+  approver Employee?        @relation(fields: [approvedBy], references: [id])
 
   @@unique([instanceId, stageId, approvedBy])
 }

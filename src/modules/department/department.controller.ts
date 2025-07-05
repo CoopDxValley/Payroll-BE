@@ -2,13 +2,11 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import departmentService from "./department.service";
-import { AuthUser } from "../../types/express";
 import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 
 const createDepartment = catchAsync(async (req: Request, res: Response) => {
-
-  console.log("kfdjssssssssss")
+  console.log("kfdjssssssssss");
   const user = req.user as AuthEmployee;
 
   console.log("kdjajddjdkkkd", user);
@@ -31,7 +29,7 @@ const createDepartment = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllDepartments = catchAsync(async (req: Request, res: Response) => {
-   const user = req.user as AuthEmployee;
+  const user = req.user as AuthEmployee;
 
   // Filter departments by user's company if not admin/super-admin
   const departments = await departmentService.getAllDepartments(user.companyId);
@@ -68,7 +66,6 @@ const deleteDepartment = catchAsync(async (req: Request, res: Response) => {
     .status(httpStatus.OK)
     .send({ message: "Department deactivated", data: updated });
 });
-
 
 export default {
   createDepartment,

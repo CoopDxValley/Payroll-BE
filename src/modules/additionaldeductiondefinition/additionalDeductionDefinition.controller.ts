@@ -2,11 +2,11 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import additionalDeductionDefinitionService from "./additionalDeductionDefinition.service";
-import { AuthUser } from "../../types/express";
 import ApiError from "../../utils/api-error";
+import { AuthEmployee } from "../auth/auth.type";
 
 const create = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   if (!user.companyId) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Company ID is required.");
   }
@@ -20,7 +20,7 @@ const create = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAll = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const data = await additionalDeductionDefinitionService.getAll(
     user.companyId
   );

@@ -5,7 +5,6 @@ import companyRoute from "../../modules/company/company.route";
 import employeeRoute from "../../modules/employee/employee.route";
 import authRoute from "../../modules/auth/auth.route";
 
-import { testController } from "../../controllers";
 import departmentRoute from "../../modules/department/department.route";
 import positionRoute from "../../modules/position/position.route";
 // import authRoute from "./auth.routes";
@@ -16,8 +15,9 @@ import shiftRoute from "../../modules/shift/shift.route";
 import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
-import additionalPayment from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
-import attendance  from '../../modules/attendance/attendance.route';
+import approvalRoute from "../../modules/approval/approval.route";
+import attendance from "../../modules/attendance/attendance.route";
+
 const router = express.Router();
 
 const defaultRoutes = [
@@ -76,9 +76,14 @@ const defaultRoutes = [
   {
     path: "/auth",
     route: authRoute,
-  }, {
+  },
+  {
     path: "/attendance",
     route: attendance,
+  },
+  {
+    path: "/approvals",
+    route: approvalRoute,
   },
 ];
 

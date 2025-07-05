@@ -198,7 +198,7 @@ export const getEmployeeRoleById = async (
   id: string
 ): Promise<EmployeeRole[] | null> => {
   return prisma.employeeRole.findMany({
-    where: { id },
+    where: { employeeId: id },
   });
 };
 
