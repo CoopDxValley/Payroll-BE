@@ -393,12 +393,12 @@ model StageEmployee {
 model Request {
   id          String      @id @default(uuid())
   type        RequestType
-  createdById String
+  requestedBy String
   moduleId    String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  creator  Employee           @relation(fields: [createdById], references: [id])
+  requestor   Employee           @relation(fields: [requestedBy], references: [id])
   instance ApprovalInstance[]
 }
 

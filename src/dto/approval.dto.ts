@@ -17,7 +17,7 @@ const WeightedRuleSchema = z.object({
 });
 
 // Discriminated union of approvalRules
-const ApprovalRuleSchema = z.discriminatedUnion("type", [
+export const ApprovalRuleSchema = z.discriminatedUnion("type", [
   AllOrAnyNRuleSchema,
   WeightedRuleSchema,
 ]);
@@ -44,4 +44,14 @@ export const createApprovalWorkflowSchema = z.object({
   isFullyParallel: z.boolean(),
   stages: z.array(StageSchema),
   employeeIds: z.array(UUID),
+});
+
+export const createRequestSchema = z.object({
+  requestType: z.enum([
+    RequestType.ATTENDANCE,
+    RequestType.EXPENSE,
+    RequestType.PAYROLL,
+    RequestType.PROGRAM,
+  ]),
+  moduleId: z.string(UUID),
 });
