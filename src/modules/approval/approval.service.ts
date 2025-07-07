@@ -128,37 +128,164 @@ export const createWorkflow = async (
   }
 };
 
-/**
- * create an approval request
- * @param {Object} data - request creation input
- */
+// /**
+//  * create an approval request
+//  * @param {Object} data - request creation input
+//  */
 
+// export const createRequest = async (
+//   data: CreateRequestDto & { requestedBy: string; companyId: string }
+// ) => {
+//   const { requestType, moduleId, requestedBy, companyId } = data;
+//   const workflow = await prisma.approvalWorkflow.findFirst({
+//     where: {
+//       requestType,
+//       companyId,
+//       company: {
+//         employees: {
+//           some: {
+//             id: requestedBy,
+//           },
+//         },
+//       },
+//     },
+//     include: {
+//       stages: { include: { stageEmployees: true }, orderBy: { order: "asc" } },
+//     },
+//   });
+
+//   const request = await prisma.request.findFirst({
+//     where: {
+//       type: requestType,
+//       requestedBy,
+//       moduleId,
+//     },
+//   });
+
+//   if (!workflow) {
+//     throw new ApiError(
+//       httpStatus.NOT_FOUND,
+//       "No approval workflow found for this request type"
+//     );
+//   }
+
+//   if (request) {
+//     throw new ApiError(
+//       httpStatus.NOT_FOUND,
+//       "No request found for this type and user"
+//     );
+//   }
+
+//   return prisma.$transaction(async (tx) => {
+//     const request = await tx.request.create({
+//       data: { type: requestType, requestedBy, moduleId },
+//     });
+//     let activeStageIds: string[];
+//     let stageStatuses: {
+//       instanceId: string;
+//       stageId: string;
+//       approvedBy: string | null;
+//       status: ApprovalStageStatus;
+//     }[] = [];
+
+//     if (workflow.isFullyParallel) {
+//       activeStageIds = workflow.stages.map((stage) => stage.id);
+//       for (const stage of workflow.stages) {
+//         const approvalRules = stage.approvalRules as ApprovalRules;
+//         if (
+//           stage.isParallel ||
+//           approvalRules.type === "anyN" ||
+//           approvalRules.type === "all"
+//         ) {
+//           stageStatuses.push(
+//             ...stage.stageEmployees.map((sr) => ({
+//               instanceId: "",
+//               stageId: stage.id,
+//               approvedBy: sr.employeeId,
+//               status: ApprovalStageStatus.PENDING,
+//             }))
+//           );
+//         } else {
+//           stageStatuses.push({
+//             instanceId: "",
+//             stageId: stage.id,
+//             approvedBy: null,
+//             status: ApprovalStageStatus.PENDING,
+//           });
+//         }
+//       }
+//     } else {
+//       const firstStage = workflow.stages[0];
+//       const firstStageAprovalRules = firstStage.approvalRules as ApprovalRules;
+
+//       if (!firstStage)
+//         throw new ApiError(httpStatus.BAD_REQUEST, "Workflow has no stages");
+
+//       activeStageIds = [firstStage.id];
+
+//       if (
+//         firstStage.isParallel ||
+//         firstStageAprovalRules?.type === "anyN" ||
+//         firstStageAprovalRules?.type === "all"
+//       ) {
+//         stageStatuses.push(
+//           ...firstStage.stageEmployees.map((sr) => ({
+//             instanceId: "",
+//             stageId: firstStage.id,
+//             approvedBy: sr.employeeId,
+//             status: ApprovalStageStatus.PENDING,
+//           }))
+//         );
+//       } else {
+//         const firstApprover = firstStage.stageEmployees[0];
+//         stageStatuses.push({
+//           instanceId: "",
+//           stageId: firstStage.id,
+//           approvedBy: firstApprover.employeeId || null,
+//           status: ApprovalStageStatus.PENDING,
+//         });
+//       }
+//     }
+//     const instance = await tx.approvalInstance.create({
+//       data: {
+//         requestId: request.id,
+//         workflowId: workflow.id,
+//         activeStageIds,
+//         status: ApprovalStatus.PENDING,
+//         version: 1,
+//       },
+//     });
+//     await tx.stageStatus.createMany({
+//       data: stageStatuses.map((ss) => ({ ...ss, instanceId: instance.id })),
+//     });
+//     return { request, instance };
+//   });
+// };
+
+/**
+ * Create an approval request and workflow instance
+ */
 export const createRequest = async (
   data: CreateRequestDto & { requestedBy: string; companyId: string }
 ) => {
   const { requestType, moduleId, requestedBy, companyId } = data;
+
+  // Find workflow with all stages & stage employees
   const workflow = await prisma.approvalWorkflow.findFirst({
     where: {
       requestType,
       companyId,
       company: {
         employees: {
-          some: {
-            id: requestedBy,
-          },
+          some: { id: requestedBy },
         },
       },
     },
     include: {
-      stages: { include: { stageEmployees: true }, orderBy: { order: "asc" } },
-    },
-  });
-
-  const request = await prisma.request.findFirst({
-    where: {
-      type: requestType,
-      requestedBy,
-      moduleId,
+      stages: {
+        include: { stageEmployees: true },
+        orderBy: { order: "asc" },
+      },
     },
   });
 
@@ -169,42 +296,53 @@ export const createRequest = async (
     );
   }
 
-  if (request) {
+  // Prevent duplicate request
+  const existingRequest = await prisma.request.findFirst({
+    where: {
+      type: requestType,
+      requestedBy,
+      moduleId,
+    },
+  });
+
+  if (existingRequest) {
     throw new ApiError(
-      httpStatus.NOT_FOUND,
-      "No request found for this type and user"
+      httpStatus.CONFLICT,
+      "A request of this type already exists for this user"
     );
   }
 
-  return prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx) => {
+    // Create the request
     const request = await tx.request.create({
       data: { type: requestType, requestedBy, moduleId },
     });
-    let activeStageIds: string[];
-    let stageStatuses: {
+
+    const stageStatuses: {
       instanceId: string;
       stageId: string;
       approvedBy: string | null;
       status: ApprovalStageStatus;
     }[] = [];
 
+    let activeStageIds: string[] = [];
+
     if (workflow.isFullyParallel) {
-      activeStageIds = workflow.stages.map((stage) => stage.id);
+      // All stages are active at once
       for (const stage of workflow.stages) {
-        const approvalRules = stage.approvalRules as ApprovalRules;
-        if (
-          stage.isParallel ||
-          approvalRules.type === "anyN" ||
-          approvalRules.type === "all"
-        ) {
-          stageStatuses.push(
-            ...stage.stageEmployees.map((sr) => ({
+        activeStageIds.push(stage.id);
+
+        const approvalRule = stage.approvalRules as ApprovalRules;
+
+        if (stage.isParallel || ["anyN", "all"].includes(approvalRule?.type)) {
+          for (const se of stage.stageEmployees) {
+            stageStatuses.push({
               instanceId: "",
               stageId: stage.id,
-              approvedBy: sr.employeeId,
+              approvedBy: se.employeeId,
               status: ApprovalStageStatus.PENDING,
-            }))
-          );
+            });
+          }
         } else {
           stageStatuses.push({
             instanceId: "",
@@ -215,37 +353,46 @@ export const createRequest = async (
         }
       }
     } else {
+      // Sequential mode — only first stage is active
       const firstStage = workflow.stages[0];
-      const firstStageAprovalRules = firstStage.approvalRules as ApprovalRules;
-
       if (!firstStage)
-        throw new ApiError(httpStatus.BAD_REQUEST, "Workflow has no stages");
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          "Workflow has no defined stages"
+        );
 
       activeStageIds = [firstStage.id];
 
-      if (
-        firstStage.isParallel ||
-        firstStageAprovalRules?.type === "anyN" ||
-        firstStageAprovalRules?.type === "all"
-      ) {
-        stageStatuses.push(
-          ...firstStage.stageEmployees.map((sr) => ({
+      const rule = firstStage.approvalRules as ApprovalRules;
+
+      if (firstStage.isParallel || ["anyN", "all"].includes(rule?.type)) {
+        for (const se of firstStage.stageEmployees) {
+          stageStatuses.push({
             instanceId: "",
             stageId: firstStage.id,
-            approvedBy: sr.employeeId,
+            approvedBy: se.employeeId,
             status: ApprovalStageStatus.PENDING,
-          }))
-        );
+          });
+        }
       } else {
         const firstApprover = firstStage.stageEmployees[0];
+        if (!firstApprover) {
+          throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            "First stage has no assigned employee"
+          );
+        }
+
         stageStatuses.push({
           instanceId: "",
           stageId: firstStage.id,
-          approvedBy: firstApprover.employeeId || null,
+          approvedBy: firstApprover.employeeId,
           status: ApprovalStageStatus.PENDING,
         });
       }
     }
+
+    // Create approval instance
     const instance = await tx.approvalInstance.create({
       data: {
         requestId: request.id,
@@ -255,9 +402,15 @@ export const createRequest = async (
         version: 1,
       },
     });
-    await tx.stageStatus.createMany({
-      data: stageStatuses.map((ss) => ({ ...ss, instanceId: instance.id })),
-    });
+
+    // Assign instanceId to stageStatuses
+    const stageStatusData = stageStatuses.map((s) => ({
+      ...s,
+      instanceId: instance.id,
+    }));
+
+    await tx.stageStatus.createMany({ data: stageStatusData });
+
     return { request, instance };
   });
 };
