@@ -55,7 +55,7 @@ model Department {
   departmentUsers         User[]
   departmentEmployees     Employee[]
 
-  approvalWorkflow        ApprovalWorkflow[]
+  approvalWorkflow ApprovalWorkflow[]
 }
 
 model Position {
@@ -102,6 +102,7 @@ model Role {
   permissions   RolePermission[]
   userRoles     UserRole[]
   employeeRoles EmployeeRole[]
+  StageRole     StageRole[]
 }
 
 model Permission {
@@ -291,6 +292,16 @@ model Employee {
   stageEmployees StageEmployee[]
   requests       Request[]
   stageStatuses  StageStatus[]
+
+  delegatedFrom        Delegation[]           @relation("FromEmployee")
+  delegatedTo          Delegation[]           @relation("ToEmployee")
+
+  delegatedRuleFrom    DelegationRule[]       @relation("FromEmployeeDelegationRule")
+  delegatedRuleTo      DelegationRule[]       @relation("ToEmployeeDelegationRule")
+  ApprovalComment      ApprovalComment[]
+  ApprovalNotification ApprovalNotification[]
+  ApprovalAuditLog     ApprovalAuditLog[]
+  Escalation           Escalation[]
 }
 
 model Attendance {
@@ -334,6 +345,7 @@ enum ApprovalStageStatus {
   PENDING
   APPROVED
   REJECTED
+  DELEGATED
 }
 
 enum RequestType {
@@ -353,10 +365,11 @@ model ApprovalWorkflow {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  company    Company            @relation(fields: [companyId], references: [id])
-  department Department?        @relation(fields: [departmentId], references: [id])
-  stages     ApprovalStage[]
-  instances  ApprovalInstance[]
+  company       Company            @relation(fields: [companyId], references: [id])
+  department    Department?        @relation(fields: [departmentId], references: [id])
+  stages        ApprovalStage[]
+  instances     ApprovalInstance[]
+  WorkflowState WorkflowState[]
 
   @@unique([requestType, companyId, departmentId])
 }
@@ -374,6 +387,7 @@ model ApprovalStage {
   stageEmployees StageEmployee[]
   stageStatuses  StageStatus[]
   instances      ApprovalInstance[] @relation("ActiveStages")
+  StageRole      StageRole[]
 }
 
 model StageEmployee {
@@ -398,8 +412,8 @@ model Request {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  requestor   Employee           @relation(fields: [requestedBy], references: [id])
-  instance ApprovalInstance[]
+  requestor Employee           @relation(fields: [requestedBy], references: [id])
+  instance  ApprovalInstance[]
 }
 
 model ApprovalInstance {
@@ -414,12 +428,15 @@ model ApprovalInstance {
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
-  request        Request            @relation(fields: [requestId], references: [id])
-  workflow       ApprovalWorkflow   @relation(fields: [workflowId], references: [id])
-  parentInstance ApprovalInstance?  @relation("Resubmissions", fields: [parentInstanceId], references: [id])
-  resubmissions  ApprovalInstance[] @relation("Resubmissions")
-  activeStages   ApprovalStage[]    @relation("ActiveStages")
-  stageStatuses  StageStatus[]
+  request              Request                @relation(fields: [requestId], references: [id])
+  workflow             ApprovalWorkflow       @relation(fields: [workflowId], references: [id])
+  parentInstance       ApprovalInstance?      @relation("Resubmissions", fields: [parentInstanceId], references: [id])
+  resubmissions        ApprovalInstance[]     @relation("Resubmissions")
+  activeStages         ApprovalStage[]        @relation("ActiveStages")
+  stageStatuses        StageStatus[]
+  ApprovalComment      ApprovalComment[]
+  ApprovalNotification ApprovalNotification[]
+  ApprovalAuditLog     ApprovalAuditLog[]
 }
 
 model StageStatus {
@@ -433,9 +450,110 @@ model StageStatus {
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
-  instance ApprovalInstance @relation(fields: [instanceId], references: [id])
-  stage    ApprovalStage    @relation(fields: [stageId], references: [id])
-  approver Employee?        @relation(fields: [approvedBy], references: [id])
+  instance   ApprovalInstance @relation(fields: [instanceId], references: [id])
+  stage      ApprovalStage    @relation(fields: [stageId], references: [id])
+  approver   Employee?        @relation(fields: [approvedBy], references: [id])
+  Delegation Delegation[]
+  Escalation Escalation[]
 
   @@unique([instanceId, stageId, approvedBy])
+}
+
+// --- Approval Workflow Extensions ---
+
+model WorkflowState {
+  id          String               @id @default(uuid())
+  name        String
+  workflowId  String
+  order       Int
+  isTerminal  Boolean              @default(false)
+  workflow    ApprovalWorkflow     @relation(fields: [workflowId], references: [id])
+  transitions WorkflowTransition[]
+}
+
+model WorkflowTransition {
+  id            String        @id @default(uuid())
+  fromStateId   String
+  toStateId     String
+  action        String // e.g., "approve", "reject", "delegate"
+  allowedRoles  String[] // Role IDs allowed to perform this action
+  workflowState WorkflowState @relation(fields: [fromStateId], references: [id])
+}
+
+model StageRole {
+  id        String        @id @default(uuid())
+  stageId   String
+  roleId    String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  stage     ApprovalStage @relation(fields: [stageId], references: [id])
+  role      Role          @relation(fields: [roleId], references: [id])
+
+  @@unique([stageId, roleId])
+}
+
+model ApprovalComment {
+  id         String           @id @default(uuid())
+  instanceId String
+  authorId   String
+  comment    String
+  createdAt  DateTime         @default(now())
+  instance   ApprovalInstance @relation(fields: [instanceId], references: [id])
+  author     Employee         @relation(fields: [authorId], references: [id])
+}
+
+model ApprovalNotification {
+  id          String           @id @default(uuid())
+  instanceId  String
+  recipientId String
+  message     String
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  instance    ApprovalInstance @relation(fields: [instanceId], references: [id])
+  recipient   Employee         @relation(fields: [recipientId], references: [id])
+}
+
+model ApprovalAuditLog {
+  id          String           @id @default(uuid())
+  instanceId  String
+  action      String
+  performedBy String
+  details     String?
+  createdAt   DateTime         @default(now())
+  instance    ApprovalInstance @relation(fields: [instanceId], references: [id])
+  performer   Employee         @relation(fields: [performedBy], references: [id])
+}
+
+model Delegation {
+  id             String      @id @default(uuid())
+  stageStatusId  String
+  fromEmployeeId String
+  toEmployeeId   String
+  reason         String?
+  createdAt      DateTime    @default(now())
+  stageStatus    StageStatus @relation(fields: [stageStatusId], references: [id])
+  fromEmployee   Employee    @relation("FromEmployee", fields: [fromEmployeeId], references: [id])
+  toEmployee     Employee    @relation("ToEmployee", fields: [toEmployeeId], references: [id])
+}
+
+model DelegationRule {
+  id               String      @id @default(uuid())
+  requestType      RequestType
+  fromEmployeeId   String      // The employee that would normally approve
+  toEmployeeId     String          // The employee to whom it should be delegated
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  fromEmployee     Employee        @relation("FromEmployeeDelegationRule", fields: [fromEmployeeId], references: [id])
+  toEmployee       Employee        @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
+}
+
+model Escalation {
+  id            String      @id @default(uuid())
+  stageStatusId String
+  escalatedToId String
+  reason        String?
+  createdAt     DateTime    @default(now())
+  stageStatus   StageStatus @relation(fields: [stageStatusId], references: [id])
+  escalatedTo   Employee    @relation(fields: [escalatedToId], references: [id])
 }

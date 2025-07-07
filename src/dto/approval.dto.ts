@@ -4,6 +4,15 @@ import { z } from "zod";
 // Common types
 const UUID = z.string().uuid("Invalid user ID");
 
+// RequestType
+
+const requestTypeEnum = z.enum([
+  RequestType.ATTENDANCE,
+  RequestType.EXPENSE,
+  RequestType.PAYROLL,
+  RequestType.PROGRAM,
+]);
+
 // Approval Rules
 const AllOrAnyNRuleSchema = z.object({
   type: z.enum(["all", "anyN"]),
@@ -22,36 +31,67 @@ export const ApprovalRuleSchema = z.discriminatedUnion("type", [
   WeightedRuleSchema,
 ]);
 
-// Stage schema
+// --- New for like Workflow ---
+
+// Role-based stage assignment
+export const StageRoleSchema = z.object({
+  roleId: z.string().uuid(),
+});
+
+// Stage schema with roles
 const StageSchema = z.object({
   isParallel: z.boolean(),
   order: z.number().int(),
   approvalRules: ApprovalRuleSchema,
+  employeeIds: z.array(z.string().uuid()),
 });
+
+//
 
 // Full request schema
 export const createApprovalWorkflowSchema = z.object({
   name: z.string(),
   departmentId: z.string().uuid("Invalid department ID").optional(),
-  requestType: z
-    .enum([
-      RequestType.ATTENDANCE,
-      RequestType.EXPENSE,
-      RequestType.PAYROLL,
-      RequestType.PROGRAM,
-    ])
-    .default(RequestType.ATTENDANCE),
+  requestType: requestTypeEnum,
   isFullyParallel: z.boolean(),
   stages: z.array(StageSchema),
   employeeIds: z.array(UUID),
 });
 
+// Approval request creation schema (unchanged)
 export const createRequestSchema = z.object({
-  requestType: z.enum([
-    RequestType.ATTENDANCE,
-    RequestType.EXPENSE,
-    RequestType.PAYROLL,
-    RequestType.PROGRAM,
-  ]),
+  requestType: requestTypeEnum,
   moduleId: z.string(UUID),
+});
+
+// Delegation rule schema
+export const DelegationRuleSchema = z.object({
+  requestType: requestTypeEnum,
+  fromEmployeeId: UUID,
+  toEmployeeId: UUID,
+});
+
+// Comment action
+export const ApprovalCommentSchema = z.object({
+  instanceId: z.string().uuid(),
+  comment: z.string().min(1),
+});
+
+// Delegation action
+export const DelegationSchema = z.object({
+  stageStatusId: z.string().uuid(),
+  toEmployeeId: z.string().uuid(),
+  reason: z.string().optional(),
+});
+
+// Escalation action
+export const EscalationSchema = z.object({
+  stageStatusId: z.string().uuid(),
+  escalatedToId: z.string().uuid(),
+  reason: z.string().optional(),
+});
+
+// Audit log query
+export const AuditLogQuerySchema = z.object({
+  instanceId: z.string().uuid(),
 });

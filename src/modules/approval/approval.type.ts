@@ -3,6 +3,12 @@ import {
   ApprovalRuleSchema,
   createApprovalWorkflowSchema,
   createRequestSchema,
+  StageRoleSchema,
+  ApprovalCommentSchema,
+  DelegationSchema,
+  EscalationSchema,
+  AuditLogQuerySchema,
+  DelegationRuleSchema,
 } from "../../dto/approval.dto";
 
 export type CreateApprovalWorkflowDto = z.infer<
@@ -12,3 +18,12 @@ export type CreateApprovalWorkflowDto = z.infer<
 export type CreateRequestDto = z.infer<typeof createRequestSchema>;
 
 export type ApprovalRules = z.infer<typeof ApprovalRuleSchema>;
+
+export type StageRole = z.infer<typeof StageRoleSchema>;
+
+export type ApprovalComment = z.infer<typeof ApprovalCommentSchema>;
+export type Delegation = z.infer<typeof DelegationSchema>;
+export type Escalation = z.infer<typeof EscalationSchema>;
+export type AuditLogQuery = z.infer<typeof AuditLogQuerySchema>;
+
+export type CreateDelegationRuleDto = z.infer<typeof DelegationRuleSchema>;

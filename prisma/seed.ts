@@ -58,6 +58,20 @@ async function seedRoles(companyId: string, permissions: any[]) {
     },
   });
 
+  const managerRole = await prisma.role.create({
+    data: {
+      name: "Manager",
+      companyId,
+    },
+  })
+
+  const finance = await prisma.role.create({
+    data: {
+      name: "Finance",
+      companyId,
+    },
+  })
+
   await prisma.rolePermission.createMany({
     data: permissions.map((p) => ({
       roleId: adminRole.id,

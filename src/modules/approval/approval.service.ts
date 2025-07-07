@@ -4,6 +4,7 @@ import ApiError from "../../utils/api-error";
 import {
   ApprovalRules,
   CreateApprovalWorkflowDto,
+  CreateDelegationRuleDto,
   CreateRequestDto,
 } from "./approval.type";
 import { ApprovalStageStatus, ApprovalStatus } from "@prisma/client";
@@ -29,13 +30,6 @@ export const createWorkflow = async (
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       "At least one stage is required."
-    );
-  }
-
-  if (!employeeIds.length) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "At least one employee is required."
     );
   }
 
@@ -263,47 +257,48 @@ export const createWorkflow = async (
 // };
 
 /**
- * Create an approval request and workflow instance
+ * create an approval request
+ * @param {Object} data - request creation input
  */
+
 export const createRequest = async (
   data: CreateRequestDto & { requestedBy: string; companyId: string }
 ) => {
   const { requestType, moduleId, requestedBy, companyId } = data;
 
-  // Find workflow with all stages & stage employees
-  const workflow = await prisma.approvalWorkflow.findFirst({
-    where: {
-      requestType,
-      companyId,
-      company: {
-        employees: {
-          some: { id: requestedBy },
+  const [workflow, existingRequest] = await Promise.all([
+    prisma.approvalWorkflow.findFirst({
+      where: {
+        requestType,
+        companyId,
+        company: { employees: { some: { id: requestedBy } } },
+      },
+      select: {
+        id: true,
+        isFullyParallel: true,
+        stages: {
+          select: {
+            id: true,
+            order: true,
+            stageEmployees: { select: { employeeId: true } },
+          },
+          orderBy: { order: "asc" },
         },
       },
-    },
-    include: {
-      stages: {
-        include: { stageEmployees: true },
-        orderBy: { order: "asc" },
-      },
-    },
-  });
+    }),
+    prisma.request.findFirst({
+      where: { type: requestType, requestedBy, moduleId },
+      select: { id: true }, // Minimal fields
+    }),
+  ]);
 
   if (!workflow) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      "No approval workflow found for this request type"
-    );
+    throw new ApiError(httpStatus.NOT_FOUND, "No approval workflow found.");
   }
 
-  // Prevent duplicate request
-  const existingRequest = await prisma.request.findFirst({
-    where: {
-      type: requestType,
-      requestedBy,
-      moduleId,
-    },
-  });
+  if (workflow.stages.length === 0) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Workflow has no stages.");
+  }
 
   if (existingRequest) {
     throw new ApiError(
@@ -312,105 +307,445 @@ export const createRequest = async (
     );
   }
 
-  return await prisma.$transaction(async (tx) => {
-    // Create the request
+  if (workflow.isFullyParallel && workflow.stages.length > 1) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Fully parallel workflows must have exactly one stage"
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
     const request = await tx.request.create({
       data: { type: requestType, requestedBy, moduleId },
+      select: { id: true },
     });
 
+    const firstStage = workflow.stages[0];
+    if (!firstStage.stageEmployees.length) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "First stage has no assigned employees"
+      );
+    }
+
     const stageStatuses: {
+      stageId: string;
+      approvedBy: string;
+      status: ApprovalStageStatus;
+    }[] = firstStage.stageEmployees.map((emp) => ({
+      stageId: firstStage.id,
+      approvedBy: emp.employeeId,
+      status: ApprovalStageStatus.PENDING,
+    }));
+
+    const instance = await tx.approvalInstance.create({
+      data: {
+        requestId: request.id,
+        workflowId: workflow.id,
+        activeStageIds: [firstStage.id],
+        status: ApprovalStatus.PENDING,
+        version: 1,
+      },
+      select: { id: true },
+    });
+
+    const allApproverIds = Array.from(
+      new Set(stageStatuses.map((s) => s.approvedBy))
+    );
+    const delegationRules = await tx.delegationRule.findMany({
+      where: {
+        requestType,
+        fromEmployeeId: { in: allApproverIds },
+      },
+      select: { fromEmployeeId: true, toEmployeeId: true },
+    });
+
+    const delegationMap = new Map(
+      delegationRules.map((rule) => [rule.fromEmployeeId, rule.toEmployeeId])
+    );
+
+    const stageStatusData: {
       instanceId: string;
       stageId: string;
-      approvedBy: string | null;
+      approvedBy: string;
       status: ApprovalStageStatus;
     }[] = [];
 
-    let activeStageIds: string[] = [];
+    const notifications: {
+      instanceId: string;
+      recipientId: string;
+      message: string;
+    }[] = [];
 
-    if (workflow.isFullyParallel) {
-      // All stages are active at once
-      for (const stage of workflow.stages) {
-        activeStageIds.push(stage.id);
+    const auditLog: {
+      instanceId: string;
+      action: string;
+      performedBy: string;
+      details: string;
+    }[] = [];
 
-        const approvalRule = stage.approvalRules as ApprovalRules;
-
-        if (stage.isParallel || ["anyN", "all"].includes(approvalRule?.type)) {
-          for (const se of stage.stageEmployees) {
-            stageStatuses.push({
-              instanceId: "",
-              stageId: stage.id,
-              approvedBy: se.employeeId,
-              status: ApprovalStageStatus.PENDING,
-            });
+    for (const stage of stageStatuses) {
+      const delegatedTo = delegationMap.get(stage.approvedBy);
+      if (delegatedTo) {
+        stageStatusData.push(
+          {
+            instanceId: instance.id,
+            stageId: stage.stageId,
+            approvedBy: stage.approvedBy,
+            status: ApprovalStageStatus.DELEGATED,
+          },
+          {
+            instanceId: instance.id,
+            stageId: stage.stageId,
+            approvedBy: delegatedTo,
+            status: ApprovalStageStatus.PENDING,
           }
-        } else {
-          stageStatuses.push({
-            instanceId: "",
-            stageId: stage.id,
-            approvedBy: null,
-            status: ApprovalStageStatus.PENDING,
-          });
-        }
-      }
-    } else {
-      // Sequential mode — only first stage is active
-      const firstStage = workflow.stages[0];
-      if (!firstStage)
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Workflow has no defined stages"
         );
+        notifications.push({
+          instanceId: instance.id,
+          recipientId: delegatedTo,
+          message: `Approval automatically delegated to you for ${requestType}`,
+        });
 
-      activeStageIds = [firstStage.id];
-
-      const rule = firstStage.approvalRules as ApprovalRules;
-
-      if (firstStage.isParallel || ["anyN", "all"].includes(rule?.type)) {
-        for (const se of firstStage.stageEmployees) {
-          stageStatuses.push({
-            instanceId: "",
-            stageId: firstStage.id,
-            approvedBy: se.employeeId,
-            status: ApprovalStageStatus.PENDING,
-          });
-        }
+        auditLog.push({
+          instanceId: instance.id,
+          action: "delegate",
+          performedBy: stage.approvedBy,
+          details: `Delegated to ${delegatedTo}`,
+        });
       } else {
-        const firstApprover = firstStage.stageEmployees[0];
-        if (!firstApprover) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            "First stage has no assigned employee"
-          );
-        }
-
-        stageStatuses.push({
-          instanceId: "",
-          stageId: firstStage.id,
-          approvedBy: firstApprover.employeeId,
+        stageStatusData.push({
+          instanceId: instance.id,
+          stageId: stage.stageId,
+          approvedBy: stage.approvedBy,
           status: ApprovalStageStatus.PENDING,
         });
       }
     }
 
-    // Create approval instance
-    const instance = await tx.approvalInstance.create({
+    await tx.stageStatus.createMany({ data: stageStatusData });
+
+    // TODO: Implement actual queuing logic. Queue notifications to a background worker
+    if (notifications.length > 0) {
+      await tx.approvalNotification.createMany({ data: notifications });
+    }
+    if (auditLog.length > 0) {
+      await tx.approvalAuditLog.createMany({ data: auditLog });
+    }
+
+    return { request, instance };
+  });
+};
+
+export const createDelegationRule = async (
+  data: CreateDelegationRuleDto & { companyId: string }
+) => {
+  const employee = await prisma.employee.findMany({
+    where: {
+      id: { in: [data.fromEmployeeId, data.toEmployeeId] },
+    },
+  });
+
+  if (employee.length !== 2) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Both fromEmployeeId and toEmployeeId must be valid employees"
+    );
+  }
+
+  const existingRule = await prisma.delegationRule.findFirst({
+    where: {
+      requestType: data.requestType,
+      fromEmployeeId: data.fromEmployeeId,
+      toEmployeeId: data.toEmployeeId,
+    },
+  });
+
+  if (existingRule) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Delegation rule already exists for this pair of employees"
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const rule = await tx.delegationRule.create({
       data: {
-        requestId: request.id,
-        workflowId: workflow.id,
-        activeStageIds,
-        status: ApprovalStatus.PENDING,
-        version: 1,
+        requestType: data.requestType,
+        fromEmployeeId: data.fromEmployeeId,
+        toEmployeeId: data.toEmployeeId,
       },
     });
 
-    // Assign instanceId to stageStatuses
-    const stageStatusData = stageStatuses.map((s) => ({
-      ...s,
-      instanceId: instance.id,
-    }));
+    // TODO: create a notification for the delegation rule
+    await tx.approvalNotification.create({
+      data: {
+        instanceId: "",
+        recipientId: data.fromEmployeeId,
+        message: `Delegation rule created from you to ${data.toEmployeeId} for ${data.requestType}`,
+      },
+    });
 
-    await tx.stageStatus.createMany({ data: stageStatusData });
+    return rule;
+  });
+};
 
-    return { request, instance };
+/**
+ * Perform an approval action (approve, reject, delegate, escalate, comment)
+ */
+export const performApprovalAction = async ({
+  instanceId,
+  action,
+  userId,
+  comment,
+  delegateToId,
+  escalateToId,
+}: {
+  instanceId: string;
+  action: string;
+  userId: string;
+  comment?: string;
+  delegateToId?: string;
+  escalateToId?: string;
+}) => {
+  // Fetch instance, workflow, current state, user roles
+  const instance = await prisma.approvalInstance.findUnique({
+    where: { id: instanceId },
+    include: {
+      workflow: {
+        include: {
+          WorkflowState: { include: { transitions: true } },
+          stages: { include: { StageRole: true } },
+        },
+      },
+      stageStatuses: true,
+    },
+  });
+  if (!instance) throw new ApiError(404, "Approval instance not found");
+
+  // Find current state (lowest order among active stages)
+  const workflowStates = instance.workflow.WorkflowState;
+  const currentState = workflowStates.reduce(
+    (min, s) => (s.order < min.order ? s : min),
+    workflowStates[0]
+  );
+  if (!currentState) throw new ApiError(400, "No current state found");
+
+  // Get user roles
+  const user = await prisma.employee.findUnique({
+    where: { id: userId },
+    include: { employeeRoles: true },
+  });
+  if (!user) throw new ApiError(404, "User not found");
+  const userRoleIds = user.employeeRoles.map((er) => er.roleId);
+
+  console.log(currentState);
+
+  // Find allowed transitions for current state
+  const allowedTransitions = currentState.transitions.filter(
+    (t) =>
+      t.allowedRoles.some((roleId) => userRoleIds.includes(roleId)) &&
+      t.action === action
+  );
+  if (
+    !allowedTransitions.length &&
+    !["delegate", "escalate", "comment"].includes(action)
+  ) {
+    throw new ApiError(403, "Action not allowed for your role in this state");
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    // Handle comment
+    if (comment) {
+      await tx.approvalComment.create({
+        data: {
+          instanceId,
+          authorId: userId,
+          comment,
+        },
+      });
+    }
+
+    // Handle delegation
+    if (action === "delegate" && delegateToId) {
+      // Find the relevant stageStatus for this user
+      const stageStatus = instance.stageStatuses.find(
+        (ss) => ss.approvedBy === userId && ss.status === "PENDING"
+      );
+      if (!stageStatus) throw new ApiError(400, "No pending stage to delegate");
+      // Mark current user's StageStatus as DELEGATED (workaround: use REJECTED, or add to enum)
+      await tx.stageStatus.update({
+        where: { id: stageStatus.id },
+        // 'DELEGATED' is not in ApprovalStageStatus, so use 'REJECTED' as a workaround
+        // To support true delegation status, add 'DELEGATED' to the enum in schema.prisma
+        data: { status: "DELEGATED" },
+      });
+      // Check if delegatee already has a StageStatus for this stage/instance
+      const existingDelegateeStatus = instance.stageStatuses.find(
+        (ss) =>
+          ss.approvedBy === delegateToId && ss.stageId === stageStatus.stageId
+      );
+      if (!existingDelegateeStatus) {
+        await tx.stageStatus.create({
+          data: {
+            instanceId,
+            stageId: stageStatus.stageId,
+            approvedBy: delegateToId,
+            status: "PENDING",
+          },
+        });
+      }
+      await tx.delegation.create({
+        data: {
+          stageStatusId: stageStatus.id,
+          fromEmployeeId: userId,
+          toEmployeeId: delegateToId,
+        },
+      });
+      await tx.approvalNotification.create({
+        data: {
+          instanceId,
+          recipientId: delegateToId,
+          message: `Approval delegated to you by ${user.name}`,
+        },
+      });
+      await tx.approvalAuditLog.create({
+        data: {
+          instanceId,
+          action: "delegate",
+          performedBy: userId,
+          details: `Delegated to ${delegateToId}`,
+        },
+      });
+      // Return updated instance details
+      const updatedInstance = await tx.approvalInstance.findUnique({
+        where: { id: instanceId },
+        include: {
+          workflow: {
+            include: {
+              WorkflowState: { include: { transitions: true } },
+              stages: { include: { StageRole: true } },
+            },
+          },
+          stageStatuses: true,
+          ApprovalComment: true,
+          ApprovalNotification: true,
+          ApprovalAuditLog: true,
+        },
+      });
+      return { delegated: true, instance: updatedInstance };
+    }
+
+    // Handle escalation
+    if (action === "escalate" && escalateToId) {
+      // Find the relevant stageStatus for this user
+      const stageStatus = instance.stageStatuses.find(
+        (ss) => ss.approvedBy === userId && ss.status === "PENDING"
+      );
+      if (!stageStatus) throw new ApiError(400, "No pending stage to escalate");
+      await tx.escalation.create({
+        data: {
+          stageStatusId: stageStatus.id,
+          escalatedToId: escalateToId,
+        },
+      });
+      await tx.approvalNotification.create({
+        data: {
+          instanceId,
+          recipientId: escalateToId,
+          message: `Approval escalated to you by ${user.name}`,
+        },
+      });
+      await tx.approvalAuditLog.create({
+        data: {
+          instanceId,
+          action: "escalate",
+          performedBy: userId,
+          details: `Escalated to ${escalateToId}`,
+        },
+      });
+      return { escalated: true };
+    }
+
+    // Handle approval/rejection (state transition)
+    if (allowedTransitions.length) {
+      const transition = allowedTransitions[0];
+      // Update instance state (simulate state machine)
+      // Mark current user's stageStatus as approved/rejected
+      const stageStatus = instance.stageStatuses.find(
+        (ss) => ss.approvedBy === userId && ss.status === "PENDING"
+      );
+      if (!stageStatus) throw new ApiError(400, "No pending stage to act on");
+      await tx.stageStatus.update({
+        where: { id: stageStatus.id },
+        data: {
+          status: action.toUpperCase() as ApprovalStageStatus,
+          approvedAt: new Date(),
+        },
+      });
+      // Move to next state if needed
+      await tx.approvalInstance.update({
+        where: { id: instanceId },
+        data: {
+          // For simplicity, just update status; in a real system, update activeStageIds, etc.
+          status: transition.action === "approve" ? "APPROVED" : "REJECTED",
+        },
+      });
+      await tx.approvalAuditLog.create({
+        data: {
+          instanceId,
+          action,
+          performedBy: userId,
+          details: `Transitioned to state ${transition.toStateId}`,
+        },
+      });
+      // Notify next approvers if any (not implemented in detail here)
+      return { transitioned: true };
+    }
+
+    // If only comment, just return
+    if (action === "comment") {
+      await tx.approvalAuditLog.create({
+        data: {
+          instanceId,
+          action: "comment",
+          performedBy: userId,
+          details: comment,
+        },
+      });
+      return { commented: true };
+    }
+
+    throw new ApiError(400, "Unhandled action");
+  });
+};
+
+export const getAuditLog = async (instanceId: string) => {
+  return prisma.approvalAuditLog.findMany({
+    where: { instanceId },
+    orderBy: { createdAt: "asc" },
+  });
+};
+
+export const getInstanceDetails = async (id: string) => {
+  return prisma.approvalInstance.findUnique({
+    where: { id },
+    include: {
+      workflow: {
+        include: {
+          WorkflowState: { include: { transitions: true } },
+          stages: { include: { StageRole: true } },
+        },
+      },
+      stageStatuses: {
+        include: {
+          Delegation: true,
+          Escalation: true,
+        },
+      },
+      ApprovalComment: true,
+      ApprovalNotification: true,
+      ApprovalAuditLog: true,
+    },
   });
 };
