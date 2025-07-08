@@ -9,6 +9,7 @@ import {
   EscalationSchema,
   AuditLogQuerySchema,
   DelegationRuleSchema,
+  approvalSchema,
 } from "../../dto/approval.dto";
 
 export type CreateApprovalWorkflowDto = z.infer<
@@ -27,3 +28,5 @@ export type Escalation = z.infer<typeof EscalationSchema>;
 export type AuditLogQuery = z.infer<typeof AuditLogQuerySchema>;
 
 export type CreateDelegationRuleDto = z.infer<typeof DelegationRuleSchema>;
+
+export type approvalDto = z.infer<typeof approvalSchema>;

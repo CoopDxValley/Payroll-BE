@@ -1,6 +1,10 @@
 import httpStatus from "http-status";
 import * as workflowService from "./approval.service";
-import { CreateApprovalWorkflowDto, CreateRequestDto } from "./approval.type";
+import {
+  approvalDto,
+  CreateApprovalWorkflowDto,
+  CreateRequestDto,
+} from "./approval.type";
 import { AuthEmployee } from "../auth/auth.type";
 import catchAsync from "../../utils/catch-async";
 import { performApprovalAction } from "./approval.service";
@@ -8,7 +12,7 @@ import { performApprovalAction } from "./approval.service";
 export const createWorkflow = catchAsync(async (req, res) => {
   const input: CreateApprovalWorkflowDto = req.body;
   const user = req.user as AuthEmployee;
-  const companyId = "2dfec33d-4bf9-4846-bfce-deef09c08457"; //TODO: delete this line and use user.companyId instead
+  const companyId = "92c8ffa5-c27b-4e88-a2a3-0d127f6ca993"; //TODO: delete this line and use user.companyId instead
 
   const workflow = await workflowService.createWorkflow({
     ...input,
@@ -23,8 +27,8 @@ export const createWorkflow = catchAsync(async (req, res) => {
 export const createRequest = catchAsync(async (req, res) => {
   const input: CreateRequestDto = req.body;
   const user = req.user as AuthEmployee;
-  const companyId = "2dfec33d-4bf9-4846-bfce-deef09c08457"; //TODO: delete this line and use user.companyId instead
-  const userId = "0f697815-1863-41f0-afa4-86b1108ae2ad"; //TODO: delete this line and use user.id instead
+  const companyId = "92c8ffa5-c27b-4e88-a2a3-0d127f6ca993"; //TODO: delete this line and use user.companyId instead
+  const userId = "d980fd97-a045-4b88-b10a-917dd729c93c"; //TODO: delete this line and use user.id instead
 
   const request = await workflowService.createRequest({
     ...input,
@@ -39,8 +43,8 @@ export const createRequest = catchAsync(async (req, res) => {
 export const createDelegationRule = catchAsync(async (req, res) => {
   const input = req.body;
   const user = req.user as AuthEmployee;
-  const companyId = "2dfec33d-4bf9-4846-bfce-deef09c08457"; //TODO: delete this line and use user.companyId instead
-  const userId = "0f697815-1863-41f0-afa4-86b1108ae2ad"; //TODO: delete this line and use user.id instead
+  const companyId = "92c8ffa5-c27b-4e88-a2a3-0d127f6ca993"; //TODO: delete this line and use user.companyId instead
+  const userId = "d980fd97-a045-4b88-b10a-917dd729c93c"; //TODO: delete this line and use user.id instead
   const delegationRule = await workflowService.createDelegationRule({
     ...input,
     companyId: user ? user.companyId : companyId,
@@ -53,16 +57,16 @@ export const createDelegationRule = catchAsync(async (req, res) => {
 });
 
 export const action = catchAsync(async (req, res) => {
-  const user = req.user as AuthEmployee;
-  const userId = "0f697815-1863-41f0-afa4-86b1108ae2ad";
-  const { instanceId, action, comment, delegateToId, escalateToId } = req.body;
-  const result = await performApprovalAction({
+  const employee = req.user as AuthEmployee;
+  const employeeId = "30a46325-f34f-44fe-b7b3-d2df425399e8";
+
+  const { instanceId, action, comment, stageId }: approvalDto = req.body;
+  const result = await workflowService.handleApproval({
     instanceId,
     action,
-    userId, //TODO: change this line to user.id
     comment,
-    delegateToId,
-    escalateToId,
+    employeeId, //TODO: change this line to employee.id
+    stageId,
   });
   res.status(httpStatus.OK).send({ message: "Action performed", data: result });
 });

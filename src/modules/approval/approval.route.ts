@@ -8,6 +8,7 @@ import {
   escalationValidation,
   auditLogQueryValidation,
   createDelegationRuleValidation,
+  approvalValidation,
 } from "./approval.validation";
 import {
   createRequest,
@@ -50,6 +51,7 @@ router.post(
   "/action",
   // auth(),
   // checkPermission("approve_request"),
+  validate(approvalValidation),
   action
 );
 

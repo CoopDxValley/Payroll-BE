@@ -6,6 +6,7 @@ import {
   EscalationSchema,
   AuditLogQuerySchema,
   DelegationRuleSchema,
+  approvalSchema,
 } from "../../dto/approval.dto";
 
 export const createApprovalWorkflowValidation = {
@@ -22,6 +23,10 @@ export const createDelegationRuleValidation = {
 
 export const approvalCommentValidation = {
   body: ApprovalCommentSchema,
+};
+
+export const approvalValidation = {
+  body: approvalSchema,
 };
 
 export const delegationValidation = {

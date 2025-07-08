@@ -2,6 +2,7 @@ import httpStatus from "http-status";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import {
+  approvalDto,
   ApprovalRules,
   CreateApprovalWorkflowDto,
   CreateDelegationRuleDto,
@@ -21,7 +22,7 @@ export const createWorkflow = async (
     requestType,
     isFullyParallel,
     stages,
-    employeeIds,
+    // employeeIds,
     companyId,
     departmentId,
   } = data;
@@ -47,6 +48,42 @@ export const createWorkflow = async (
     );
   }
 
+  for (const stage of stages) {
+    if (
+      stage.approvalRules.type === "weighted" &&
+      !stage.approvalRules.weights
+    ) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Weighted approval rules must have weights defined for each approver."
+      );
+    } else if (
+      stage.approvalRules.type === "weighted" &&
+      Object.keys(stage.approvalRules.weights).length === 0
+    ) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Weighted approval rules must have at least one approver with a weight defined."
+      );
+    } else if (
+      stage.approvalRules.type === "weighted" &&
+      Object.keys(stage.approvalRules.weights).length < stage.employeeIds.length
+    ) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Weighted approval rules must have weights defined for all approvers."
+      );
+    } else if (
+      stage.approvalRules.type !== "weighted" &&
+      stage.approvalRules.required !== stage.employeeIds.length
+    ) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Approval rules must match the number of employees in the stage."
+      );
+    }
+  }
+
   try {
     return await prisma.$transaction(async (tx) => {
       // Create workflow
@@ -61,12 +98,17 @@ export const createWorkflow = async (
       });
 
       // Fetch employees and validate
+      const approverIds = stages.flatMap((stage) => stage.employeeIds);
       const approvers = await tx.employee.findMany({
-        where: { id: { in: employeeIds } },
-        include: { employeeRoles: true },
+        where: {
+          id: { in: approverIds },
+        },
+        select: {
+          id: true,
+        },
       });
 
-      if (approvers.length !== employeeIds.length) {
+      if (approvers.length !== approverIds.length) {
         throw new ApiError(
           httpStatus.BAD_REQUEST,
           "One or more provided employee IDs are invalid."
@@ -75,22 +117,24 @@ export const createWorkflow = async (
 
       const approverMap = new Map(approvers.map((emp) => [emp.id, emp]));
 
-      // Prepare all stage creation data
       const stageCreates = stages.map((stage) => {
-        const stageEmployees = employeeIds.map((employeeId) => {
+        const stageEmployees = stage.employeeIds.map((employeeId) => {
           const user = approverMap.get(employeeId);
           if (!user) {
-            throw new Error(`Unexpected: employee ID ${employeeId} not found`);
+            throw new ApiError(
+              httpStatus.BAD_REQUEST,
+              `Employee ID ${employeeId} not found`
+            );
           }
 
           const weight =
-            stage.approvalRules?.type === "weighted" &&
-            stage.approvalRules.weights?.[user.name]
-              ? stage.approvalRules.weights[user.name]
+            stage.approvalRules.type === "weighted" &&
+            stage.approvalRules.weights?.[user.id]
+              ? stage.approvalRules.weights[user.id]
               : null;
 
           return {
-            employeeId,
+            employeeId: user.id,
             weight,
           };
         });
@@ -107,6 +151,39 @@ export const createWorkflow = async (
           },
         });
       });
+
+      // Prepare all stage creation data
+      // const stageCreates = stages.map((stage) => {
+      //   const stageEmployees = employeeIds.map((employeeId) => {
+      //     const user = approverMap.get(employeeId);
+      //     if (!user) {
+      //       throw new Error(`Unexpected: employee ID ${employeeId} not found`);
+      //     }
+
+      //     const weight =
+      //       stage.approvalRules.type === "weighted" &&
+      //       stage.approvalRules.weights?.[user.name]
+      //         ? stage.approvalRules.weights[user.name]
+      //         : null;
+
+      //     return {
+      //       employeeId,
+      //       weight,
+      //     };
+      //   });
+
+      //   return tx.approvalStage.create({
+      //     data: {
+      //       workflowId: workflow.id,
+      //       isParallel: stage.isParallel,
+      //       order: stage.order,
+      //       approvalRules: stage.approvalRules,
+      //       stageEmployees: {
+      //         create: stageEmployees,
+      //       },
+      //     },
+      //   });
+      // });
 
       // Create stages in parallel
       await Promise.all(stageCreates);
@@ -491,8 +568,269 @@ export const createDelegationRule = async (
 };
 
 /**
- * Perform an approval action (approve, reject, delegate, escalate, comment)
+ * Perform an approval action (approve, reject, comment)
  */
+
+export const handleApproval = async (
+  data: approvalDto & { employeeId: string }
+) => {
+  const { instanceId, action, comment, employeeId, stageId } = data;
+  return prisma.$transaction(async (tx) => {
+    const instance = await tx.approvalInstance.findUnique({
+      where: { id: instanceId },
+      select: {
+        activeStageIds: true,
+        workflow: {
+          select: {
+            isFullyParallel: true,
+            stages: {
+              select: {
+                id: true,
+                isParallel: true,
+                approvalRules: true,
+                stageEmployees: { select: { employeeId: true, weight: true } },
+              },
+              orderBy: { order: "asc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (!instance)
+      throw new ApiError(httpStatus.BAD_REQUEST, "Approval instance not found");
+
+    const stage = instance.workflow.stages.find((s) => s.id === stageId);
+    if (!stage || !instance.activeStageIds.includes(stageId))
+      throw new Error("Stage not found or not active");
+    const validUser = stage.stageEmployees.find(
+      (sr) => sr.employeeId === employeeId
+    );
+
+    if (!validUser) {
+      throw new Error("User is not authorized for this stage");
+    }
+
+    const approvalRules = stage.approvalRules as ApprovalRules;
+
+    const stageStatus = await tx.stageStatus.update({
+      where: {
+        instanceId_stageId_approvedBy: {
+          instanceId,
+          stageId,
+          approvedBy: employeeId,
+        },
+      },
+      data: {
+        status: action,
+        approvedAt: new Date(),
+      },
+    });
+    let activeStageIds: string[] = instance.activeStageIds as string[];
+    let status: ApprovalStatus = ApprovalStatus.PENDING;
+
+    if (instance.workflow.isFullyParallel) {
+      const approvedStatuses = await tx.stageStatus.findMany({
+        where: { instanceId, stageId, status: ApprovalStageStatus.APPROVED },
+        include: { approver: true },
+      });
+
+      let isStageComplete = false;
+
+      if (approvalRules.type === "anyN") {
+        isStageComplete =
+          approvedStatuses.length >= (approvalRules.required || 1);
+      } else if (approvalRules?.type === "all") {
+        isStageComplete =
+          approvedStatuses.length >= stage.stageEmployees.length;
+      } else if (approvalRules.type === "weighted" && approvalRules.threshold) {
+        console.log("approvedStatuses", approvedStatuses);
+        console.log("employees", stage.stageEmployees);
+        const totalWeight = approvedStatuses.reduce(
+          (sum, s) =>
+            sum +
+            (stage.stageEmployees.find((sr) => sr.employeeId === s.approvedBy)
+              ?.weight || 0),
+          0
+        );
+        console.log("totalWeight", totalWeight);
+        isStageComplete = totalWeight >= approvalRules.threshold;
+        console.log("isStageComplete", isStageComplete);
+      }
+
+      if (isStageComplete) {
+        activeStageIds = activeStageIds.filter((id) => id !== stageId);
+        // console.log("activeStageIds after completion", activeStageIds);
+      }
+      if (activeStageIds.length === 0) {
+        let allStagesComplete = true;
+        for (const s of instance.workflow.stages) {
+          const statuses = await tx.stageStatus.findMany({
+            where: {
+              instanceId,
+              stageId: s.id,
+              status: ApprovalStageStatus.APPROVED,
+            },
+            include: { approver: true },
+          });
+          const roles = statuses
+            .map((st) => st.approver?.name)
+            .filter((name): name is string => !!name);
+          let isStageDone = false;
+          const sApprovalRules = s.approvalRules as ApprovalRules;
+          if (sApprovalRules.type === "anyN") {
+            isStageDone = statuses.length >= (sApprovalRules.required || 1);
+          } else if (sApprovalRules?.type === "all") {
+            isStageDone = statuses.length >= s.stageEmployees.length;
+          } else if (
+            sApprovalRules?.type === "weighted" &&
+            sApprovalRules.threshold
+          ) {
+            const totalWeight = statuses.reduce(
+              (sum, st) =>
+                sum +
+                (s.stageEmployees.find((sr) => sr.employeeId === st.approvedBy)
+                  ?.weight || 0),
+              0
+            );
+            isStageDone = totalWeight >= sApprovalRules.threshold;
+          }
+          if (!isStageDone) {
+            allStagesComplete = false;
+            break;
+          }
+        }
+        if (allStagesComplete) status = ApprovalStatus.APPROVED;
+      }
+    } else {
+      const stageAprovalRules = stage.approvalRules as ApprovalRules;
+      if (
+        stage.isParallel ||
+        stageAprovalRules.type === "anyN" ||
+        stageAprovalRules.type === "all"
+      ) {
+        const approvedStatuses = await tx.stageStatus.findMany({
+          where: { instanceId, stageId, status: ApprovalStageStatus.APPROVED },
+          include: { approver: true },
+        });
+
+        let isStageComplete = false;
+
+        if (stageAprovalRules.type === "anyN") {
+          isStageComplete =
+            approvedStatuses.length >= (stageAprovalRules.required || 1);
+        } else if (stageAprovalRules?.type === "all") {
+          isStageComplete =
+            approvedStatuses.length >= stage.stageEmployees.length;
+        } else if (
+          stageAprovalRules?.type === "weighted" &&
+          stageAprovalRules.threshold
+        ) {
+          const totalWeight = approvedStatuses.reduce(
+            (sum, s) =>
+              sum +
+              (stage.stageEmployees.find((sr) => sr.employeeId === s.approvedBy)
+                ?.weight || 0),
+            0
+          );
+          isStageComplete = totalWeight >= stageAprovalRules.threshold;
+        }
+        if (isStageComplete) {
+          activeStageIds = [];
+          const currentStageIndex = instance.workflow.stages.findIndex(
+            (s) => s.id === stageId
+          );
+          console.log("currentStageIndex", currentStageIndex);
+          const nextStage = instance.workflow.stages[currentStageIndex + 1];
+          console.log("nextStage after completion", nextStage);
+
+          if (nextStage) {
+            activeStageIds = [nextStage.id];
+            const nextApprovalRules = nextStage.approvalRules as ApprovalRules;
+            if (
+              nextStage.isParallel ||
+              nextApprovalRules.type === "anyN" ||
+              nextApprovalRules.type === "all"
+            ) {
+              console.log("stage Employees", nextStage.stageEmployees);
+              await tx.stageStatus.createMany({
+                data: nextStage.stageEmployees.map((sr) => ({
+                  instanceId,
+                  stageId: nextStage.id,
+                  approvedBy: sr.employeeId,
+                  status: ApprovalStageStatus.PENDING,
+                })),
+              });
+
+              //TODO: create a notification for the next stage
+            } else {
+              const nextRole = nextStage.stageEmployees[0];
+              await tx.stageStatus.create({
+                data: {
+                  instanceId,
+                  stageId: nextStage.id,
+                  approvedBy: nextRole?.employeeId,
+                  status: ApprovalStageStatus.PENDING,
+                },
+              });
+              //TODO: create a notification for the next stage
+            }
+          } else {
+            status = ApprovalStatus.APPROVED;
+            //TODO: create a notification for the final approval
+          }
+        }
+      } else {
+        activeStageIds = [];
+
+        const currentStageIndex = instance.workflow.stages.findIndex(
+          (s) => s.id === stageId
+        );
+        const nextStage = instance.workflow.stages[currentStageIndex + 1];
+        console.log("nextStage before completion", nextStage);
+        if (nextStage) {
+          const nextApprovalRules = nextStage.approvalRules as ApprovalRules;
+          activeStageIds = [nextStage.id];
+          if (
+            nextStage.isParallel ||
+            nextApprovalRules?.type === "anyN" ||
+            nextApprovalRules?.type === "all"
+          ) {
+            await tx.stageStatus.createMany({
+              data: nextStage.stageEmployees.map((sr) => ({
+                instanceId,
+                stageId: nextStage.id,
+                approvedBy: sr.employeeId,
+                status: ApprovalStageStatus.PENDING,
+              })),
+            });
+            //TODO: create a notification for the next stage
+          } else {
+            const nextRole = nextStage.stageEmployees[0];
+            await tx.stageStatus.create({
+              data: {
+                instanceId,
+                stageId: nextStage.id,
+                approvedBy: nextRole?.employeeId || null,
+                status: ApprovalStageStatus.PENDING,
+              },
+            });
+            //TODO: create a notification for the next stage
+          }
+        } else {
+          status = ApprovalStatus.APPROVED;
+          //TODO: create a notification for the final approval
+        }
+      }
+    }
+    await tx.approvalInstance.update({
+      where: { id: instanceId },
+      data: { activeStageIds, status, updatedAt: new Date() },
+    });
+    return { instanceId, stageId, status: stageStatus.status };
+  });
+};
+
 export const performApprovalAction = async ({
   instanceId,
   action,

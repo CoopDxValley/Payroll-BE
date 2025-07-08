@@ -1,5 +1,5 @@
-import { RequestType } from "@prisma/client";
-import { z } from "zod";
+import { ApprovalStageStatus, RequestType } from "@prisma/client";
+import { string, z } from "zod";
 
 // Common types
 const UUID = z.string().uuid("Invalid user ID");
@@ -38,12 +38,11 @@ export const StageRoleSchema = z.object({
   roleId: z.string().uuid(),
 });
 
-// Stage schema with roles
 const StageSchema = z.object({
   isParallel: z.boolean(),
   order: z.number().int(),
   approvalRules: ApprovalRuleSchema,
-  employeeIds: z.array(z.string().uuid()),
+  employeeIds: z.array(UUID),
 });
 
 //
@@ -55,13 +54,13 @@ export const createApprovalWorkflowSchema = z.object({
   requestType: requestTypeEnum,
   isFullyParallel: z.boolean(),
   stages: z.array(StageSchema),
-  employeeIds: z.array(UUID),
+  // employeeIds: z.array(UUID),
 });
 
 // Approval request creation schema (unchanged)
 export const createRequestSchema = z.object({
   requestType: requestTypeEnum,
-  moduleId: z.string(UUID),
+  moduleId: UUID,
 });
 
 // Delegation rule schema
@@ -69,6 +68,14 @@ export const DelegationRuleSchema = z.object({
   requestType: requestTypeEnum,
   fromEmployeeId: UUID,
   toEmployeeId: UUID,
+});
+
+// approval schema
+export const approvalSchema = z.object({
+  instanceId: UUID,
+  action: z.enum([ApprovalStageStatus.APPROVED, ApprovalStageStatus.REJECTED]),
+  comment: z.string().optional(),
+  stageId: UUID,
 });
 
 // Comment action
