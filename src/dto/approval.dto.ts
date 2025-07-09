@@ -33,11 +33,6 @@ export const ApprovalRuleSchema = z.discriminatedUnion("type", [
 
 // --- New for like Workflow ---
 
-// Role-based stage assignment
-export const StageRoleSchema = z.object({
-  roleId: z.string().uuid(),
-});
-
 const StageSchema = z.object({
   isParallel: z.boolean(),
   order: z.number().int(),
@@ -54,7 +49,6 @@ export const createApprovalWorkflowSchema = z.object({
   requestType: requestTypeEnum,
   isFullyParallel: z.boolean(),
   stages: z.array(StageSchema),
-  // employeeIds: z.array(UUID),
 });
 
 // Approval request creation schema (unchanged)
