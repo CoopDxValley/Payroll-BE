@@ -1,8 +1,8 @@
 import { ApprovalStageStatus, RequestType } from "@prisma/client";
-import { string, z } from "zod";
+import { z } from "zod";
 
 // Common types
-const UUID = z.string().uuid("Invalid user ID");
+export const UUID = z.string().uuid("Invalid user ID");
 
 // RequestType
 
@@ -74,25 +74,31 @@ export const approvalSchema = z.object({
 
 // Comment action
 export const ApprovalCommentSchema = z.object({
-  instanceId: z.string().uuid(),
+  instanceId: UUID,
   comment: z.string().min(1),
 });
 
 // Delegation action
 export const DelegationSchema = z.object({
-  stageStatusId: z.string().uuid(),
-  toEmployeeId: z.string().uuid(),
+  stageStatusId: UUID,
+  toEmployeeId: UUID,
   reason: z.string().optional(),
 });
 
 // Escalation action
 export const EscalationSchema = z.object({
-  stageStatusId: z.string().uuid(),
-  escalatedToId: z.string().uuid(),
+  stageStatusId: UUID,
+  escalatedToId: UUID,
   reason: z.string().optional(),
 });
 
 // Audit log query
 export const AuditLogQuerySchema = z.object({
-  instanceId: z.string().uuid(),
+  instanceId: UUID,
 });
+
+// Resubmit/Appeal schema
+export const resubmitApprovalSchema = z.object({
+  reason: z.string().optional(),
+});
+

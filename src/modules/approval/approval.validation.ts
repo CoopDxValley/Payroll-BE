@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   createApprovalWorkflowSchema,
   createRequestSchema,
@@ -7,6 +9,7 @@ import {
   AuditLogQuerySchema,
   DelegationRuleSchema,
   approvalSchema,
+  resubmitApprovalSchema,
 } from "../../dto/approval.dto";
 
 export const createApprovalWorkflowValidation = {
@@ -39,4 +42,9 @@ export const escalationValidation = {
 
 export const auditLogQueryValidation = {
   query: AuditLogQuerySchema,
+};
+
+export const resubmitApprovalValidation = {
+  body: resubmitApprovalSchema,
+  params: AuditLogQuerySchema
 };

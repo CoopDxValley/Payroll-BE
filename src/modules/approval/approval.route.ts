@@ -9,6 +9,7 @@ import {
   auditLogQueryValidation,
   createDelegationRuleValidation,
   approvalValidation,
+  resubmitApprovalValidation,
 } from "./approval.validation";
 import {
   createRequest,
@@ -17,6 +18,7 @@ import {
   getAuditLog,
   getInstanceDetails,
   createDelegationRule,
+  resubmit,
 } from "./approval.controller";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/checkPermissions";
@@ -53,6 +55,14 @@ router.post(
   // checkPermission("approve_request"),
   validate(approvalValidation),
   action
+);
+
+router.post(
+  "/resubmit/:instanceId",
+  // auth(),
+  // checkPermission("resubmit_request"),
+  validate(resubmitApprovalValidation),
+  resubmit
 );
 
 router.get(

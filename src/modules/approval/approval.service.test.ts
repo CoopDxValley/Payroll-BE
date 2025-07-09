@@ -1,7 +1,9 @@
 // import { createWorkflow } from "./approval.service";
 // import { CreateApprovalWorkflowDto } from "./approval.type";
-// import prisma from "../../client";
+import prisma from "../../client";
 // import ApiError from "../../utils/api-error";
+import { resubmitApprovalInstance } from "./approval.service";
+import { ApprovalStatus } from "@prisma/client";
 
 // // Mock Prisma transaction
 // jest.mock("../../client", () => ({
@@ -82,3 +84,64 @@
 //     await expect(createWorkflow(baseData)).rejects.toThrow("DB failure");
 //   });
 // });
+
+describe("resubmitApprovalInstance", () => {
+  const instanceId = "instance-1";
+  const requestorId = "user-1";
+  const reason = "Appealing the decision";
+  const originalInstance = {
+    id: instanceId,
+    requestId: "req-1",
+    workflowId: "wf-1",
+    status: ApprovalStatus.REJECTED,
+    version: 1,
+    workflow: {
+      stages: [
+        {
+          id: "stage-1",
+          stageEmployees: [{ employeeId: "approver-1" }],
+        },
+      ],
+    },
+    request: { requestedBy: requestorId },
+  };
+  const newInstance = { id: "instance-2" };
+  const tx = {
+    approvalInstance: { create: jest.fn().mockResolvedValue(newInstance) },
+    stageStatus: { createMany: jest.fn() },
+    approvalAuditLog: { create: jest.fn() },
+    approvalNotification: { createMany: jest.fn() },
+  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (prisma.approvalInstance.findUnique as jest.Mock).mockResolvedValue(originalInstance);
+    (prisma.$transaction as jest.Mock).mockImplementation(async (cb) => cb(tx));
+  });
+  it("should resubmit a rejected instance and create a new instance", async () => {
+    const result = await resubmitApprovalInstance({ instanceId, requestorId, reason });
+    expect(prisma.approvalInstance.findUnique).toHaveBeenCalledWith({
+      where: { id: instanceId },
+      include: expect.any(Object),
+    });
+    expect(tx.approvalInstance.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          parentInstanceId: instanceId,
+          resubmissionReason: reason,
+        }),
+      })
+    );
+    expect(tx.stageStatus.createMany).toHaveBeenCalled();
+    expect(tx.approvalAuditLog.create).toHaveBeenCalled();
+    expect(tx.approvalNotification.createMany).toHaveBeenCalled();
+    expect(result).toBe(newInstance);
+  });
+  it("should throw if not rejected", async () => {
+    (prisma.approvalInstance.findUnique as jest.Mock).mockResolvedValue({ ...originalInstance, status: ApprovalStatus.APPROVED });
+    await expect(resubmitApprovalInstance({ instanceId, requestorId, reason })).rejects.toThrow();
+  });
+  it("should throw if not requestor", async () => {
+    (prisma.approvalInstance.findUnique as jest.Mock).mockResolvedValue({ ...originalInstance, request: { requestedBy: "other-user" } });
+    await expect(resubmitApprovalInstance({ instanceId, requestorId, reason })).rejects.toThrow();
+  });
+});

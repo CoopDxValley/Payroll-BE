@@ -422,28 +422,6 @@ model StageStatus {
   @@unique([instanceId, stageId, approvedBy])
 }
 
-// --- Approval Workflow Extensions ---
-
-model WorkflowState {
-  id          String               @id @default(uuid())
-  name        String
-  workflowId  String
-  order       Int
-  isTerminal  Boolean              @default(false)
-  workflow    ApprovalWorkflow     @relation(fields: [workflowId], references: [id])
-  transitions WorkflowTransition[]
-}
-
-model WorkflowTransition {
-  id            String        @id @default(uuid())
-  fromStateId   String
-  toStateId     String
-  action        String // e.g., "approve", "reject", "delegate"
-  allowedRoles  String[] // Role IDs allowed to perform this action
-  workflowState WorkflowState @relation(fields: [fromStateId], references: [id])
-}
-
-
 model ApprovalComment {
   id         String           @id @default(uuid())
   instanceId String
@@ -498,14 +476,4 @@ model DelegationRule {
 
   fromEmployee     Employee        @relation("FromEmployeeDelegationRule", fields: [fromEmployeeId], references: [id])
   toEmployee       Employee        @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
-}
-
-model Escalation {
-  id            String      @id @default(uuid())
-  stageStatusId String
-  escalatedToId String
-  reason        String?
-  createdAt     DateTime    @default(now())
-  stageStatus   StageStatus @relation(fields: [stageStatusId], references: [id])
-  escalatedTo   Employee    @relation(fields: [escalatedToId], references: [id])
 }

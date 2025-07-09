@@ -531,6 +531,7 @@ export const handleApproval = async (
       id: true,
       activeStageIds: true,
       status: true,
+      requestId: true, // <-- add this line
       workflow: {
         select: {
           isFullyParallel: true,
@@ -596,6 +597,69 @@ export const handleApproval = async (
       "No pending stage status for user"
     );
   }
+
+  // --- REJECTION LOGIC ---
+  if (action === ApprovalStageStatus.REJECTED) {
+    // 1. Mark the acting user's stageStatus as REJECTED
+    updates.push(
+      prisma.stageStatus.update({
+        where: { id: userStageStatus.id },
+        data: { status: ApprovalStageStatus.REJECTED, approvedAt: now },
+      })
+    );
+    // 2. Mark the instance as REJECTED and clear activeStageIds
+    updates.push(
+      prisma.approvalInstance.update({
+        where: { id: instanceId },
+        data: { status: ApprovalStatus.REJECTED, activeStageIds: [], updatedAt: now },
+      })
+    );
+    // 3. Add audit log
+    updates.push(
+      prisma.approvalAuditLog.create({
+        data: {
+          instanceId,
+          action: 'rejected',
+          performedBy: employeeId,
+          details: comment || 'Request was rejected',
+        },
+      })
+    );
+    // 4. Add notification to requestor (if available)
+    // Fetch requestor
+    const request = await prisma.request.findUnique({
+      where: { id: instance.requestId },
+      select: { requestedBy: true },
+    });
+    if (request) {
+      updates.push(
+        prisma.approvalNotification.create({
+          data: {
+            instanceId,
+            recipientId: request.requestedBy,
+            message: `Your approval request was rejected.`,
+          },
+        })
+      );
+    }
+    // 5. Add comment if provided
+    if (comment) {
+      updates.push(
+        prisma.approvalComment.create({
+          data: {
+            instanceId,
+            authorId: employeeId,
+            comment,
+          },
+        })
+      );
+    }
+    // 6. Run all DB writes in a single transaction
+    await prisma.$transaction(updates);
+    return { instanceId, stageId, status: ApprovalStatus.REJECTED };
+  }
+
+  // Update the acting user's stageStatus
   updates.push(
     prisma.stageStatus.update({
       where: { id: userStageStatus.id },
@@ -715,232 +779,76 @@ export const handleApproval = async (
   return { instanceId, stageId, status: action };
 };
 
-// export const performApprovalAction = async ({
-//   instanceId,
-//   action,
-//   userId,
-//   comment,
-//   delegateToId,
-//   escalateToId,
-// }: {
-//   instanceId: string;
-//   action: string;
-//   userId: string;
-//   comment?: string;
-//   delegateToId?: string;
-//   escalateToId?: string;
-// }) => {
-//   // Fetch instance, workflow, current state, user roles
-//   const instance = await prisma.approvalInstance.findUnique({
-//     where: { id: instanceId },
-//     include: {
-//       workflow: {
-//         include: {
-//           WorkflowState: { include: { transitions: true } },
-//           stages: { include: { StageRole: true } },
-//         },
-//       },
-//       stageStatuses: true,
-//     },
-//   });
-//   if (!instance) throw new ApiError(404, "Approval instance not found");
+/**
+ * Resubmit (appeal) a rejected approval instance
+ * @param {Object} params - { instanceId, requestorId, reason }
+ */
+export const resubmitApprovalInstance = async ({ instanceId, requestorId, reason }: { instanceId: string, requestorId: string, reason?: string }) => {
+  // 1. Fetch the original instance and request
+  const originalInstance = await prisma.approvalInstance.findUnique({
+    where: { id: instanceId },
+    include: {
+      workflow: {
+        include: { stages: { include: { stageEmployees: true }, orderBy: { order: 'asc' } } },
+      },
+      request: true,
+    },
+  });
+  if (!originalInstance) throw new ApiError(httpStatus.NOT_FOUND, 'Original approval instance not found');
+  if (originalInstance.status !== ApprovalStatus.REJECTED) throw new ApiError(httpStatus.BAD_REQUEST, 'Only rejected requests can be resubmitted');
+  if (originalInstance.request.requestedBy !== requestorId) throw new ApiError(httpStatus.FORBIDDEN, 'Only the original requestor can resubmit');
 
-//   // Find current state (lowest order among active stages)
-//   const workflowStates = instance.workflow.WorkflowState;
-//   const currentState = workflowStates.reduce(
-//     (min, s) => (s.order < min.order ? s : min),
-//     workflowStates[0]
-//   );
-//   if (!currentState) throw new ApiError(400, "No current state found");
+  // 2. Prepare new instance data
+  const firstStage = originalInstance.workflow.stages[0];
+  if (!firstStage) throw new ApiError(httpStatus.BAD_REQUEST, 'Workflow has no stages');
+  const stageStatuses = firstStage.stageEmployees.map(emp => ({
+    stageId: firstStage.id,
+    approvedBy: emp.employeeId,
+    status: ApprovalStageStatus.PENDING,
+  }));
 
-//   // Get user roles
-//   const user = await prisma.employee.findUnique({
-//     where: { id: userId },
-//     include: { employeeRoles: true },
-//   });
-//   if (!user) throw new ApiError(404, "User not found");
-//   const userRoleIds = user.employeeRoles.map((er) => er.roleId);
-
-//   console.log(currentState);
-
-//   // Find allowed transitions for current state
-//   const allowedTransitions = currentState.transitions.filter(
-//     (t) =>
-//       t.allowedRoles.some((roleId) => userRoleIds.includes(roleId)) &&
-//       t.action === action
-//   );
-//   if (
-//     !allowedTransitions.length &&
-//     !["delegate", "escalate", "comment"].includes(action)
-//   ) {
-//     throw new ApiError(403, "Action not allowed for your role in this state");
-//   }
-
-//   return await prisma.$transaction(async (tx) => {
-//     // Handle comment
-//     if (comment) {
-//       await tx.approvalComment.create({
-//         data: {
-//           instanceId,
-//           authorId: userId,
-//           comment,
-//         },
-//       });
-//     }
-
-//     // Handle delegation
-//     if (action === "delegate" && delegateToId) {
-//       // Find the relevant stageStatus for this user
-//       const stageStatus = instance.stageStatuses.find(
-//         (ss) => ss.approvedBy === userId && ss.status === "PENDING"
-//       );
-//       if (!stageStatus) throw new ApiError(400, "No pending stage to delegate");
-//       // Mark current user's StageStatus as DELEGATED (workaround: use REJECTED, or add to enum)
-//       await tx.stageStatus.update({
-//         where: { id: stageStatus.id },
-//         // 'DELEGATED' is not in ApprovalStageStatus, so use 'REJECTED' as a workaround
-//         // To support true delegation status, add 'DELEGATED' to the enum in schema.prisma
-//         data: { status: "DELEGATED" },
-//       });
-//       // Check if delegatee already has a StageStatus for this stage/instance
-//       const existingDelegateeStatus = instance.stageStatuses.find(
-//         (ss) =>
-//           ss.approvedBy === delegateToId && ss.stageId === stageStatus.stageId
-//       );
-//       if (!existingDelegateeStatus) {
-//         await tx.stageStatus.create({
-//           data: {
-//             instanceId,
-//             stageId: stageStatus.stageId,
-//             approvedBy: delegateToId,
-//             status: "PENDING",
-//           },
-//         });
-//       }
-//       await tx.delegation.create({
-//         data: {
-//           stageStatusId: stageStatus.id,
-//           fromEmployeeId: userId,
-//           toEmployeeId: delegateToId,
-//         },
-//       });
-//       await tx.approvalNotification.create({
-//         data: {
-//           instanceId,
-//           recipientId: delegateToId,
-//           message: `Approval delegated to you by ${user.name}`,
-//         },
-//       });
-//       await tx.approvalAuditLog.create({
-//         data: {
-//           instanceId,
-//           action: "delegate",
-//           performedBy: userId,
-//           details: `Delegated to ${delegateToId}`,
-//         },
-//       });
-//       // Return updated instance details
-//       const updatedInstance = await tx.approvalInstance.findUnique({
-//         where: { id: instanceId },
-//         include: {
-//           workflow: {
-//             include: {
-//               WorkflowState: { include: { transitions: true } },
-//               stages: { include: { StageRole: true } },
-//             },
-//           },
-//           stageStatuses: true,
-//           ApprovalComment: true,
-//           ApprovalNotification: true,
-//           ApprovalAuditLog: true,
-//         },
-//       });
-//       return { delegated: true, instance: updatedInstance };
-//     }
-
-//     // Handle escalation
-//     if (action === "escalate" && escalateToId) {
-//       // Find the relevant stageStatus for this user
-//       const stageStatus = instance.stageStatuses.find(
-//         (ss) => ss.approvedBy === userId && ss.status === "PENDING"
-//       );
-//       if (!stageStatus) throw new ApiError(400, "No pending stage to escalate");
-//       await tx.escalation.create({
-//         data: {
-//           stageStatusId: stageStatus.id,
-//           escalatedToId: escalateToId,
-//         },
-//       });
-//       await tx.approvalNotification.create({
-//         data: {
-//           instanceId,
-//           recipientId: escalateToId,
-//           message: `Approval escalated to you by ${user.name}`,
-//         },
-//       });
-//       await tx.approvalAuditLog.create({
-//         data: {
-//           instanceId,
-//           action: "escalate",
-//           performedBy: userId,
-//           details: `Escalated to ${escalateToId}`,
-//         },
-//       });
-//       return { escalated: true };
-//     }
-
-//     // Handle approval/rejection (state transition)
-//     if (allowedTransitions.length) {
-//       const transition = allowedTransitions[0];
-//       // Update instance state (simulate state machine)
-//       // Mark current user's stageStatus as approved/rejected
-//       const stageStatus = instance.stageStatuses.find(
-//         (ss) => ss.approvedBy === userId && ss.status === "PENDING"
-//       );
-//       if (!stageStatus) throw new ApiError(400, "No pending stage to act on");
-//       await tx.stageStatus.update({
-//         where: { id: stageStatus.id },
-//         data: {
-//           status: action.toUpperCase() as ApprovalStageStatus,
-//           approvedAt: new Date(),
-//         },
-//       });
-//       // Move to next state if needed
-//       await tx.approvalInstance.update({
-//         where: { id: instanceId },
-//         data: {
-//           // For simplicity, just update status; in a real system, update activeStageIds, etc.
-//           status: transition.action === "approve" ? "APPROVED" : "REJECTED",
-//         },
-//       });
-//       await tx.approvalAuditLog.create({
-//         data: {
-//           instanceId,
-//           action,
-//           performedBy: userId,
-//           details: `Transitioned to state ${transition.toStateId}`,
-//         },
-//       });
-//       // Notify next approvers if any (not implemented in detail here)
-//       return { transitioned: true };
-//     }
-
-//     // If only comment, just return
-//     if (action === "comment") {
-//       await tx.approvalAuditLog.create({
-//         data: {
-//           instanceId,
-//           action: "comment",
-//           performedBy: userId,
-//           details: comment,
-//         },
-//       });
-//       return { commented: true };
-//     }
-
-//     throw new ApiError(400, "Unhandled action");
-//   });
-// };
+  // 3. Create new instance, stage statuses, audit log, and notifications
+  return await prisma.$transaction(async (tx) => {
+    const newInstance = await tx.approvalInstance.create({
+      data: {
+        requestId: originalInstance.requestId,
+        workflowId: originalInstance.workflowId,
+        activeStageIds: [firstStage.id],
+        status: ApprovalStatus.PENDING,
+        version: (originalInstance.version || 1) + 1,
+        parentInstanceId: originalInstance.id,
+        resubmissionReason: reason,
+      },
+    });
+    await tx.stageStatus.createMany({
+      data: stageStatuses.map(ss => ({ ...ss, instanceId: newInstance.id })),
+    });
+    // Audit log
+    await tx.approvalAuditLog.create({
+      data: {
+        instanceId: newInstance.id,
+        action: 'resubmitted',
+        performedBy: requestorId,
+        details: reason || 'Request resubmitted',
+      },
+    });
+    // Notify first-stage approvers
+    const notifications = [
+      ...firstStage.stageEmployees.map(emp => ({
+        instanceId: newInstance.id,
+        recipientId: emp.employeeId,
+        message: 'A resubmitted approval request requires your attention.',
+      })),
+      {
+        instanceId: newInstance.id,
+        recipientId: requestorId,
+        message: 'Your request has been resubmitted.',
+      },
+    ];
+    await tx.approvalNotification.createMany({ data: notifications });
+    return newInstance;
+  });
+};
 
 export const getAuditLog = async (instanceId: string) => {
   return prisma.approvalAuditLog.findMany({

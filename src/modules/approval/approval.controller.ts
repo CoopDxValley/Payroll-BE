@@ -7,6 +7,7 @@ import {
 } from "./approval.type";
 import { AuthEmployee } from "../auth/auth.type";
 import catchAsync from "../../utils/catch-async";
+import { resubmitApprovalInstance } from "./approval.service";
 // import { performApprovalAction } from "./approval.service";
 
 export const createWorkflow = catchAsync(async (req, res) => {
@@ -85,4 +86,16 @@ export const getInstanceDetails = catchAsync(async (req, res) => {
   res
     .status(httpStatus.OK)
     .send({ message: "Instance details", data: details });
+});
+
+export const resubmit = catchAsync(async (req, res) => {
+  const { instanceId } = req.params;
+  const user = req.user as AuthEmployee;
+  const { reason } = req.body;
+  const newInstance = await resubmitApprovalInstance({
+    instanceId,
+    requestorId: user.id,
+    reason,
+  });
+  res.status(httpStatus.CREATED).send({ message: "Request resubmitted", data: newInstance });
 });
