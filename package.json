@@ -2,12 +2,14 @@
   "name": "hello-prisma",
   "license": "MIT",
   "scripts": {
+    "start": "yarn build && pm2 start ecosystem.config.json",
     "dev": "cross-env NODE_ENV=development nodemon src/index.ts",
     "postinstall": "prisma generate",
     "seed": "ts-node prisma/seed.ts",
     "worker": "cross-env NODE_ENV=development nodemon src/jobs/index.ts",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "build": "rimraf build && tsc -p tsconfig.json",
     "test": "jest",
     "test:watch": "jest --watch"
   },
