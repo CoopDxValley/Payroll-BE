@@ -265,7 +265,6 @@ model Employee {
   ApprovalComment      ApprovalComment[]
   ApprovalNotification ApprovalNotification[]
   ApprovalAuditLog     ApprovalAuditLog[]
-  Escalation           Escalation[]
 }
 
 model Attendance {
@@ -333,7 +332,6 @@ model ApprovalWorkflow {
   department    Department?        @relation(fields: [departmentId], references: [id])
   stages        ApprovalStage[]
   instances     ApprovalInstance[]
-  WorkflowState WorkflowState[]
 
   @@unique([requestType, companyId, departmentId])
 }
@@ -417,7 +415,6 @@ model StageStatus {
   stage      ApprovalStage    @relation(fields: [stageId], references: [id])
   approver   Employee?        @relation(fields: [approvedBy], references: [id])
   Delegation Delegation[]
-  Escalation Escalation[]
 
   @@unique([instanceId, stageId, approvedBy])
 }

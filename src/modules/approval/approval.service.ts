@@ -611,7 +611,11 @@ export const handleApproval = async (
     updates.push(
       prisma.approvalInstance.update({
         where: { id: instanceId },
-        data: { status: ApprovalStatus.REJECTED, activeStageIds: [], updatedAt: now },
+        data: {
+          status: ApprovalStatus.REJECTED,
+          activeStageIds: [],
+          updatedAt: now,
+        },
       })
     );
     // 3. Add audit log
@@ -619,9 +623,9 @@ export const handleApproval = async (
       prisma.approvalAuditLog.create({
         data: {
           instanceId,
-          action: 'rejected',
+          action: "rejected",
           performedBy: employeeId,
-          details: comment || 'Request was rejected',
+          details: comment || "Request was rejected",
         },
       })
     );
@@ -783,25 +787,51 @@ export const handleApproval = async (
  * Resubmit (appeal) a rejected approval instance
  * @param {Object} params - { instanceId, requestorId, reason }
  */
-export const resubmitApprovalInstance = async ({ instanceId, requestorId, reason }: { instanceId: string, requestorId: string, reason?: string }) => {
+export const resubmitApprovalInstance = async ({
+  instanceId,
+  requestorId,
+  reason,
+}: {
+  instanceId: string;
+  requestorId: string;
+  reason?: string;
+}) => {
   // 1. Fetch the original instance and request
   const originalInstance = await prisma.approvalInstance.findUnique({
     where: { id: instanceId },
     include: {
       workflow: {
-        include: { stages: { include: { stageEmployees: true }, orderBy: { order: 'asc' } } },
+        include: {
+          stages: {
+            include: { stageEmployees: true },
+            orderBy: { order: "asc" },
+          },
+        },
       },
       request: true,
     },
   });
-  if (!originalInstance) throw new ApiError(httpStatus.NOT_FOUND, 'Original approval instance not found');
-  if (originalInstance.status !== ApprovalStatus.REJECTED) throw new ApiError(httpStatus.BAD_REQUEST, 'Only rejected requests can be resubmitted');
-  if (originalInstance.request.requestedBy !== requestorId) throw new ApiError(httpStatus.FORBIDDEN, 'Only the original requestor can resubmit');
+  if (!originalInstance)
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      "Original approval instance not found"
+    );
+  if (originalInstance.status !== ApprovalStatus.REJECTED)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Only rejected requests can be resubmitted"
+    );
+  if (originalInstance.request.requestedBy !== requestorId)
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      "Only the original requestor can resubmit"
+    );
 
   // 2. Prepare new instance data
   const firstStage = originalInstance.workflow.stages[0];
-  if (!firstStage) throw new ApiError(httpStatus.BAD_REQUEST, 'Workflow has no stages');
-  const stageStatuses = firstStage.stageEmployees.map(emp => ({
+  if (!firstStage)
+    throw new ApiError(httpStatus.BAD_REQUEST, "Workflow has no stages");
+  const stageStatuses = firstStage.stageEmployees.map((emp) => ({
     stageId: firstStage.id,
     approvedBy: emp.employeeId,
     status: ApprovalStageStatus.PENDING,
@@ -821,28 +851,28 @@ export const resubmitApprovalInstance = async ({ instanceId, requestorId, reason
       },
     });
     await tx.stageStatus.createMany({
-      data: stageStatuses.map(ss => ({ ...ss, instanceId: newInstance.id })),
+      data: stageStatuses.map((ss) => ({ ...ss, instanceId: newInstance.id })),
     });
     // Audit log
     await tx.approvalAuditLog.create({
       data: {
         instanceId: newInstance.id,
-        action: 'resubmitted',
+        action: "resubmitted",
         performedBy: requestorId,
-        details: reason || 'Request resubmitted',
+        details: reason || "Request resubmitted",
       },
     });
     // Notify first-stage approvers
     const notifications = [
-      ...firstStage.stageEmployees.map(emp => ({
+      ...firstStage.stageEmployees.map((emp) => ({
         instanceId: newInstance.id,
         recipientId: emp.employeeId,
-        message: 'A resubmitted approval request requires your attention.',
+        message: "A resubmitted approval request requires your attention.",
       })),
       {
         instanceId: newInstance.id,
         recipientId: requestorId,
-        message: 'Your request has been resubmitted.',
+        message: "Your request has been resubmitted.",
       },
     ];
     await tx.approvalNotification.createMany({ data: notifications });
@@ -863,14 +893,14 @@ export const getInstanceDetails = async (id: string) => {
     include: {
       workflow: {
         include: {
-          WorkflowState: { include: { transitions: true } },
+          // WorkflowState: { include: { transitions: true } },
           stages: { include: { stageEmployees: true } },
         },
       },
       stageStatuses: {
         include: {
           Delegation: true,
-          Escalation: true,
+          // Escalation: true,
         },
       },
       ApprovalComment: true,

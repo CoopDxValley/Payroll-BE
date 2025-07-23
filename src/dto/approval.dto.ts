@@ -86,11 +86,11 @@ export const DelegationSchema = z.object({
 });
 
 // Escalation action
-export const EscalationSchema = z.object({
-  stageStatusId: UUID,
-  escalatedToId: UUID,
-  reason: z.string().optional(),
-});
+// export const EscalationSchema = z.object({
+//   stageStatusId: UUID,
+//   escalatedToId: UUID,
+//   reason: z.string().optional(),
+// });
 
 // Audit log query
 export const AuditLogQuerySchema = z.object({
@@ -101,4 +101,3 @@ export const AuditLogQuerySchema = z.object({
 export const resubmitApprovalSchema = z.object({
   reason: z.string().optional(),
 });
-
