@@ -14,7 +14,7 @@ import ApiError from "./utils/api-error";
 import { errorConverter, errorHandler } from "./middlewares/error";
 import config from "./config/config";
 import morgan from "./config/morgan";
-import { smsQueue } from "./queues";
+// import { smsQueue } from "./queues";
 
 // const serverAdapter = new ExpressAdapter();
 // serverAdapter.setBasePath("/ui");
