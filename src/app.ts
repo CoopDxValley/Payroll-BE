@@ -14,7 +14,7 @@ import morgan from "./config/morgan";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
-import { paymentQueue, smsQueue } from "./queues";
+// import { paymentQueue, smsQueue } from "./queues";
 
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath("/ui");
