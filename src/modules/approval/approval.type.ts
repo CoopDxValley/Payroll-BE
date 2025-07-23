@@ -5,7 +5,7 @@ import {
   createRequestSchema,
   ApprovalCommentSchema,
   DelegationSchema,
-  EscalationSchema,
+  // EscalationSchema,
   AuditLogQuerySchema,
   DelegationRuleSchema,
   approvalSchema,
@@ -21,7 +21,7 @@ export type ApprovalRules = z.infer<typeof ApprovalRuleSchema>;
 
 export type ApprovalComment = z.infer<typeof ApprovalCommentSchema>;
 export type Delegation = z.infer<typeof DelegationSchema>;
-export type Escalation = z.infer<typeof EscalationSchema>;
+// export type Escalation = z.infer<typeof EscalationSchema>;
 export type AuditLogQuery = z.infer<typeof AuditLogQuerySchema>;
 
 export type CreateDelegationRuleDto = z.infer<typeof DelegationRuleSchema>;

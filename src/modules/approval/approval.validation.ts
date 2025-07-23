@@ -5,7 +5,7 @@ import {
   createRequestSchema,
   ApprovalCommentSchema,
   DelegationSchema,
-  EscalationSchema,
+  // EscalationSchema,
   AuditLogQuerySchema,
   DelegationRuleSchema,
   approvalSchema,
@@ -36,9 +36,9 @@ export const delegationValidation = {
   body: DelegationSchema,
 };
 
-export const escalationValidation = {
-  body: EscalationSchema,
-};
+// export const escalationValidation = {
+//   body: EscalationSchema,
+// };
 
 export const auditLogQueryValidation = {
   query: AuditLogQuerySchema,
@@ -46,5 +46,5 @@ export const auditLogQueryValidation = {
 
 export const resubmitApprovalValidation = {
   body: resubmitApprovalSchema,
-  params: AuditLogQuerySchema
+  params: AuditLogQuerySchema,
 };
