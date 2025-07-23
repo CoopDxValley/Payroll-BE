@@ -5,9 +5,9 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import httpStatus from "http-status";
-import { createBullBoard } from "@bull-board/api";
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { ExpressAdapter } from "@bull-board/express";
+// import { createBullBoard } from "@bull-board/api";
+// import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+// import { ExpressAdapter } from "@bull-board/express";
 import routes from "./routes/v1";
 import { jwtStrategy } from "./config/passport";
 import ApiError from "./utils/api-error";
@@ -16,15 +16,15 @@ import config from "./config/config";
 import morgan from "./config/morgan";
 import { smsQueue } from "./queues";
 
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath("/ui");
+// const serverAdapter = new ExpressAdapter();
+// serverAdapter.setBasePath("/ui");
 
-createBullBoard({
-  queues: [new BullMQAdapter(smsQueue)],
-  serverAdapter,
-});
+// createBullBoard({
+//   queues: [new BullMQAdapter(smsQueue)],
+//   serverAdapter,
+// });
 
-serverAdapter.setBasePath("/admin/queues");
+// serverAdapter.setBasePath("/admin/queues");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -33,7 +33,7 @@ if (config.env !== "test") {
   app.use(morgan.errorHandler);
 }
 
-app.use("/admin/queues", serverAdapter.getRouter());
+// app.use("/admin/queues", serverAdapter.getRouter());
 
 app.use(helmet());
 
