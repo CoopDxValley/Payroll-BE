@@ -34,12 +34,10 @@ router
     additionalDeductionDefinitionController.update
   );
 
-router
-  .route("/delete/:id")
-  .post(
-    auth(),
-    // validate(additionalDeductionDefinitionValidation.getById),
-    additionalDeductionDefinitionController.remove
-  );
+router.route("/delete/:id").post(
+  auth(),
+  // validate(additionalDeductionDefinitionValidation.getById),
+  additionalDeductionDefinitionController.remove
+);
 
 export default router;
