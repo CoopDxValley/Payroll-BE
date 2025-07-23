@@ -87,6 +87,7 @@ web_modules/
 .env.local
 .env.test
 .env.production
+ecosystem.config.json
 
 generated/
 src/uploads/
