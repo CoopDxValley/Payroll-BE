@@ -323,7 +323,7 @@ model Attendance {
 
 
 model EmployeeRole {
-  id        String   @id @default(uuid())
+  id        String   @id @def666ault(uuid())
   employeeId    String
   roleId    String
   createdAt DateTime @default(now())
