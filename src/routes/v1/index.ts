@@ -18,6 +18,8 @@ import additionalDeductionRoute from "../../modules/additionaldeductiondefinitio
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
 import attendance from "../../modules/attendance/attendance.route";
+// import swagger from "../../modules/swagger";
+import { setupSwagger } from "../../swagger/setup";
 
 const router = express.Router();
 
@@ -85,6 +87,10 @@ const defaultRoutes = [
   {
     path: "/approvals",
     route: approvalRoute,
+  },
+  {
+    path: "/swagger",
+    route: setupSwagger,
   },
 ];
 

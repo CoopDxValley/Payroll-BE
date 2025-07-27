@@ -233,25 +233,44 @@ enum DeductionType {
 
 //////
 
+enum PayrollCalculationType {
+  FIXED_SALARY        // Fixed monthly/weekly salary regardless of attendance
+  HOURLY_ATTENDANCE   // Hourly rate based on attendance hours
+  MIXED               // Base salary + attendance bonuses/deductions
+  COMMISSION_BASED    // Commission/piece-rate, attendance optional
+  CONTRACT            // Contract-based, attendance may not matter
+}
+
+enum AttendanceRequirement {
+  REQUIRED            // Must track attendance for payroll
+  OPTIONAL            // Attendance tracked but doesn't affect pay
+  NOT_REQUIRED        // No attendance tracking needed
+}
+
 model Employee {
-  id                  String         @id @default(uuid())
-  name                String
-  username            String         @unique
-  phoneNumber         String
-  password            String
-  isSuperAdmin        Boolean        @default(false)
-  companyId           String
-  departmentId        String?
-  positionId          String?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  isFirstTimeLoggedIn Boolean        @default(true)
-  Token               Token[]
-  company             Company        @relation(fields: [companyId], references: [id])
-  department          Department?    @relation(fields: [departmentId], references: [id])
-  position            Position?      @relation(fields: [positionId], references: [id])
-  employeeRoles       EmployeeRole[]
-  attendanceLogs      Attendance[]
+  id                     String                  @id @default(uuid())
+  name                   String
+  username               String                  @unique
+  phoneNumber            String
+  password               String
+  deviceUserId           String?                 @unique // Device user ID from attendance device
+  //payrollCalculationType PayrollCalculationType @default(FIXED_SALARY)
+  attendanceRequirement  AttendanceRequirement  @default(REQUIRED)
+ // hourlyRate             Float?                 // For hourly employees
+ // baseSalary             Float?                 // For fixed/mixed salary employees
+  isSuperAdmin           Boolean                 @default(false)
+  companyId              String
+  departmentId           String?
+  positionId             String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  isFirstTimeLoggedIn    Boolean                 @default(true)
+  Token                  Token[]
+  company                Company                 @relation(fields: [companyId], references: [id])
+  department             Department?             @relation(fields: [departmentId], references: [id])
+  position               Position?               @relation(fields: [positionId], references: [id])
+  employeeRoles          EmployeeRole[]
+  //attendanceLogs         Attendance[]
 
   stageEmployees StageEmployee[]
   requests       Request[]
@@ -267,22 +286,29 @@ model Employee {
   ApprovalAuditLog     ApprovalAuditLog[]
 }
 
+
+
 model Attendance {
-  id         String    @id @default(uuid())
-  employeeId String
-  date       DateTime // ✅ The day this record represents (e.g. 2025-06-24)
-  checkTime  DateTime?
-  checkType  String?
-  verifyMode Int?
-  workCode   Int?
-  sensorId   String?
-  deviceIp   String?
-  isAbsent   Boolean   @default(false)
-  createdAt  DateTime  @default(now())
+  id           String    @id @default(uuid())
+  deviceUserId String    // ✅ now the only identifier
+  date         DateTime  @db.Date
+  checkTime    DateTime
+  checkType    CheckType // ✅ enum for punch type
+  verifyMode   Int?
+  workCode     Int?
+  sensorId     String?
+  deviceIp     String?
+  isAbsent     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  @@index([deviceUserId, date])
+}
 
-  @@unique([employeeId, date]) // ✅ Prevent duplicate logs per employee per day
+
+
+enum CheckType {
+  PUNCHIN
+  PUNCHOUT
 }
 
 model EmployeeRole {

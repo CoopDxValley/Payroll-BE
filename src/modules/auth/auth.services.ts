@@ -34,6 +34,8 @@ export const loginEmployeeWithUsernameAndPassword = async (
     "isFirstTimeLoggedIn",
     "isSuperAdmin",
     "companyId",
+    "deviceUserId",
+    "attendanceRequirement",
     "positionId",
     "departmentId",
     "createdAt",
