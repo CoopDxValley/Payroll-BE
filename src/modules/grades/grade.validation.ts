@@ -1,36 +1,34 @@
-import Joi from "joi";
+import { z } from "zod";
 
 const createGrade = {
-  body: Joi.object().keys({
-    name: Joi.string().required().trim(),
-    minSalary: Joi.number().positive().required(),
-    maxSalary: Joi.number().positive().required().min(Joi.ref("minSalary")),
+  body: z.object({
+    name: z.string().trim(),
+    minSalary: z.number().positive(),
+    maxSalary: z.number().positive(),
   }),
 };
 
 const updateGrade = {
-  params: Joi.object().keys({
-    id: Joi.string().required(),
+  params: z.object({
+    id: z.string(),
   }),
-  body: Joi.object()
-    .keys({
-      name: Joi.string().trim(),
-      minSalary: Joi.number().positive(),
-      maxSalary: Joi.number().positive().min(Joi.ref("minSalary")),
-      isActive: Joi.boolean(),
-    })
-    .min(1),
+  body: z.object({
+    name: z.string().trim(),
+    minSalary: z.number().positive(),
+    maxSalary: z.number().positive(),
+    isActive: z.boolean(),
+  }),
 };
 
 const getGrade = {
-  params: Joi.object().keys({
-    id: Joi.string().required(),
+  params: z.object({
+    id: z.string().uuid(),
   }),
 };
 
 const deleteGrade = {
-  params: Joi.object().keys({
-    id: Joi.string().required(),
+  params: z.object({
+    id: z.string().uuid(),
   }),
 };
 

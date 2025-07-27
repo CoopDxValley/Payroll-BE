@@ -1,30 +1,28 @@
-import Joi from "joi";
+import { z } from "zod";
 // import { objectId } from "./custom.validation";
 
 const createShift = {
-  body: Joi.object().keys({
-    name: Joi.string().required(),
-    startTime: Joi.date().iso().required(),
-    endTime: Joi.date().iso().required().min(Joi.ref("startTime")),
-    breakTime: Joi.number().integer().min(0).required(),
-    gracePeriod: Joi.number().integer().min(0).required(),
+  body: z.object({
+    name: z.string(),
+    startTime: z.date(),
+    endTime: z.date(),
+    breakTime: z.number(),
+    gracePeriod: z.number(),
   }),
 };
 
 const updateShift = {
-  params: Joi.object().keys({
-    id: Joi.string(),
+  params: z.object({
+    id: z.string(),
   }),
-  body: Joi.object()
-    .keys({
-      name: Joi.string(),
-      startTime: Joi.date().iso(),
-      endTime: Joi.date().iso().min(Joi.ref("startTime")),
-      breakTime: Joi.number().integer().min(0),
-      gracePeriod: Joi.number().integer().min(0),
-      isActive: Joi.boolean(),
-    })
-    .min(1),
+  body: z.object({
+    name: z.string(),
+    startTime: z.date(),
+    endTime: z.date(),
+    breakTime: z.number(),
+    gracePeriod: z.number(),
+    isActive: z.boolean(),
+  }),
 };
 
 export default {

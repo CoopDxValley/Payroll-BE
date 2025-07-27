@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../client";
-import { AuthUser } from "../types/express";
+import { AuthEmployee } from "../modules/auth/auth.type";
 
 const permissionCache = new Map<string, Set<string>>();
 
 export const checkPermission = (required: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user as AuthUser;
+    const user = req.user as AuthEmployee;
     if (!user) {
       res.status(401).json({ message: "Unauthorized" });
       return; // Just return after sending response
@@ -21,10 +21,10 @@ export const checkPermission = (required: string) => {
     }
 
     try {
-      const userWithRoles = await prisma.user.findUnique({
+      const employeeWithRoles = await prisma.employee.findUnique({
         where: { id: userId },
         include: {
-          userRoles: {
+          employeeRoles: {
             include: {
               role: {
                 include: {
@@ -38,13 +38,16 @@ export const checkPermission = (required: string) => {
         },
       });
 
-      if (!userWithRoles) {
+      if (!employeeWithRoles) {
         res.status(403).json({ message: "Access Denied: User not found" });
         return;
       }
 
-      const allPermissions = userWithRoles.userRoles.flatMap((userRole) =>
-        userRole.role.permissions.map((rp) => rp.permission.action_subject)
+      const allPermissions = employeeWithRoles.employeeRoles.flatMap(
+        (employeeRole) =>
+          employeeRole.role.permissions.map(
+            (rp) => rp.permission.action_subject
+          )
       );
 
       const permissionSet = new Set(allPermissions);

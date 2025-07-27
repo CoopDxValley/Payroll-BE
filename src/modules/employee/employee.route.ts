@@ -19,7 +19,7 @@ router
   )
   .get(
     auth(),
-    validate(getEmployeesValidation),
+    // validate(getEmployeesValidation),
     employeeController.getEmployees
   );
 

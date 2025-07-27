@@ -21,10 +21,7 @@ const create = async (data: {
   });
 
   if (existing) {
-    throw new ApiError(
-      httpStatus.CONFLICT,
-      "Name already exists."
-    );
+    throw new ApiError(httpStatus.CONFLICT, "Name already exists.");
   }
 
   return prisma.additionalDeductionDefinition.create({
@@ -37,6 +34,8 @@ const create = async (data: {
 };
 
 const getAll = async (companyId: string) => {
+  console.log("dkljdfdjfhdfhdi");
+  console.log(companyId);
   return prisma.additionalDeductionDefinition.findMany({
     where: { companyId, isActive: true },
     orderBy: { createdAt: "desc" },

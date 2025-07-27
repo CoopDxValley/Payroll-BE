@@ -2,10 +2,10 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import shiftService from "./shift.service";
-import { AuthUser } from "../../types/express";
+import { AuthEmployee } from "../auth/auth.type";
 
 const createShift = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const shift = await shiftService.createShift(req.body, user.companyId);
   res
     .status(httpStatus.CREATED)
@@ -13,20 +13,20 @@ const createShift = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getShifts = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const shifts = await shiftService.getShifts(user.companyId);
   res.status(httpStatus.OK).send({ data: shifts });
 });
 
 const getShiftById = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const { id } = req.params;
   const shift = await shiftService.getShiftById(id, user.companyId);
   res.status(httpStatus.OK).send({ data: shift });
 });
 
 const updateShift = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const { id } = req.params;
   const shift = await shiftService.updateShift(id, user.companyId, req.body);
   res
@@ -35,7 +35,7 @@ const updateShift = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteShift = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const { id } = req.params;
   await shiftService.deleteShift(id, user.companyId);
   res.status(httpStatus.OK).send({ message: "Shift deleted successfully" });

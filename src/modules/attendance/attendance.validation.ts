@@ -1,16 +1,13 @@
-import Joi from 'joi';
+import { z } from "zod";
 
 const createAttendance = {
-  body: Joi.object().keys({
-    checkTime: Joi.date().required().messages({
-      "any.required": "Check time is required",
-      "date.base": "Check time must be a valid date",
-    }),
-    checkType: Joi.string().valid("I", "O").optional(),
-    verifyMode: Joi.number().optional(),
-    workCode: Joi.number().optional(),
-    sensorId: Joi.string().optional(),
-    deviceIp: Joi.string().ip({ version: "ipv4" }).optional(),
+  body: z.object({
+    checkTime: z.date(),
+    checkType: z.enum(["I", "O"]).optional(),
+    verifyMode: z.number().optional(),
+    workCode: z.number().optional(),
+    sensorId: z.string().optional(),
+    deviceIp: z.string().ip().optional(),
   }),
 };
 

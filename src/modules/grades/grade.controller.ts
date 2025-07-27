@@ -3,24 +3,38 @@ import gradeService from "./grade.service";
 import { createGradeSchema, updateGradeSchema } from "../../dto/grade.dto";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
-import { AuthUser } from "../../types/express";
+import { AuthEmployee } from "../auth/auth.type";
 
+// const createGrade = catchAsync(async (req: Request, res: Response) => {
+//   const user = req.user as AuthEmployee;
+
+//   console.log("objedddddct");
+//   console.log(user.companyId);
+//   // const validatedData = createGradeSchema.parse({req.body, user.companyId});
+//   const grade = await gradeService.createGrade({
+//     ...req.body,
+//     companyId: user.companyId,
+//   });
+//   res
+//     .status(httpStatus.CREATED)
+//     .send({ message: "Grade created successfully", data: grade });
+// });
 const createGrade = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
 
-  console.log("object");
-  // const validatedData = createGradeSchema.parse({req.body, user.companyId});
-  const grade = await gradeService.createGrade({
+  const validatedData = createGradeSchema.parse({
     ...req.body,
-    companyId: user.companyId,
+    companyId: user.companyId, // append companyId for validation
   });
+
+  const grade = await gradeService.createGrade(validatedData);
+
   res
     .status(httpStatus.CREATED)
     .send({ message: "Grade created successfully", data: grade });
 });
-
 const getGrades = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const grades = await gradeService.getAllGrades(user.companyId);
   res.status(httpStatus.OK).send({ data: grades });
 });
@@ -36,7 +50,7 @@ const getGrade = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateGrade = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
+  const user = req.user as AuthEmployee;
   const { id } = req.params;
 
   const grade = await gradeService.updateGrade(id, {

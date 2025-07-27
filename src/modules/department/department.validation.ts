@@ -1,17 +1,11 @@
-import Joi from "joi";
+import { z } from "zod";
 
 const createDepartment = {
-  body: Joi.object().keys({
-    deptName: Joi.string().trim().required().messages({
-      "any.required": "Department name is required",
-      "string.empty": "Department name cannot be empty",
-    }),
-    location: Joi.string().trim().optional(),
-    shorthandRepresentation: Joi.string().trim().optional(),
-    companyId: Joi.string().guid({ version: "uuidv4" }).required().messages({
-      "any.required": "Company ID is required",
-      "string.guid": "Company ID must be a valid UUID",
-    }),
+  body: z.object({
+    deptName: z.string().trim().min(3, "dept name is required"),
+    location: z.string().trim().optional(),
+    shorthandRepresentation: z.string().trim().optional(),
+    companyId: z.string().uuid(),
   }),
 };
 

@@ -1,27 +1,22 @@
-import Joi from "joi";
+import { z } from "zod";
 
 const createLeaveType = {
-  body: Joi.object().keys({
-    name: Joi.string().required().messages({
-      "any.required": "Leave type name is required",
-    }),
-    description: Joi.string().optional().allow(null, ""),
-    maxDaysYearly: Joi.number().integer().min(0).required().messages({
-      "any.required": "Max days yearly is required",
-      "number.base": "Max days yearly must be a number",
-    }),
-    isPaid: Joi.boolean().optional(),
-    carryForward: Joi.boolean().optional(),
+  body: z.object({
+    name: z.string().min(1, "leave type name is required"),
+    description: z.string().optional(),
+    maxDaysYearly: z.number().min(0),
+    isPaid: z.boolean().optional(),
+    carryForward: z.boolean().optional(),
   }),
 };
 
 const updateLeaveType = {
-  body: Joi.object().keys({
-    name: Joi.string().optional(),
-    description: Joi.string().optional().allow(null, ""),
-    maxDaysYearly: Joi.number().integer().min(0).optional(),
-    isPaid: Joi.boolean().optional(),
-    carryForward: Joi.boolean().optional(),
+  body: z.object({
+    name: z.string().optional(),
+    description: z.string().optional(),
+    maxDaysYearly: z.number().min(0).optional(),
+    isPaid: z.boolean().optional(),
+    carryForward: z.boolean().optional(),
   }),
 };
 

@@ -4,27 +4,27 @@ import passport from "passport";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
+import httpStatus from "http-status";
+// import { createBullBoard } from "@bull-board/api";
+// import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+// import { ExpressAdapter } from "@bull-board/express";
 import routes from "./routes/v1";
 import { jwtStrategy } from "./config/passport";
 import ApiError from "./utils/api-error";
-import httpStatus from "http-status";
 import { errorConverter, errorHandler } from "./middlewares/error";
 import config from "./config/config";
 import morgan from "./config/morgan";
-import { createBullBoard } from "@bull-board/api";
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { ExpressAdapter } from "@bull-board/express";
-// import { paymentQueue, smsQueue } from "./queues";
+// import { smsQueue } from "./queues";
 
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath("/ui");
+// const serverAdapter = new ExpressAdapter();
+// serverAdapter.setBasePath("/ui");
 
 // createBullBoard({
-//   queues: [new BullMQAdapter(paymentQueue), new BullMQAdapter(smsQueue)],
+//   queues: [new BullMQAdapter(smsQueue)],
 //   serverAdapter,
 // });
 
-serverAdapter.setBasePath("/admin/queues");
+// serverAdapter.setBasePath("/admin/queues");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -33,7 +33,7 @@ if (config.env !== "test") {
   app.use(morgan.errorHandler);
 }
 
-app.use("/admin/queues", serverAdapter.getRouter());
+// app.use("/admin/queues", serverAdapter.getRouter());
 
 app.use(helmet());
 

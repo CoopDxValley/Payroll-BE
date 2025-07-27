@@ -68,7 +68,7 @@ const getDepartmentById = async (id: string) => {
     where: { id },
     include: {
       company: true,
-      departmentUsers: true,
+      departmentEmployees: true,
     },
   });
 };

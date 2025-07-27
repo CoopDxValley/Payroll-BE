@@ -10,7 +10,7 @@ import { encryptPassword } from "../../utils/encryption";
 import * as roleService from "../role/role.services";
 import { accountCreatedMessage } from "../../templates/sms-template";
 import { formatPhoneNumberForSms } from "../../utils/format-phone-number";
-import { smsQueue } from "../../queues";
+// import { smsQueue } from "../../queues";
 import logger from "../../config/logger";
 import { AuthEmployee } from "../auth/auth.type";
 
@@ -72,14 +72,15 @@ export const createEmployee = async (
       jobId: uuidv4(),
       type: "createAccount",
     };
-    const job = await smsQueue.add("send-sms", data, {
-      attempts: 3,
-      backoff: { type: "exponential", delay: 1000 },
-    });
-    logger.info(`SMS job queued for user ${employee.id}`, {
-      bulkId: data.phoneNumber,
-      jobId: job.id,
-    });
+    // TODO: uncomment this when adding redis
+    // const job = await smsQueue.add("send-sms", data, {
+    //   attempts: 3,
+    //   backoff: { type: "exponential", delay: 1000 },
+    // });
+    // logger.info(`SMS job queued for user ${employee.id}`, {
+    //   bulkId: data.phoneNumber,
+    //   jobId: job.id,
+    // });
   } catch (error) {
     logger.error(`Failed to queue send sms job for createUser ${employee.id}`, {
       error,
@@ -198,7 +199,7 @@ export const getEmployeeRoleById = async (
   id: string
 ): Promise<EmployeeRole[] | null> => {
   return prisma.employeeRole.findMany({
-    where: { id },
+    where: { employeeId: id },
   });
 };
 

@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
+import prisma from "../../client";
 
-
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 const createShift = async (shiftData: any, companyId: string) => {
   const shift = await prisma.shift.create({

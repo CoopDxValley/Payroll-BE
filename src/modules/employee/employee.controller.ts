@@ -26,7 +26,9 @@ export const registerEmployee = catchAsync(async (req, res) => {
 });
 
 export const getEmployees = catchAsync(async (req, res) => {
-  const authEmployee = req.employee as AuthEmployee;
+  const authEmployee = req.user as AuthEmployee;
+  // const user = req.user as AuthEmployee;
+  console.log("employee", authEmployee);
   const options = pick(req.query, ["sortBy", "limit", "page"]);
   const result = await employeeService.queryEmployee(
     authEmployee.companyId,
