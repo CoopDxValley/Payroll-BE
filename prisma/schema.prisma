@@ -42,31 +42,44 @@ model Account {
   company       Company  @relation(fields: [companyId], references: [id])
 }
 
-model Department {
-  id                      String     @id @default(uuid())
-  deptName                String
-  location                String?
-  shorthandRepresentation String?
-  companyId               String
-  isActive                Boolean    @default(true)
-  createdAt               DateTime   @default(now())
-  updatedAt               DateTime   @updatedAt
-  company                 Company    @relation(fields: [companyId], references: [id])
-  departmentEmployees     Employee[]
+//model Department {
+ // id                      String     @id @default(uuid())
+ // deptName                String
+ // location                String?
+ // shorthandRepresentation String?
+ // companyId               String
+ // isActive                Boolean    @default(true)
+ // createdAt               DateTime   @default(now())
+ // updatedAt               DateTime   @updatedAt
+ // company                 Company    @relation(fields: [companyId], references: [id])
+  //departmentEmployees     Employee[]
 
-  approvalWorkflow ApprovalWorkflow[]
-}
+ // approvalWorkflow        ApprovalWorkflow[]
+//}
 
 model Position {
   id                String     @id @default(uuid())
   positionName      String
   description       String?
   companyId         String
-  createdAt         DateTime   @default(now())
   isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
+  
   company           Company    @relation(fields: [companyId], references: [id])
-  employeePositions Employee[]
+  assignments       EmployeePositionHistory[]
+  //employeePositions Employee[]
+}
+
+model EmployeePositionHistory {
+  id         String   @id @default(cuid())
+  employeeId String
+  positionId String
+  fromDate   DateTime
+  toDate     DateTime?
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  position   Position @relation(fields: [positionId], references: [id])
 }
 
 
@@ -79,7 +92,8 @@ model Role {
   company       Company          @relation(fields: [companyId], references: [id])
 
   permissions   RolePermission[]
-  employeeRoles EmployeeRole[]
+  //employeeRoles EmployeeRole[]
+  assignments   EmployeeRoleHistory[]
 }
 
 model Permission {
@@ -253,37 +267,148 @@ model Employee {
   username               String                  @unique
   phoneNumber            String
   password               String
-  deviceUserId           String?                 @unique // Device user ID from attendance device
-  //payrollCalculationType PayrollCalculationType @default(FIXED_SALARY)
-  attendanceRequirement  AttendanceRequirement  @default(REQUIRED)
- // hourlyRate             Float?                 // For hourly employees
- // baseSalary             Float?                 // For fixed/mixed salary employees
+  employeeIdNumber       String?                 @unique // Device user ID from attendance device
+  
+  attendanceRequirement  AttendanceRequirement   @default(REQUIRED)
+
   isSuperAdmin           Boolean                 @default(false)
+  email                  String?                 @unique
+  primaryPhoneNumber     String     
+  optionalPhoneNumber    String?
+  gender                 Gender
+  dateOfBirth            DateTime?
+  nationality            String?                 @default("Ethiopia")
+  imageUrl               String?
+  status                 EmploymentStatus        @default(ACTIVE)
+  idNumber               String?
+  idImageUrl             String?
+  idType                 IdType                  @default(KEBELE)
+
   companyId              String
-  departmentId           String?
-  positionId             String?
+  //departmentId           String?
+  //positionId             String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   isFirstTimeLoggedIn    Boolean                 @default(true)
   Token                  Token[]
   company                Company                 @relation(fields: [companyId], references: [id])
-  department             Department?             @relation(fields: [departmentId], references: [id])
-  position               Position?               @relation(fields: [positionId], references: [id])
-  employeeRoles          EmployeeRole[]
+  //department             Department?             @relation(fields: [departmentId], references: [id])
+  //position               Position?               @relation(fields: [positionId], references: [id])
+  //employeeRoles          EmployeeRole[]
   //attendanceLogs         Attendance[]
 
-  stageEmployees StageEmployee[]
-  requests       Request[]
-  stageStatuses  StageStatus[]
+  payrollInfo            PayrollInfo?
+  terminations           TerminationRecord[]
+  departmentHistory      EmployeeDepartmentHistory[]
+  roleHistory            EmployeeRoleHistory[]
+  positionHistory        EmployeePositionHistory[]
 
-  delegatedFrom        Delegation[]           @relation("FromEmployee")
-  delegatedTo          Delegation[]           @relation("ToEmployee")
+  stageEmployees         StageEmployee[]
+  requests               Request[]
+  stageStatuses          StageStatus[]
 
-  delegatedRuleFrom    DelegationRule[]       @relation("FromEmployeeDelegationRule")
-  delegatedRuleTo      DelegationRule[]       @relation("ToEmployeeDelegationRule")
-  ApprovalComment      ApprovalComment[]
-  ApprovalNotification ApprovalNotification[]
-  ApprovalAuditLog     ApprovalAuditLog[]
+  delegatedFrom          Delegation[]           @relation("FromEmployee")
+  delegatedTo            Delegation[]           @relation("ToEmployee")
+
+  delegatedRuleFrom      DelegationRule[]       @relation("FromEmployeeDelegationRule")
+  delegatedRuleTo        DelegationRule[]       @relation("ToEmployeeDelegationRule")
+  ApprovalComment        ApprovalComment[]
+  ApprovalNotification   ApprovalNotification[]
+  ApprovalAuditLog       ApprovalAuditLog[]
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  deptName                String
+  parentId  String? // optional for tree structure
+  location                String?
+  shorthandRepresentation String?
+  companyId               String
+  //departmentEmployees     Employee[]
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime   @updatedAt
+
+  parent    Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children  Department[] @relation("DepartmentHierarchy")
+  assignments EmployeeDepartmentHistory[]
+  company     Company    @relation(fields: [companyId], references: [id])
+  approvalWorkflow        ApprovalWorkflow[]
+}
+
+model EmployeeDepartmentHistory {
+  id           String    @id @default(cuid())
+  employeeId   String
+  departmentId String
+  fromDate     DateTime
+  toDate       DateTime?
+
+  employee     Employee   @relation(fields: [employeeId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+}
+
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+  ON_LEAVE
+  RETIRED
+}
+
+enum IdType {
+  KEBELE
+  PASSPORT
+  LICENSE
+}
+
+model PayrollInfo {
+  id             String   @id @default(cuid())
+  employeeId     String   @unique
+  tinNumber      String   @unique
+  basicSalary    Float
+  currency       String   @default("ETB")
+  employmentType EmploymentType
+  payFrequency   PayFrequency       @default(MONTHLY)
+
+  employee       Employee @relation(fields: [employeeId], references: [id])
+}
+
+enum EmploymentType {
+  PERMANENT
+  CONTRACT
+  HOURLY
+}
+
+enum PayFrequency {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+  DAILY
+}
+
+model TerminationRecord {
+  id            String   @id @default(cuid())
+  employeeId    String
+  reason        String
+  terminationType TerminationType
+  noticeDate    DateTime
+  terminationDate DateTime
+  remarks       String?
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+}
+
+enum TerminationType {
+  RESIGNATION
+  DISMISSAL
+  RETIREMENT
+  DECEASED
 }
 
 
@@ -311,11 +436,12 @@ enum CheckType {
   PUNCHOUT
 }
 
-model EmployeeRole {
+model EmployeeRoleHistory {
   employeeId String
   roleId     String
-  assignedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  fromDate   DateTime
+  toDate     DateTime?
+
   role       Role     @relation(fields: [roleId], references: [id])
   employee   Employee @relation(fields: [employeeId], references: [id])
 
