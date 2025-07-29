@@ -158,7 +158,9 @@ model Grade {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   company   Company  @relation(fields: [companyId], references: [id])
+  assignments  EmployeeGradeHistory[]
 
   @@index([companyId])
 }
@@ -292,6 +294,7 @@ model Employee {
   Token                  Token[]
   company                Company                 @relation(fields: [companyId], references: [id])
 
+  gradeHistory           EmployeeGradeHistory[] 
   payrollInfo            PayrollInfo?
   terminations           TerminationRecord[]
   departmentHistory      EmployeeDepartmentHistory[]
@@ -345,6 +348,18 @@ model EmployeeDepartmentHistory {
   @@unique([employeeId, departmentId])
 }
 
+model EmployeeGradeHistory {
+  employeeId   String
+  gradeId      String
+  fromDate     DateTime
+  toDate       DateTime?
+
+  employee     Employee   @relation(fields: [employeeId], references: [id])
+  grade        Grade @relation(fields: [gradeId], references: [id])
+
+  @@unique([employeeId, gradeId])
+}
+
 
 enum Gender {
   MALE
@@ -374,6 +389,7 @@ model PayrollInfo {
   currency       String   @default("ETB")
   employmentType EmploymentType
   payFrequency   PayFrequency       @default(MONTHLY)
+  accountNumber  String   @unique
 
   employee       Employee @relation(fields: [employeeId], references: [id])
 }

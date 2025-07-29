@@ -19,24 +19,6 @@ const jwtVerify: VerifyCallback = async (payload, done) => {
       return done(new Error("Invalid token type"), false);
     }
 
-    // const user = await prisma.employee.findUnique({
-    //   where: { id: payload.sub.employeeId },
-    //   include: {
-    //     employeeRoles: {
-    //       include: {
-    //         role: {
-    //           include: {
-    //             permissions: {
-    //               include: {
-    //                 permission: true,
-    //               },
-    //             },
-    //           },
-    //         },
-    //       },
-    //     },
-    //   },
-    // });
     const user = await prisma.employee.findFirst({
       where: { id: payload.sub.employeeId },
       include: {
@@ -58,13 +40,6 @@ const jwtVerify: VerifyCallback = async (payload, done) => {
             department: true,
           },
         },
-        // role: {
-        //   include: {
-        //     permissions: {
-        //       include: { permission: true },
-        //     },
-        //   },
-        // },
       },
     });
 

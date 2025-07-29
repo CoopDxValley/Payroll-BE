@@ -103,7 +103,7 @@ export const getEmployeesSchema = z.object({
 });
 
 export const getEmployeeSchema = z.object({
-  userId: z.string().min(1, "User ID is required"),
+  employeeId: z.string().min(1, "Employee ID is required"),
 });
 
 export const createEmployeeValidation = { body: createEmployeeSchema };

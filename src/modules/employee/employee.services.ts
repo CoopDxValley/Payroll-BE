@@ -118,11 +118,7 @@ const getEmployeeById = async <Key extends keyof Employee>(
       phoneNumber: true,
       name: true,
       username: true,
-      createdAt: true,
-      updatedAt: true,
-      // department: { select: { id: true, deptName: true } },
-      // position: { select: { id: true, positionName: true } },
-      // employeeRoles: { select: { role: { select: { id: true, name: true } } } },
+      gender: true,
     },
     // select: keys.reduce((obj, k) => ({ ...obj, [k]: true }), {}),
   }) as Promise<Pick<Employee, Key> | null>;
@@ -224,65 +220,112 @@ const getEmployeePermissions = async (
 //   return authEmployee;
 // };
 
-// /**
-//  * Query for employees with pagination and sorting
-//  * @param {Object} filter - Prisma filter
-//  * @param {Object} options - Query options
-//  * @param {string} [options.sortBy] - Sort option in the format: sortField:(desc|asc)
-//  * @param {number} [options.limit] - Maximum number of results per page (default = 10)
-//  * @param {number} [options.page] - Current page (default = 1)
-//  * @returns {Promise<QueryResult>}
-//  */
-// export const queryEmployee = async (
-//   // filter: object,
-//   companyId: string,
-//   options: {
-//     limit?: string;
-//     page?: string;
-//     sortBy?: string;
-//     sortType?: "asc" | "desc";
-//   }
-// ) => {
-//   const page = options.page ? parseInt(options.page) : 1;
-//   const limit = options.limit ? parseInt(options.limit) : 10;
-//   const skip = (page - 1) * limit;
-//   const sortBy = options.sortBy;
-//   const sortType = options.sortType ?? "desc";
-//   const [employees, total] = await Promise.all([
-//     prisma.employee.findMany({
-//       where: { companyId },
-//       select: {
-//         id: true,
-//         name: true,
-//         username: true,
-//         phoneNumber: true,
-//         department: { select: { id: true, deptName: true } },
-//         position: { select: { id: true, positionName: true } },
-//         employeeRoles: {
-//           select: { role: { select: { id: true, name: true } } },
-//         },
-//       },
-//       skip,
-//       take: limit,
-//       orderBy: sortBy ? { [sortBy]: sortType } : undefined,
-//     }),
-//     prisma.employee.count(),
-//   ]);
-//   const totalPages = Math.ceil(total / limit);
-//   return {
-//     employees,
-//     meta: {
-//       total,
-//       page,
-//       limit,
-//       totalPages,
-//     },
-//   };
-// };
+/**
+ * Query for employees with pagination and sorting
+ * @param {Object} filter - Prisma filter
+ * @param {Object} options - Query options
+ * @param {string} [options.sortBy] - Sort option in the format: sortField:(desc|asc)
+ * @param {number} [options.limit] - Maximum number of results per page (default = 10)
+ * @param {number} [options.page] - Current page (default = 1)
+ * @returns {Promise<QueryResult>}
+ */
+export const queryEmployee = async (
+  // filter: object,
+  companyId: string,
+  options: {
+    limit?: string;
+    page?: string;
+    sortBy?: string;
+    sortType?: "asc" | "desc";
+  }
+) => {
+  const page = options.page ? parseInt(options.page) : 1;
+  const limit = options.limit ? parseInt(options.limit) : 10;
+  const skip = (page - 1) * limit;
+  const sortBy = options.sortBy;
+  const sortType = options.sortType ?? "desc";
+  const [employees, total] = await Promise.all([
+    prisma.employee.findMany({
+      where: { companyId },
+      select: {
+        id: true,
+        name: true,
+        gender: true,
+        employeeIdNumber: true,
+        positionHistory: {
+          where: { toDate: null },
+          select: {
+            position: { select: { positionName: true } },
+          },
+        },
+        gradeHistory: {
+          where: { toDate: null },
+          select: {
+            grade: { select: { name: true } },
+          },
+        },
+      },
+      skip,
+      take: limit,
+      orderBy: sortBy ? { [sortBy]: sortType } : undefined,
+    }),
+    prisma.employee.count(),
+  ]);
+  const totalPages = Math.ceil(total / limit);
+  return {
+    employees,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+    },
+  };
+};
+
+/**
+ * Get employee info by ID
+ * @param {string} employeeId
+ * @returns {Promise<Employee | null>}
+ */
+const getEmployeeInfoById = async (
+  employeeId: string
+): Promise<Omit<Employee, "password"> | null> => {
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    include: {
+      company: { select: { organizationName: true } },
+      payrollInfo: true,
+      emergencyContacts: true,
+      positionHistory: {
+        where: { toDate: null },
+        select: {
+          position: { select: { positionName: true } },
+        },
+      },
+      gradeHistory: {
+        where: { toDate: null },
+        select: {
+          grade: { select: { name: true } },
+        },
+      },
+      departmentHistory: {
+        where: { toDate: null },
+        select: {
+          department: { select: { deptName: true } },
+        },
+      },
+    },
+  });
+
+  return employee;
+};
 
 export default {
   createEmployee,
   getEmployeeById,
   getEmployeeByUsername,
   getEmployeePermissions,
+  queryEmployee,
+  getEmployeeInfoById,
 };

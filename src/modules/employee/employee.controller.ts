@@ -4,6 +4,7 @@ import employeeService from "./employee.services";
 import { CreateEmployeeInput } from "./employee.type";
 import { AuthEmployee } from "../auth/auth.type";
 import exclude from "../../utils/exclude";
+import pick from "../../utils/pick";
 
 export const registerEmployee = catchAsync(async (req, res) => {
   const input: CreateEmployeeInput = req.body;
@@ -24,24 +25,22 @@ export const registerEmployee = catchAsync(async (req, res) => {
   });
 });
 
-// export const getEmployees = catchAsync(async (req, res) => {
-//   const authEmployee = req.user as AuthEmployee;
-//   // const user = req.user as AuthEmployee;
-//   console.log("employee", authEmployee);
-//   const options = pick(req.query, ["sortBy", "limit", "page"]);
-//   const result = await employeeService.queryEmployee(
-//     authEmployee.companyId,
-//     options
-//   );
-//   res
-//     .status(httpStatus.CREATED)
-//     .send({ data: result, message: "Employee retrieved successfully" });
-// });
+export const getEmployees = catchAsync(async (req, res) => {
+  const authEmployee = req.employee as AuthEmployee;
+  const options = pick(req.query, ["sortBy", "limit", "page"]);
+  const result = await employeeService.queryEmployee(
+    authEmployee.companyId,
+    options
+  );
+  res
+    .status(httpStatus.CREATED)
+    .send({ data: result, message: "Employee retrieved successfully" });
+});
 
-export const getEmployeeById = catchAsync(async (req, res) => {
+export const getEmployeeInfoById = catchAsync(async (req, res) => {
   const { employeeId } = req.params;
 
-  const result = await employeeService.getEmployeeById(employeeId);
+  const result = await employeeService.getEmployeeInfoById(employeeId);
 
   res
     .status(httpStatus.OK)
