@@ -5,6 +5,8 @@ import {
   getEmployeeValidation,
   createEmployeeValidation,
   getEmployeesValidation,
+  assignEmployeeToDepartmentValidation,
+  assignEmployeeToPositionValidation,
 } from "./employee.validation";
 import * as employeeController from "./employee.controller";
 
@@ -29,6 +31,22 @@ router
     auth(),
     validate(getEmployeeValidation),
     employeeController.getEmployeeInfoById
+  );
+
+router
+  .route("/assign-department")
+  .post(
+    auth(),
+    validate(assignEmployeeToDepartmentValidation),
+    employeeController.assignEmployeeToDepartment
+  );
+
+router
+  .route("/assign-position")
+  .post(
+    auth(),
+    validate(assignEmployeeToPositionValidation),
+    employeeController.assignEmployeeToPosition
   );
 
 export default router;

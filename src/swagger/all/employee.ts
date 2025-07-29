@@ -329,3 +329,97 @@
  *       400:
  *         description: Invalid employee ID
  */
+
+/**
+ * @swagger
+ * /api/v1/employees/assign-department:
+ *   post:
+ *     summary: Assign an employee to a department
+ *     tags: [Employees]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - employeeId
+ *               - departmentId
+ *             properties:
+ *               employeeId:
+ *                 type: string
+ *               departmentId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Employee assigned to department successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 employeeId:
+ *                   type: string
+ *                 departmentId:
+ *                   type: string
+ *                 fromDate:
+ *                   type: string
+ *                   format: date-time
+ *                 toDate:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *       400:
+ *         description: Invalid input or assignment failed
+ */
+
+/**
+ * @swagger
+ * /api/v1/employees/assign-position:
+ *   post:
+ *     summary: Assign an employee to a position
+ *     tags: [Employees]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - employeeId
+ *               - positionId
+ *             properties:
+ *               employeeId:
+ *                 type: string
+ *               positionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Employee assigned to position successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 employeeId:
+ *                   type: string
+ *                 positionId:
+ *                   type: string
+ *                 fromDate:
+ *                   type: string
+ *                   format: date-time
+ *                 toDate:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *       400:
+ *         description: Invalid input or assignment failed
+ */

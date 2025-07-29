@@ -46,3 +46,31 @@ export const getEmployeeInfoById = catchAsync(async (req, res) => {
     .status(httpStatus.OK)
     .send({ data: result, message: "Employee retrieved successfully" });
 });
+
+export const assignEmployeeToDepartment = catchAsync(async (req, res) => {
+  const { employeeId, departmentId } = req.body;
+
+  const result = await employeeService.assignEmployeeToDepartment(
+    employeeId,
+    departmentId
+  );
+
+  res.status(httpStatus.OK).send({
+    data: result,
+    message: "Employee assigned to department successfully",
+  });
+});
+
+export const assignEmployeeToPosition = catchAsync(async (req, res) => {
+  const { employeeId, positionId } = req.body;
+
+  const result = await employeeService.assignEmployeeToPosition(
+    employeeId,
+    positionId
+  );
+
+  res.status(httpStatus.OK).send({
+    data: result,
+    message: "Employee assigned to position successfully",
+  });
+});

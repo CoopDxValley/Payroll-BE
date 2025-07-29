@@ -1,6 +1,10 @@
 import httpStatus from "http-status";
 import { v4 as uuidv4 } from "uuid";
-import { Employee } from "@prisma/client";
+import {
+  Employee,
+  EmployeeDepartmentHistory,
+  EmployeePositionHistory,
+} from "@prisma/client";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import {
@@ -321,6 +325,44 @@ const getEmployeeInfoById = async (
   return employee;
 };
 
+const assignEmployeeToDepartment = async (
+  employeeId: string,
+  departmentId: string
+): Promise<EmployeeDepartmentHistory> => {
+  await prisma.employeeDepartmentHistory.updateMany({
+    where: { employeeId, toDate: null },
+    data: { toDate: new Date() },
+  });
+
+  // Create new department assignment
+  return prisma.employeeDepartmentHistory.create({
+    data: {
+      employeeId,
+      departmentId,
+      fromDate: new Date(),
+    },
+  });
+};
+
+const assignEmployeeToPosition = async (
+  employeeId: string,
+  positionId: string
+): Promise<EmployeePositionHistory> => {
+  await prisma.employeePositionHistory.updateMany({
+    where: { employeeId, toDate: null },
+    data: { toDate: new Date() },
+  });
+
+  // Create new position assignment
+  return prisma.employeePositionHistory.create({
+    data: {
+      employeeId,
+      positionId,
+      fromDate: new Date(),
+    },
+  });
+};
+
 export default {
   createEmployee,
   getEmployeeById,
@@ -328,4 +370,6 @@ export default {
   getEmployeePermissions,
   queryEmployee,
   getEmployeeInfoById,
+  assignEmployeeToDepartment,
+  assignEmployeeToPosition,
 };

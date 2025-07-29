@@ -106,6 +106,23 @@ export const getEmployeeSchema = z.object({
   employeeId: z.string().min(1, "Employee ID is required"),
 });
 
+const assignEmployeeToDepartmentSchema = z.object({
+  employeeId: z.string().min(1, "Employee ID is required"),
+  departmentId: z.string().min(1, "Department ID is required"),
+});
+
+const assignEmployeeToPositionSchema = z.object({
+  employeeId: z.string().min(1, "Employee ID is required"),
+  positionId: z.string().min(1, "Position ID is required"),
+});
+
 export const createEmployeeValidation = { body: createEmployeeSchema };
 export const getEmployeesValidation = { query: getEmployeesSchema };
 export const getEmployeeValidation = { params: getEmployeeSchema };
+export const assignEmployeeToDepartmentValidation = {
+  body: assignEmployeeToDepartmentSchema,
+};
+
+export const assignEmployeeToPositionValidation = {
+  body: assignEmployeeToPositionSchema,
+};
