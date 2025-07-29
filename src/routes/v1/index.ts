@@ -17,7 +17,7 @@ import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
-import attendance from "../../modules/attendance/attendance.route";
+// import attendance from "../../modules/attendance/attendance.route";
 // import swagger from "../../modules/swagger";
 import { setupSwagger } from "../../swagger/setup";
 
@@ -80,10 +80,10 @@ const defaultRoutes = [
     path: "/auth",
     route: authRoute,
   },
-  {
-    path: "/attendance",
-    route: attendance,
-  },
+  // {
+  //   path: "/attendance",
+  //   route: attendance,
+  // },
   {
     path: "/approvals",
     route: approvalRoute,

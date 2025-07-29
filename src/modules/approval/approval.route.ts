@@ -21,7 +21,7 @@ import {
   resubmit,
 } from "./approval.controller";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+import { checkPermission } from "../../middlewares/check-permissions";
 
 const router = Router();
 

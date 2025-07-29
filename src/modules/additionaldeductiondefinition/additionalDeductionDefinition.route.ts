@@ -1,7 +1,7 @@
 import express from "express";
 // import validate from "../../middlewares/validate";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+import { checkPermission } from "../../middlewares/check-permissions";
 // import additionalDeductionDefinitionValidation from "../../validations/additionalDeductionDefinition.validation";
 import additionalDeductionDefinitionController from "./additionalDeductionDefinition.controller";
 

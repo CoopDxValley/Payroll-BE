@@ -1,6 +1,6 @@
 import httpStatus from "http-status";
 import * as authService from "./auth.services";
-import * as employeeService from "../employee/employee.services";
+import employeeService from "../employee/employee.services";
 import catchAsync from "../../utils/catch-async";
 import {
   AuthEmployee,

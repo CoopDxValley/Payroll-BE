@@ -19,22 +19,52 @@ const jwtVerify: VerifyCallback = async (payload, done) => {
       return done(new Error("Invalid token type"), false);
     }
 
-    const user = await prisma.employee.findUnique({
+    // const user = await prisma.employee.findUnique({
+    //   where: { id: payload.sub.employeeId },
+    //   include: {
+    //     employeeRoles: {
+    //       include: {
+    //         role: {
+    //           include: {
+    //             permissions: {
+    //               include: {
+    //                 permission: true,
+    //               },
+    //             },
+    //           },
+    //         },
+    //       },
+    //     },
+    //   },
+    // });
+    const user = await prisma.employee.findFirst({
       where: { id: payload.sub.employeeId },
       include: {
-        employeeRoles: {
+        roleHistory: {
+          where: { toDate: null },
           include: {
             role: {
               include: {
                 permissions: {
-                  include: {
-                    permission: true,
-                  },
+                  include: { permission: true },
                 },
               },
             },
           },
         },
+        departmentHistory: {
+          where: { toDate: null },
+          include: {
+            department: true,
+          },
+        },
+        // role: {
+        //   include: {
+        //     permissions: {
+        //       include: { permission: true },
+        //     },
+        //   },
+        // },
       },
     });
 
@@ -43,7 +73,8 @@ const jwtVerify: VerifyCallback = async (payload, done) => {
     }
 
     const permissions = new Set<string>();
-    user.employeeRoles.forEach((employeeRole) => {
+
+    user.roleHistory.forEach((employeeRole) => {
       employeeRole.role.permissions.forEach((rp) => {
         permissions.add(`${rp.permission.action}_${rp.permission.subject}`);
       });
@@ -54,8 +85,8 @@ const jwtVerify: VerifyCallback = async (payload, done) => {
       name: user.name,
       isSuperAdmin: user.isSuperAdmin,
       companyId: user.companyId,
-      departmentId: user.departmentId,
-      roles: user.employeeRoles.map((ur) => ur.role.name),
+      departmentId: user.departmentHistory[0]?.department.id || "",
+      roles: user.roleHistory.map((ur) => ur.role.name),
       permissions: Array.from(permissions),
     };
 

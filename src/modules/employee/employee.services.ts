@@ -133,46 +133,34 @@ const getEmployeeById = async <Key extends keyof Employee>(
  * @param employeeId
  * @returns Promise<string[]> - array of permission strings in "action_subject" format
  */
-// export const getEmployeePermissions = async (
-//   employeeId: string
-// ): Promise<string[]> => {
-//   const employeeWithRoles = await prisma.employee.findUnique({
-//     where: { id: employeeId },
-//     include: {
-//       employeeRoles: {
-//         include: {
-//           role: {
-//             include: {
-//               permissions: {
-//                 include: {
-//                   permission: true,
-//                 },
-//               },
-//             },
-//           },
-//         },
-//       },
-//     },
-//   });
+const getEmployeePermissions = async (
+  employeeId: string
+): Promise<string[]> => {
+  const employeeRoles = await prisma.employeeRoleHistory.findMany({
+    where: { employeeId, toDate: null },
+    include: {
+      role: {
+        include: {
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-// if (!employeeWithRoles) return [];
-
-// Collect all unique permissions from all roles
-// const permissions = new Set<string>();
-
-// for (const employeeRole of employeeWithRoles.employeeRoles) {
-//   for (const rolePermission of employeeRole.role.permissions) {
-//     permissions.add(rolePermission.permission.action_subject);
-//   }
-// }
-
-// // If user is super admin, add all permissions wildcard
-// if (employeeWithRoles.isSuperAdmin) {
-//   permissions.add("*:*");
-// }
-
-// return Array.from(permissions);
-// };
+  if (!employeeRoles || employeeRoles.length === 0) return [];
+  // Collect all unique permissions from all roles
+  const permissions = new Set<string>();
+  for (const employeeRole of employeeRoles) {
+    for (const rolePermission of employeeRole.role.permissions) {
+      permissions.add(rolePermission.permission.action_subject);
+    }
+  }
+  return Array.from(permissions);
+};
 
 /**
  * Get employee roles by id
@@ -296,4 +284,5 @@ export default {
   createEmployee,
   getEmployeeById,
   getEmployeeByUsername,
+  getEmployeePermissions,
 };

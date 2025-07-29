@@ -4,7 +4,6 @@ import employeeService from "./employee.services";
 import { CreateEmployeeInput } from "./employee.type";
 import { AuthEmployee } from "../auth/auth.type";
 import exclude from "../../utils/exclude";
-import pick from "../../utils/pick";
 
 export const registerEmployee = catchAsync(async (req, res) => {
   const input: CreateEmployeeInput = req.body;

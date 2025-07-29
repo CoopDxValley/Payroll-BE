@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { PrismaClient } from "@prisma/client";
+import { Gender, PrismaClient } from "@prisma/client";
 import config from "../src/config/config";
 import { generateRandomPassword } from "../src/utils/helper";
 import { encryptPassword } from "../src/utils/encryption";
@@ -63,14 +63,14 @@ async function seedRoles(companyId: string, permissions: any[]) {
       name: "Manager",
       companyId,
     },
-  })
+  });
 
   const finance = await prisma.role.create({
     data: {
       name: "Finance",
       companyId,
     },
-  })
+  });
 
   await prisma.rolePermission.createMany({
     data: permissions.map((p) => ({
@@ -111,14 +111,35 @@ async function seedEmployee(
   roleId: string
 ) {
   const employeeData = [
-    { name: "Alice Tesfa", username: "alice", phoneNumber: "0911111111" },
-    { name: "Biruk Alemu", username: "biruk", phoneNumber: "0922222222" },
-    { name: "Chaltu Diba", username: "chaltu", phoneNumber: "0933333333" },
-    { name: "Dawit Bekele", username: "dawit", phoneNumber: "0944444444" },
+    {
+      name: "Alice Tesfa",
+      username: "alice",
+      phoneNumber: "0911111111",
+      gender: Gender.FEMALE,
+    },
+    {
+      name: "Biruk Alemu",
+      username: "biruk",
+      phoneNumber: "0922222222",
+      gender: Gender.FEMALE,
+    },
+    {
+      name: "Chaltu Diba",
+      username: "chaltu",
+      phoneNumber: "0933333333",
+      gender: Gender.FEMALE,
+    },
+    {
+      name: "Dawit Bekele",
+      username: "dawit",
+      phoneNumber: "0944444444",
+      gender: Gender.FEMALE,
+    },
     {
       name: "Elshaday Mulu",
       username: "elshaday",
       phoneNumber: "0955555555",
+      gender: Gender.FEMALE,
     },
   ];
   const rawPassword =
@@ -134,15 +155,17 @@ async function seedEmployee(
         phoneNumber: emp.phoneNumber,
         password: hashedPassword,
         companyId,
-        departmentId,
-        positionId,
+        gender: emp.gender,
+        // departmentId,
+        // positionId,
       },
     });
 
-    await prisma.employeeRole.create({
+    await prisma.employeeRoleHistory.create({
       data: {
         employeeId: employee.id,
         roleId,
+        fromDate: new Date(),
       },
     });
   }
