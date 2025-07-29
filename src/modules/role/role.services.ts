@@ -104,7 +104,7 @@ export const assignRoleToEmployee = async (
   if (!user || !role) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Role or Employee not found");
   }
-  const existing = await prisma.employeeRole.findUnique({
+  const existing = await prisma.employeeRoleHistory.findUnique({
     where: {
       employeeId_roleId: { employeeId, roleId },
     },
@@ -117,8 +117,8 @@ export const assignRoleToEmployee = async (
     );
   }
 
-  await prisma.employeeRole.create({
-    data: { employeeId, roleId },
+  await prisma.employeeRoleHistory.create({
+    data: { employeeId, roleId, fromDate: new Date() },
   });
 
   invalidateUserPermissionCache(employeeId);

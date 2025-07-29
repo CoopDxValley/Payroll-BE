@@ -16,12 +16,12 @@ router
     auth(),
     validate(createEmployeeValidation),
     employeeController.registerEmployee
-  )
-  .get(
-    auth(),
-    // validate(getEmployeesValidation),
-    employeeController.getEmployees
   );
+// .get(
+//   auth(),
+//   // validate(getEmployeesValidation),
+//   employeeController.getEmployees
+// );
 
 router
   .route("/:employeeId")
