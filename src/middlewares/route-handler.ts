@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import auth from "./auth";
-import { checkPermission } from "./checkPermissions";
+import { checkPermission } from "./check-permissions";
 
 type RouteConfig = {
   path: string;
