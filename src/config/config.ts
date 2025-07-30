@@ -14,6 +14,7 @@ const envVarsSchema = z.object({
   JWT_ACCESS_EXPIRATION_MINUTES: z.coerce.number().default(30),
   JWT_REFRESH_EXPIRATION_DAYS: z.coerce.number().default(30),
   JWT_RESET_PASSWORD_EXPIRATION_MINUTES: z.coerce.number().default(10),
+  SWAGGER_URL: z.string().url(),
 });
 
 const parsedEnv = envVarsSchema.safeParse(process.env);
@@ -38,4 +39,5 @@ export default {
       envVars.JWT_RESET_PASSWORD_EXPIRATION_MINUTES,
   },
   smsAPIURL: envVars.SMS_API_URL,
+  swaggerURL: envVars.SWAGGER_URL,
 };
