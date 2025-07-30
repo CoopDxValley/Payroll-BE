@@ -11,6 +11,12 @@ import {
 const createGrade = async (data: CreateGradeDto) => {
   const { name, minSalary, maxSalary, companyId } = data;
 
+  const min = Number(minSalary);
+  const max = Number(maxSalary);
+
+  if (isNaN(min) || isNaN(max)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid salary range");
+  }
   if (maxSalary <= minSalary) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,

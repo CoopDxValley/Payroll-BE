@@ -21,17 +21,30 @@ export const checkPermission = (required: string) => {
     }
 
     try {
-      const employeeWithRoles = await prisma.employee.findUnique({
-        where: { id: employeeId },
+      // const employeeWithRoles = await prisma.employee.findUnique({
+      //   where: { id: employeeId, roleHistory: {} },
+      //   include: {
+      //     roleHistory: {
+      //       include: {
+      //         role: {
+      //           include: {
+      //             permissions: {
+      //               include: { permission: true },
+      //             },
+      //           },
+      //         },
+      //       },
+      //     },
+      //   },
+      // });
+
+      const employeeWithRoles = await prisma.employeeRoleHistory.findFirst({
+        where: { employeeId, toDate: null },
         include: {
-          employeeRoles: {
+          role: {
             include: {
-              role: {
-                include: {
-                  permissions: {
-                    include: { permission: true },
-                  },
-                },
+              permissions: {
+                include: { permission: true },
               },
             },
           },
@@ -43,11 +56,14 @@ export const checkPermission = (required: string) => {
         return;
       }
 
-      const allPermissions = employeeWithRoles.employeeRoles.flatMap(
-        (employeeRole) =>
-          employeeRole.role.permissions.map(
-            (rp) => rp.permission.action_subject
-          )
+      // const allPermissions = employeeWithRoles.role.flatMap(
+      //   (employeeRole) =>
+      //     employeeRole.role.permissions.map(
+      //       (rp) => rp.permission.action_subject
+      //     )
+      // );
+      const allPermissions = employeeWithRoles.role.permissions.map(
+        (rp) => `${rp.permission.action}_${rp.permission.subject}`
       );
 
       const permissionSet = new Set(allPermissions);

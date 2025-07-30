@@ -2,7 +2,7 @@ import express from "express";
 import leaveTypeController from "./leaveType.controller";
 // import validate from "../../middlewares/validate";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+import { checkPermission } from "../../middlewares/check-permissions";
 // import leaveTypeValidation from "../../validations/leaveType.validation";
 
 const router = express.Router();
@@ -21,14 +21,11 @@ router
     leaveTypeController.getAllLeaveTypes
   );
 
-router
-  .route("/:id")
-  .get(auth(), leaveTypeController.getLeaveTypeById)
-  .post(
-    auth(),
-    // validate(leaveTypeValidation.updateLeaveType),
-    leaveTypeController.updateLeaveType
-  );
+router.route("/:id").get(auth(), leaveTypeController.getLeaveTypeById).post(
+  auth(),
+  // validate(leaveTypeValidation.updateLeaveType),
+  leaveTypeController.updateLeaveType
+);
 router.route("/delete/:id").post(auth(), leaveTypeController.deleteLeaveType);
 
 export default router;

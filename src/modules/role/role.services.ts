@@ -2,7 +2,7 @@ import httpStatus from "http-status";
 import { Permission, Role } from "@prisma/client";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
-import * as employeeService from "../employee/employee.services";
+import employeeService from "../employee/employee.services";
 import { invalidateUserPermissionCache } from "../../middlewares/check-permissions";
 import { validatePermission } from "../../utils/validate-permissions";
 import {
@@ -104,7 +104,7 @@ export const assignRoleToEmployee = async (
   if (!user || !role) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Role or Employee not found");
   }
-  const existing = await prisma.employeeRole.findUnique({
+  const existing = await prisma.employeeRoleHistory.findUnique({
     where: {
       employeeId_roleId: { employeeId, roleId },
     },
@@ -117,8 +117,8 @@ export const assignRoleToEmployee = async (
     );
   }
 
-  await prisma.employeeRole.create({
-    data: { employeeId, roleId },
+  await prisma.employeeRoleHistory.create({
+    data: { employeeId, roleId, fromDate: new Date() },
   });
 
   invalidateUserPermissionCache(employeeId);
@@ -249,11 +249,12 @@ export const revokeRoleFromEmployee = async (
     throw new ApiError(httpStatus.BAD_REQUEST, "Role or Employee not found");
   }
 
-  await prisma.employeeRole.delete({
-    where: {
-      employeeId_roleId: { employeeId, roleId },
-    },
-  });
+  // TODO: Check if the employee has this role
+  // await prisma.employeeRole.delete({
+  //   where: {
+  //     employeeId_roleId: { employeeId, roleId },
+  //   },
+  // });
 
   invalidateUserPermissionCache(employeeId);
 

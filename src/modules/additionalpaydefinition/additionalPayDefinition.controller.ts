@@ -3,6 +3,7 @@ import catchAsync from "../../utils/catch-async";
 import service from "./additionalPayDefinition.service";
 import httpStatus from "http-status";
 import { AuthEmployee } from "../auth/auth.type";
+import additionalPayDefinitionService from "./additionalPayDefinition.service";
 
 export const create = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as AuthEmployee;
@@ -12,13 +13,21 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   res.status(httpStatus.CREATED).json({ message: "Created", data: data });
 });
 
-export const getAll = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const companyId = user.companyId;
-  const data = await service.getAll(companyId);
-  res.json({ success: true, data });
-});
+// export const getAll = catchAsync(async (req: Request, res: Response) => {
+//   const user = req.user as AuthEmployee;
+//   const companyId = user.companyId;
+//   const data = await service.getAll(companyId);
+//   res.json({ success: true, data });
+// });
 
+const getAll = catchAsync(async (req: Request, res: Response) => {
+  console.log("dkfdkfkdfdkfjkdkkdkdkkdfkd");
+  const user = req.user as AuthEmployee;
+  const data = await additionalPayDefinitionService.getAll(user.companyId);
+  res
+    .status(httpStatus.OK)
+    .send({ message: "Fetched successfully", data, count: data.length });
+});
 const getById = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as AuthEmployee;
   const companyId = user.companyId;

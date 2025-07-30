@@ -1,6 +1,7 @@
 import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
+import employeeServices from "../employee/employee.services";
 
 const createDepartment = async (data: {
   deptName: string;
@@ -68,7 +69,7 @@ const getDepartmentById = async (id: string) => {
     where: { id },
     include: {
       company: true,
-      departmentEmployees: true,
+      // departmentEmployees: true,
     },
   });
 };
@@ -116,27 +117,44 @@ const deleteDepartment = async (id: string) => {
   });
 };
 
-// const getDepartmentsByCenter = async (centerId: string) => {
-//   const center = await prisma.departmentCenter.findUnique({
-//     where: { id: centerId },
-//     include: {
-//       departments: {
-//         where: {
-//           isActive: true,
-//         },
-//         orderBy: {
-//           deptName: "asc",
-//         },
-//       },
-//     },
-//   });
+/**
+ * Assign department to employee
+ * @param {string} employeeId
+ * @param {string} departmentId
+ * @returns {Promise<string | null>}
+ */
+const assignDepartmentToEmployee = async (
+  employeeId: string,
+  departmentId: string
+): Promise<string> => {
+  const user = await employeeServices.getEmployeeById(employeeId);
+  const department = await getDepartmentById(departmentId);
 
-//   if (!center) {
-//     throw new ApiError(httpStatus.NOT_FOUND, "Department Center not found");
-//   }
+  if (!user || !department) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Department or Employee not found"
+    );
+  }
+  const existing = await prisma.employeeDepartmentHistory.findUnique({
+    where: {
+      employeeId_departmentId: { employeeId, departmentId },
+    },
+  });
 
-//   return center.departments;
-// };
+  if (existing) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Employee already has this department."
+    );
+  }
+
+  await prisma.employeeDepartmentHistory.create({
+    data: { employeeId, departmentId, fromDate: new Date() },
+  });
+
+  return "Department assigned to employee successfully";
+};
 
 export default {
   createDepartment,
@@ -144,5 +162,6 @@ export default {
   getDepartmentById,
   updateDepartment,
   deleteDepartment,
+  assignDepartmentToEmployee,
   // getDepartmentsByCenter,
 };

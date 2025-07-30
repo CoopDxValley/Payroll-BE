@@ -2,7 +2,7 @@ import express from "express";
 import departmentController from "./department.controller";
 // import validate from "../../middlewares/validate";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+import { checkPermission } from "../../middlewares/check-permissions";
 // import adminValidation from "../../validations/admin.validation";
 
 const router = express.Router();

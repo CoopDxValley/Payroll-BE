@@ -1,6 +1,6 @@
 import httpStatus from "http-status";
 import catchAsync from "../../utils/catch-async";
-import * as employeeService from "./employee.services";
+import employeeService from "./employee.services";
 import { CreateEmployeeInput } from "./employee.type";
 import { AuthEmployee } from "../auth/auth.type";
 import exclude from "../../utils/exclude";
@@ -37,12 +37,40 @@ export const getEmployees = catchAsync(async (req, res) => {
     .send({ data: result, message: "Employee retrieved successfully" });
 });
 
-export const getEmployeeById = catchAsync(async (req, res) => {
+export const getEmployeeInfoById = catchAsync(async (req, res) => {
   const { employeeId } = req.params;
 
-  const result = await employeeService.getEmployeeById(employeeId);
+  const result = await employeeService.getEmployeeInfoById(employeeId);
 
   res
     .status(httpStatus.OK)
     .send({ data: result, message: "Employee retrieved successfully" });
+});
+
+export const assignEmployeeToDepartment = catchAsync(async (req, res) => {
+  const { employeeId, departmentId } = req.body;
+
+  const result = await employeeService.assignEmployeeToDepartment(
+    employeeId,
+    departmentId
+  );
+
+  res.status(httpStatus.OK).send({
+    data: result,
+    message: "Employee assigned to department successfully",
+  });
+});
+
+export const assignEmployeeToPosition = catchAsync(async (req, res) => {
+  const { employeeId, positionId } = req.body;
+
+  const result = await employeeService.assignEmployeeToPosition(
+    employeeId,
+    positionId
+  );
+
+  res.status(httpStatus.OK).send({
+    data: result,
+    message: "Employee assigned to position successfully",
+  });
 });

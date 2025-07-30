@@ -17,8 +17,12 @@ export const validate =
       if (schema.body) {
         req.body = schema.body.parse(req.body);
       }
+      // if (schema.query) {
+      //   req.query = schema.query.parse(req.query);
+      // }
       if (schema.query) {
-        req.query = schema.query.parse(req.query);
+        // Don't overwrite req.query — store parsed query separately
+        (req as any).validatedQuery = schema.query.parse(req.query);
       }
       if (schema.params) {
         req.params = schema.params.parse(req.params);

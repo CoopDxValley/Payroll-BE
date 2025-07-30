@@ -50,7 +50,7 @@ const getPositionById = async (id: string) => {
     where: { id },
     include: {
       company: true,
-      employeePositions: true,
+      // employeePositions: true,
     },
   });
 };

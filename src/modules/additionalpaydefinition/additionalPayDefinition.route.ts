@@ -1,8 +1,9 @@
 import express from "express";
 // import validate from "../../middlewares/validate";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+import { checkPermission } from "../../middlewares/check-permissions";
 // import additionalPayDefinitionValidation from "../additionaldeductiondefinition/additionalDeductionDefinition.validation";
+// import additionalPayDefinitionController from "./additionalPayDefinition.controller";
 import additionalPayDefinitionController from "./additionalPayDefinition.controller";
 
 const router = express.Router();

@@ -4,7 +4,7 @@ import moment, { Moment } from "moment";
 import jwt from "jsonwebtoken";
 import { Employee, Token, TokenType } from "@prisma/client";
 import prisma from "../../client";
-import * as employeeService from "../employee/employee.services";
+import employeeService from "../employee/employee.services";
 import { encryptPassword, isPasswordMatch } from "../../utils/encryption";
 import ApiError from "../../utils/api-error";
 import exclude from "../../utils/exclude";
@@ -25,20 +25,7 @@ export const loginEmployeeWithUsernameAndPassword = async (
   username: string,
   password: string
 ): Promise<Omit<Employee, "password">> => {
-  const employee = await employeeService.getEmployeeByUsername(username, [
-    "id",
-    "username",
-    "name",
-    "password",
-    "phoneNumber",
-    "isFirstTimeLoggedIn",
-    "isSuperAdmin",
-    "companyId",
-    "positionId",
-    "departmentId",
-    "createdAt",
-    "updatedAt",
-  ]);
+  const employee = await employeeService.getEmployeeByUsername(username);
   if (
     !employee ||
     !(await isPasswordMatch(password, employee.password as string))
@@ -240,12 +227,12 @@ const verifyToken = async (token: string, type: TokenType): Promise<Token> => {
  * @param {Employee} employee
  * @returns {Promise<AuthTokensResponse>}
  */
-export const generateAuthTokens = async (employee: {
-  id: string;
-  companyId: string;
-  isSuperAdmin: boolean;
-  departmentId: string | null;
-}): Promise<AuthTokensResponse> => {
+export const generateAuthTokens = async (
+  employee: Omit<Employee, "password">
+): Promise<AuthTokensResponse> => {
+  const department = await prisma.employeeDepartmentHistory.findFirst({
+    where: { employeeId: employee.id, toDate: null },
+  });
   const accessTokenExpires = moment().add(
     config.jwt.accessExpirationMinutes,
     "minutes"
@@ -253,7 +240,7 @@ export const generateAuthTokens = async (employee: {
   const accessToken = generateToken(
     employee.id,
     employee.companyId,
-    employee.departmentId,
+    department?.id ?? null,
     employee.isSuperAdmin,
     accessTokenExpires,
     TokenType.ACCESS
@@ -266,7 +253,7 @@ export const generateAuthTokens = async (employee: {
   const refreshToken = generateToken(
     employee.id,
     employee.companyId,
-    employee.departmentId,
+    department?.id ?? null,
     employee.isSuperAdmin,
     refreshTokenExpires,
     TokenType.REFRESH

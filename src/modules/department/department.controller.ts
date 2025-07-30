@@ -6,10 +6,7 @@ import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 
 const createDepartment = catchAsync(async (req: Request, res: Response) => {
-  console.log("kfdjssssssssss");
-  const user = req.user as AuthEmployee;
-
-  console.log("kdjajddjdkkkd", user);
+  const user = req.employee as AuthEmployee;
 
   if (!user.companyId) {
     throw new ApiError(
