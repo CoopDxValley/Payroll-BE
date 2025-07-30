@@ -1,4 +1,5 @@
 import swaggerJsdoc from "swagger-jsdoc";
+import config from "../config/config";
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -10,7 +11,7 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: "http://localhost:3000",
+        url: config.swaggerURL,
         description: "API v1",
       },
     ],

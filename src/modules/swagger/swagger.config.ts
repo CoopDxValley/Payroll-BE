@@ -3,6 +3,7 @@ import swaggerJsdoc from "swagger-jsdoc";
 
 import swaggerUi from "swagger-ui-express";
 import { Express } from "express";
+import config from "../../config/config";
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -22,7 +23,7 @@ const options: swaggerJsdoc.Options = {
         url:
           process.env.NODE_ENV === "production"
             ? "https://api.payrollsystem.com"
-            : "http://localhost:3000",
+            : config.swaggerURL,
         description:
           process.env.NODE_ENV === "production"
             ? "Production server"
@@ -104,7 +105,7 @@ export const setupSwagger = (app: Express): void => {
     `📚 Swagger documentation available at: ${
       process.env.NODE_ENV === "production"
         ? "https://api.payrollsystem.com"
-        : "http://localhost:3000"
+        : config.swaggerURL
     }/api-docs`
   );
 };
