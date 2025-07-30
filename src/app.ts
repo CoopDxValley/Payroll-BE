@@ -55,6 +55,12 @@ app.use(
 
 app.options("*name", cors());
 
+app.use((req, res, next) => {
+  res.removeHeader("Cross-Origin-Opener-Policy");
+  res.removeHeader("Origin-Agent-Cluster");
+  next();
+});
+
 // jwt authentication
 app.use(passport.initialize());
 passport.use("jwt", jwtStrategy);
