@@ -2,13 +2,15 @@ import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
 import employeeServices from "../employee/employee.services";
+import {
+  createDepartmentInput,
+  getDepartmentByIdParams,
+  updateDepartmentBody,
+} from "./department.type";
 
-const createDepartment = async (data: {
-  deptName: string;
-  location?: string;
-  shorthandRepresentation?: string;
-  companyId: string;
-}) => {
+const createDepartment = async (
+  data: createDepartmentInput & { companyId: string }
+) => {
   const { deptName, location, shorthandRepresentation, companyId } = data;
 
   const existing = await prisma.department.findFirst({
@@ -51,7 +53,7 @@ const getAllDepartments = async (companyId: string) => {
   });
 };
 
-const getDepartmentById = async (id: string) => {
+const getDepartmentById = async (id: getDepartmentByIdParams["id"]) => {
   return prisma.department.findUnique({
     where: { id },
     include: {
@@ -60,26 +62,7 @@ const getDepartmentById = async (id: string) => {
   });
 };
 
-const updateDepartment = async (
-  id: string,
-  data: Partial<{
-    deptName: string;
-    location: string;
-    shorthandRepresentation: string;
-    companyId: string;
-  }>
-) => {
-  //   if (data.deptName) {
-  //     const duplicate = await prisma.department.findFirst({
-  //       where: {
-  //         deptName: data.deptName,
-  //         NOT: { id }, // exclude current department
-  //       },
-  //     });
-  //     if (duplicate) {
-  //       throw new ApiError(httpStatus.CONFLICT, "Department name must be unique");
-  //     }
-  //   }
+const updateDepartment = async (id: string, data: updateDepartmentBody) => {
   const existing = await prisma.department.findUnique({ where: { id } });
   if (!existing) {
     throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
@@ -93,6 +76,7 @@ const updateDepartment = async (
 
 const deleteDepartment = async (id: string) => {
   const existing = await prisma.department.findUnique({ where: { id } });
+
   if (!existing) {
     throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
   }
