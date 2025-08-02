@@ -95,34 +95,33 @@ export const createEmployeeSchema = z.object({
   emergencyContacts: emergencyContactsSchema,
 });
 
-export const getEmployeesSchema = z.object({
-  name: z.string().optional(),
-  sortBy: z.string().optional(),
-  limit: z.coerce.number().int().optional(),
-  page: z.coerce.number().int().optional(),
-});
+export const getEmployeesSchema = {
+  query: z.object({
+    sortBy: z.string().optional(),
+    sortType: z.enum(["asc", "desc"]).optional(),
+    limit: z.coerce.number().int().optional(),
+    page: z.coerce.number().int().optional(),
+  }),
+};
 
-export const getEmployeeSchema = z.object({
-  employeeId: z.string().min(1, "Employee ID is required"),
-});
+export const getEmployeeSchema = {
+  params: z.object({
+    employeeId: z.string().min(1, "Employee ID is required"),
+  }),
+};
 
-const assignEmployeeToDepartmentSchema = z.object({
-  employeeId: z.string().min(1, "Employee ID is required"),
-  departmentId: z.string().min(1, "Department ID is required"),
-});
+export const assignEmployeeToDepartmentSchema = {
+  body: z.object({
+    employeeId: z.string().min(1, "Employee ID is required"),
+    departmentId: z.string().min(1, "Department ID is required"),
+  }),
+};
 
-const assignEmployeeToPositionSchema = z.object({
-  employeeId: z.string().min(1, "Employee ID is required"),
-  positionId: z.string().min(1, "Position ID is required"),
-});
+export const assignEmployeeToPositionSchema = {
+  body: z.object({
+    employeeId: z.string().min(1, "Employee ID is required"),
+    positionId: z.string().min(1, "Position ID is required"),
+  }),
+};
 
 export const createEmployeeValidation = { body: createEmployeeSchema };
-export const getEmployeesValidation = { query: getEmployeesSchema };
-export const getEmployeeValidation = { params: getEmployeeSchema };
-export const assignEmployeeToDepartmentValidation = {
-  body: assignEmployeeToDepartmentSchema,
-};
-
-export const assignEmployeeToPositionValidation = {
-  body: assignEmployeeToPositionSchema,
-};

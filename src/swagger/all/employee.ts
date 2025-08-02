@@ -144,11 +144,6 @@
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: name
- *         schema:
- *           type: string
- *         description: Filter by employee name
- *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
