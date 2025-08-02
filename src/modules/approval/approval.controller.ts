@@ -1,30 +1,43 @@
+import { Response } from "express";
 import httpStatus from "http-status";
 import * as workflowService from "./approval.service";
 import {
   approvalDto,
+  AuditLogQuery,
   CreateApprovalWorkflowDto,
+  CreateDelegationRuleDto,
   CreateRequestDto,
 } from "./approval.type";
 import { AuthEmployee } from "../auth/auth.type";
 import catchAsync from "../../utils/catch-async";
 import { resubmitApprovalInstance } from "./approval.service";
+import { CustomRequest } from "../../middlewares/validate";
 
-export const createWorkflow = catchAsync(async (req, res) => {
-  const input: CreateApprovalWorkflowDto = req.body;
-  const authEmployee = req.employee as AuthEmployee;
+export const createWorkflow = catchAsync<
+  CustomRequest<never, never, CreateApprovalWorkflowDto>
+>(
+  async (
+    req: CustomRequest<never, never, CreateApprovalWorkflowDto>,
+    res: Response
+  ) => {
+    const input = req.body;
+    const authEmployee = req.employee as AuthEmployee;
 
-  const workflow = await workflowService.createWorkflow({
-    ...input,
-    companyId: authEmployee.companyId,
-  });
+    const workflow = await workflowService.createWorkflow({
+      ...input,
+      companyId: authEmployee.companyId,
+    });
 
-  res
-    .status(httpStatus.CREATED)
-    .send({ message: "Workflow created", data: workflow });
-});
+    res
+      .status(httpStatus.CREATED)
+      .send({ message: "Workflow created", data: workflow });
+  }
+);
 
-export const createRequest = catchAsync(async (req, res) => {
-  const input: CreateRequestDto = req.body;
+export const createRequest = catchAsync<
+  CustomRequest<never, never, CreateRequestDto>
+>(async (req: CustomRequest<never, never, CreateRequestDto>, res: Response) => {
+  const input = req.body;
   const authEmployee = req.employee as AuthEmployee;
 
   const request = await workflowService.createRequest({
@@ -37,36 +50,49 @@ export const createRequest = catchAsync(async (req, res) => {
     .send({ message: "Request created", data: request });
 });
 
-export const createDelegationRule = catchAsync(async (req, res) => {
-  const input = req.body;
-  const authEmployee = req.employee as AuthEmployee;
+export const createDelegationRule = catchAsync<
+  CustomRequest<never, never, CreateDelegationRuleDto>
+>(
+  async (
+    req: CustomRequest<never, never, CreateDelegationRuleDto>,
+    res: Response
+  ) => {
+    const input = req.body;
+    const authEmployee = req.employee as AuthEmployee;
 
-  const delegationRule = await workflowService.createDelegationRule({
-    ...input,
-    companyId: authEmployee.companyId,
-    createdBy: authEmployee.id,
-  });
+    const delegationRule = await workflowService.createDelegationRule({
+      ...input,
+      companyId: authEmployee.companyId,
+      // createdBy: authEmployee.id,
+    });
 
-  res
-    .status(httpStatus.CREATED)
-    .send({ message: "Delegation rule created", data: delegationRule });
-});
+    res
+      .status(httpStatus.CREATED)
+      .send({ message: "Delegation rule created", data: delegationRule });
+  }
+);
 
-export const action = catchAsync(async (req, res) => {
-  const authEmployee = req.employee as AuthEmployee;
+export const action = catchAsync<CustomRequest<never, never, approvalDto>>(
+  async (req: CustomRequest<never, never, approvalDto>, res: Response) => {
+    const authEmployee = req.employee as AuthEmployee;
 
-  const { instanceId, action, comment, stageId }: approvalDto = req.body;
-  const result = await workflowService.handleApproval({
-    instanceId,
-    action,
-    comment,
-    employeeId: authEmployee.id,
-    stageId,
-  });
-  res.status(httpStatus.OK).send({ message: "Action performed", data: result });
-});
+    const { instanceId, action, comment, stageId } = req.body;
+    const result = await workflowService.handleApproval({
+      instanceId,
+      action,
+      comment,
+      employeeId: authEmployee.id,
+      stageId,
+    });
+    res
+      .status(httpStatus.OK)
+      .send({ message: "Action performed", data: result });
+  }
+);
 
-export const getAuditLog = catchAsync(async (req, res) => {
+export const getAuditLog = catchAsync<
+  CustomRequest<never, AuditLogQuery, never>
+>(async (req: CustomRequest<never, AuditLogQuery, never>, res: Response) => {
   const { instanceId } = req.query;
   // Fetch audit log for the instance
   const logs = await workflowService.getAuditLog(instanceId as string);
