@@ -59,6 +59,12 @@ const update = async (
 };
 
 const remove = async (id: string) => {
+  const getData = await prisma.additionalDeductionDefinition.findUnique({
+    where: { id },
+  });
+  if (!getData)
+    throw new ApiError(httpStatus.BAD_REQUEST, "deduction is not found");
+
   return prisma.additionalDeductionDefinition.update({
     where: { id },
     data: { isActive: false },
