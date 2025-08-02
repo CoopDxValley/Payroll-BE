@@ -89,8 +89,11 @@ model Role {
   id            String           @id @default(uuid())
   name          String           @unique
   companyId     String
+  isActive      Boolean          @default(true)
+  
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+
   company       Company          @relation(fields: [companyId], references: [id])
 
   permissions   RolePermission[]

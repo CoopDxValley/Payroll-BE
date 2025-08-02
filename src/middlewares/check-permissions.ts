@@ -1,3 +1,4 @@
+import httpStatus from "http-status";
 import { Request, Response, NextFunction } from "express";
 import prisma from "../client";
 import { AuthEmployee } from "../modules/auth/auth.type";
@@ -21,23 +22,6 @@ export const checkPermission = (required: string) => {
     }
 
     try {
-      // const employeeWithRoles = await prisma.employee.findUnique({
-      //   where: { id: employeeId, roleHistory: {} },
-      //   include: {
-      //     roleHistory: {
-      //       include: {
-      //         role: {
-      //           include: {
-      //             permissions: {
-      //               include: { permission: true },
-      //             },
-      //           },
-      //         },
-      //       },
-      //     },
-      //   },
-      // });
-
       const employeeWithRoles = await prisma.employeeRoleHistory.findFirst({
         where: { employeeId, toDate: null },
         include: {
@@ -52,16 +36,11 @@ export const checkPermission = (required: string) => {
       });
 
       if (!employeeWithRoles) {
-        res.status(403).json({ message: "Access Denied: Employee not found" });
+        res
+          .status(httpStatus.BAD_REQUEST)
+          .json({ message: "Access Denied: Employee has no roles" });
         return;
       }
-
-      // const allPermissions = employeeWithRoles.role.flatMap(
-      //   (employeeRole) =>
-      //     employeeRole.role.permissions.map(
-      //       (rp) => rp.permission.action_subject
-      //     )
-      // );
       const allPermissions = employeeWithRoles.role.permissions.map(
         (rp) => `${rp.permission.action}_${rp.permission.subject}`
       );
