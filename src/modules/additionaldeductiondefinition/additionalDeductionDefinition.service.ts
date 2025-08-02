@@ -1,17 +1,15 @@
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import httpStatus from "http-status";
+import {
+  createAdditionalDeductionDefination,
+  updateAdditionalDeductionDefinationBody,
+} from "./additional-deduction-defination.type";
 
-const create = async (data: {
-  name: string;
-  type: "AMOUNT" | "PERCENT";
-  companyId: string;
-}) => {
-  const { name, type, companyId } = data;
-
-  if (!name || !companyId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Missing required fields.");
-  }
+const create = async (
+  data: createAdditionalDeductionDefination & { companyId: string }
+) => {
+  const { name, companyId } = data;
 
   const existing = await prisma.additionalDeductionDefinition.findFirst({
     where: {
@@ -26,11 +24,7 @@ const create = async (data: {
   }
 
   return prisma.additionalDeductionDefinition.create({
-    data: {
-      name: name.trim(),
-      type,
-      companyId,
-    },
+    data,
   });
 };
 
@@ -42,12 +36,21 @@ const getAll = async (companyId: string) => {
 };
 
 const getById = async (id: string) => {
-  return prisma.additionalDeductionDefinition.findUnique({ where: { id } });
+  const result = await prisma.additionalDeductionDefinition.findUnique({
+    where: { id },
+  });
+
+  if (!result)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "additional deduction is not found"
+    );
+  return result;
 };
 
 const update = async (
   id: string,
-  data: Partial<{ name: string; type: "AMOUNT" | "PERCENT" }>
+  data: updateAdditionalDeductionDefinationBody
 ) => {
   return prisma.additionalDeductionDefinition.update({
     where: { id },
