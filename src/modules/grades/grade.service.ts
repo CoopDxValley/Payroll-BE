@@ -1,14 +1,9 @@
 import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
-import {
-  createGradeSchema,
-  updateGradeSchema,
-  CreateGradeDto,
-  UpdateGradeDto,
-} from "../../dto/grade.dto";
+import { gradeInput } from "./grade.type";
 
-const createGrade = async (data: CreateGradeDto) => {
+const createGrade = async (data: gradeInput & { companyId: string }) => {
   const { name, minSalary, maxSalary, companyId } = data;
 
   const min = Number(minSalary);
@@ -194,7 +189,7 @@ const getGradeById = async (id: string) => {
 
 export const updateGrade = async (gradeId: string, data: unknown) => {
   // Validate input data using Zod schema (partial update)
-  const validatedData: UpdateGradeDto = updateGradeSchema.parse(data);
+  const validatedData: any = data;
 
   // Fetch existing grade by ID
   const existingGrade = await prisma.grade.findUnique({

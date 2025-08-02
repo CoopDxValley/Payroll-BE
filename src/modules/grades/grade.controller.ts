@@ -1,40 +1,29 @@
 import { Request, Response } from "express";
 import gradeService from "./grade.service";
-import { createGradeSchema, updateGradeSchema } from "../../dto/grade.dto";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import { AuthEmployee } from "../auth/auth.type";
+import { CustomRequest } from "../../middlewares/validate";
+import { gradeInput } from "./grade.type";
 
-// const createGrade = catchAsync(async (req: Request, res: Response) => {
-//   const user = req.user as AuthEmployee;
+const createGrade = catchAsync<CustomRequest<never, never, gradeInput>>(
+  async (req: CustomRequest<never, never, gradeInput>, res: Response) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const inputData: gradeInput & { companyId: string } = {
+      ...req.body,
+      companyId: authEmployee.companyId,
+    };
 
-//   console.log("objedddddct");
-//   console.log(user.companyId);
-//   // const validatedData = createGradeSchema.parse({req.body, user.companyId});
-//   const grade = await gradeService.createGrade({
-//     ...req.body,
-//     companyId: user.companyId,
-//   });
-//   res
-//     .status(httpStatus.CREATED)
-//     .send({ message: "Grade created successfully", data: grade });
-// });
-const createGrade = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+    const grade = await gradeService.createGrade(inputData);
 
-  const validatedData = createGradeSchema.parse({
-    ...req.body,
-    companyId: user.companyId, // append companyId for validation
-  });
+    res
+      .status(httpStatus.CREATED)
+      .send({ message: "Grade created successfully", data: grade });
+  }
+);
 
-  const grade = await gradeService.createGrade(validatedData);
-
-  res
-    .status(httpStatus.CREATED)
-    .send({ message: "Grade created successfully", data: grade });
-});
 const getGrades = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const grades = await gradeService.getAllGrades(user.companyId);
   res.status(httpStatus.OK).send({ data: grades });
 });
