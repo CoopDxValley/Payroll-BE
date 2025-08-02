@@ -2,7 +2,7 @@ import httpStatus from "http-status";
 import { Company } from "@prisma/client";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
-import { CreateCompanyInput } from "./company.type";
+import { CreateCompanyInput, UpdateCompanyInput } from "./company.type";
 
 /**
  * Create a company
@@ -66,12 +66,7 @@ export const getCompanyProfile = async (companyId: string) => {
 
 export const updateCompanyProfile = async (
   companyId: string,
-  updates: Partial<{
-    organizationName: string;
-    phoneNumber: string;
-    email: string;
-    notes: string;
-  }>
+  updates: UpdateCompanyInput
 ): Promise<Company> => {
   const existing = await prisma.company.findUnique({
     where: { id: companyId },
