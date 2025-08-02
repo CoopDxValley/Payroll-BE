@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import additionalDeductionDefinitionService from "./additionalDeductionDefinition.service";
-import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 import { CustomRequest } from "../../middlewares/validate";
 import {
