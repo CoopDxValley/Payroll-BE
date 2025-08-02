@@ -8,16 +8,14 @@ import {
 import { AuthEmployee } from "../auth/auth.type";
 import catchAsync from "../../utils/catch-async";
 import { resubmitApprovalInstance } from "./approval.service";
-// import { performApprovalAction } from "./approval.service";
 
 export const createWorkflow = catchAsync(async (req, res) => {
   const input: CreateApprovalWorkflowDto = req.body;
-  const user = req.user as AuthEmployee;
-  const companyId = "48e30e0e-4d24-49c8-b5dc-564d01e1e967"; //TODO: delete this line and use user.companyId instead
+  const authEmployee = req.employee as AuthEmployee;
 
   const workflow = await workflowService.createWorkflow({
     ...input,
-    companyId: user ? user.companyId : companyId,
+    companyId: authEmployee.companyId,
   });
 
   res
@@ -27,14 +25,12 @@ export const createWorkflow = catchAsync(async (req, res) => {
 
 export const createRequest = catchAsync(async (req, res) => {
   const input: CreateRequestDto = req.body;
-  const user = req.user as AuthEmployee;
-  const companyId = "48e30e0e-4d24-49c8-b5dc-564d01e1e967"; //TODO: delete this line and use user.companyId instead
-  const userId = "2dd81423-703a-4e90-bdcd-345cb3002495"; //TODO: delete this line and use user.id instead
+  const authEmployee = req.employee as AuthEmployee;
 
   const request = await workflowService.createRequest({
     ...input,
-    requestedBy: user ? user.id : userId,
-    companyId: user ? user.companyId : companyId,
+    requestedBy: authEmployee.id,
+    companyId: authEmployee.companyId,
   });
   res
     .status(httpStatus.CREATED)
@@ -43,13 +39,12 @@ export const createRequest = catchAsync(async (req, res) => {
 
 export const createDelegationRule = catchAsync(async (req, res) => {
   const input = req.body;
-  const user = req.user as AuthEmployee;
-  const companyId = "92c8ffa5-c27b-4e88-a2a3-0d127f6ca993"; //TODO: delete this line and use user.companyId instead
-  const userId = "d980fd97-a045-4b88-b10a-917dd729c93c"; //TODO: delete this line and use user.id instead
+  const authEmployee = req.employee as AuthEmployee;
+
   const delegationRule = await workflowService.createDelegationRule({
     ...input,
-    companyId: user ? user.companyId : companyId,
-    createdBy: user ? user.id : userId,
+    companyId: authEmployee.companyId,
+    createdBy: authEmployee.id,
   });
 
   res
@@ -58,15 +53,14 @@ export const createDelegationRule = catchAsync(async (req, res) => {
 });
 
 export const action = catchAsync(async (req, res) => {
-  const employee = req.user as AuthEmployee;
-  const employeeId = "fd39bc0f-232d-48fe-8366-ed9b7358ec81";
+  const authEmployee = req.employee as AuthEmployee;
 
   const { instanceId, action, comment, stageId }: approvalDto = req.body;
   const result = await workflowService.handleApproval({
     instanceId,
     action,
     comment,
-    employeeId, //TODO: change this line to employee.id
+    employeeId: authEmployee.id,
     stageId,
   });
   res.status(httpStatus.OK).send({ message: "Action performed", data: result });
@@ -97,5 +91,7 @@ export const resubmit = catchAsync(async (req, res) => {
     requestorId: user.id,
     reason,
   });
-  res.status(httpStatus.CREATED).send({ message: "Request resubmitted", data: newInstance });
+  res
+    .status(httpStatus.CREATED)
+    .send({ message: "Request resubmitted", data: newInstance });
 });

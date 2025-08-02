@@ -6,7 +6,7 @@ import { AuthEmployee } from "../auth/auth.type";
 import additionalPayDefinitionService from "./additionalPayDefinition.service";
 
 export const create = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const companyId = user.companyId;
   const data = await service.create({ ...req.body, companyId });
 
@@ -21,29 +21,28 @@ export const create = catchAsync(async (req: Request, res: Response) => {
 // });
 
 const getAll = catchAsync(async (req: Request, res: Response) => {
-  console.log("dkfdkfkdfdkfjkdkkdkdkkdfkd");
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const data = await additionalPayDefinitionService.getAll(user.companyId);
   res
     .status(httpStatus.OK)
     .send({ message: "Fetched successfully", data, count: data.length });
 });
 const getById = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const companyId = user.companyId;
   const data = await service.getById(req.params.id, companyId);
   res.status(httpStatus.OK).send({ data: [data] });
 });
 
 const update = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const companyId = user.companyId;
   const data = await service.update(req.params.id, req.body, companyId);
   res.status(httpStatus.OK).send({ message: "Updated", data: data });
 });
 
 const remove = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const companyId = user.companyId;
   const deleted = await service.remove(req.params.id, companyId);
 

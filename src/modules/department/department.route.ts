@@ -1,9 +1,9 @@
 import express from "express";
 import departmentController from "./department.controller";
-// import validate from "../../middlewares/validate";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
-// import adminValidation from "../../validations/admin.validation";
+import { validate } from "../../middlewares/validate";
+import adminValidation from "./department.validation";
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router
   .post(
     auth(),
     // checkPermission("create_system_setting"),
-    // validate(adminValidation.createDepartmentSchema),
+    validate(adminValidation.createDepartment),
     departmentController.createDepartment
   )
   .get(
@@ -25,20 +25,20 @@ router
   .route("/:id")
   .get(
     auth(),
-    checkPermission("view_system_setting"),
-    // validate(adminValidation.getDepartmentSchema),
+    // checkPermission("view_system_setting"),
+    validate(adminValidation.getDepartmentById),
     departmentController.getDepartmentById
   )
   .post(
     auth(),
     // checkPermission("update_system_setting"),
-    // validate(adminValidation.updateDepartmentSchema),
+    validate(adminValidation.updateDepartment),
     departmentController.updateDepartment
   )
   .delete(
     auth(),
     checkPermission("delete_system_setting"),
-    // validate(adminValidation.getDepartmentSchema),
+    validate(adminValidation.getDepartmentById),
     departmentController.deleteDepartment
   );
 

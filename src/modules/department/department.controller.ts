@@ -26,7 +26,7 @@ const createDepartment = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllDepartments = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
 
   // Filter departments by user's company if not admin/super-admin
   const departments = await departmentService.getAllDepartments(user.companyId);
@@ -41,13 +41,9 @@ const getDepartmentById = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id;
   const department = await departmentService.getDepartmentById(id);
 
-  if (!department) {
-    res.status(httpStatus.NOT_FOUND).send({ message: "Department not found" });
-    return; // return void here to satisfy TS
-  }
-
-  res.send({ data: department });
-  return; // also return void here
+  res
+    .status(httpStatus.OK)
+    .send({ data: department, message: "Department retrieved successfully" });
 });
 
 const updateDepartment = catchAsync(async (req: Request, res: Response) => {

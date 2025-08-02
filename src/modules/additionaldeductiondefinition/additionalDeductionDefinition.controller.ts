@@ -6,7 +6,7 @@ import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 
 const create = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   if (!user.companyId) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Company ID is required.");
   }
@@ -20,7 +20,7 @@ const create = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAll = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const data = await additionalDeductionDefinitionService.getAll(
     user.companyId
   );

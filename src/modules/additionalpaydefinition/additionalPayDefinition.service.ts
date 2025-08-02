@@ -32,7 +32,7 @@ const create = async (data: {
 };
 
 const getAll = async (companyId: string) => {
-    console.log("dkljdfdjfhdfhddfdfdfdi");
+  console.log("dkljdfdjfhdfhddfdfdfdi");
   console.log(companyId);
   return prisma.additionalPayDefinition.findMany({
     where: {

@@ -1,6 +1,7 @@
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import httpStatus from "http-status";
+
 const create = async (data: {
   name: string;
   type: "AMOUNT" | "PERCENT";
@@ -34,8 +35,6 @@ const create = async (data: {
 };
 
 const getAll = async (companyId: string) => {
-  console.log("dkljdfdjfhdfhdi");
-  console.log(companyId);
   return prisma.additionalDeductionDefinition.findMany({
     where: { companyId, isActive: true },
     orderBy: { createdAt: "desc" },

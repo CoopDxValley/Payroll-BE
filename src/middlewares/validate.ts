@@ -30,6 +30,7 @@ export const validate =
       return next();
     } catch (err: any) {
       if (err instanceof ZodError) {
+        console.log("Zod validation error:", err.errors);
         const details = err.errors.map((issue) => ({
           message: issue.message,
           path: issue.path.join("."),

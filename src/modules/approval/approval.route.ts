@@ -27,7 +27,7 @@ const router = Router();
 
 router.post(
   "/createWorkflow",
-  // auth(),
+  auth(),
   // checkPermission("create_system_setting"),
   validate(createApprovalWorkflowValidation),
   createWorkflow
@@ -35,7 +35,7 @@ router.post(
 
 router.post(
   "/createRequest",
-  // auth(),
+  auth(),
   // checkPermission("create_system_setting"),
   validate(createRequestValidation),
   createRequest
@@ -43,7 +43,7 @@ router.post(
 
 router.post(
   "/createDelegation",
-  // auth(),
+  auth(),
   // checkPermission("create_system_setting"),
   validate(createDelegationRuleValidation),
   createDelegationRule
@@ -51,7 +51,7 @@ router.post(
 
 router.post(
   "/action",
-  // auth(),
+  auth(),
   // checkPermission("approve_request"),
   validate(approvalValidation),
   action
@@ -59,7 +59,7 @@ router.post(
 
 router.post(
   "/resubmit/:instanceId",
-  // auth(),
+  auth(),
   // checkPermission("resubmit_request"),
   validate(resubmitApprovalValidation),
   resubmit
@@ -67,7 +67,7 @@ router.post(
 
 router.get(
   "/audit-log",
-  // auth(),
+  auth(),
   // checkPermission("view_audit_log"),
   validate(auditLogQueryValidation),
   getAuditLog
@@ -75,7 +75,7 @@ router.get(
 
 router.get(
   "/instance/:id",
-  // auth(),
+  auth(),
   // checkPermission("view_instance"),
   getInstanceDetails
 );

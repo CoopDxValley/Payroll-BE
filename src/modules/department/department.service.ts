@@ -7,23 +7,10 @@ const createDepartment = async (data: {
   deptName: string;
   location?: string;
   shorthandRepresentation?: string;
-  companyId: string; // assuming UUID based on your Position model
+  companyId: string;
 }) => {
   const { deptName, location, shorthandRepresentation, companyId } = data;
 
-  // Validate deptName
-  if (!deptName || typeof deptName !== "string" || !deptName.trim()) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Department name is required");
-  }
-
-  // Validate shorthandRepresentation
-
-  // Validate companyId
-  if (!companyId || typeof companyId !== "string") {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Valid companyId is required");
-  }
-
-  // Check for duplicate department in the same company
   const existing = await prisma.department.findFirst({
     where: {
       deptName: deptName.trim(),
@@ -49,7 +36,7 @@ const createDepartment = async (data: {
   });
 };
 
-const getAllDepartments = async (companyId?: string) => {
+const getAllDepartments = async (companyId: string) => {
   return await prisma.department.findMany({
     where: {
       companyId: companyId,
@@ -69,7 +56,6 @@ const getDepartmentById = async (id: string) => {
     where: { id },
     include: {
       company: true,
-      // departmentEmployees: true,
     },
   });
 };
