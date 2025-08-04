@@ -32,3 +32,18 @@ export const createRoleSchema = {
     name: z.string().min(1, "Role name is required"),
   }),
 };
+
+export const updateRole = {
+  params: z.object({
+    roleId: z.string().uuid().min(1, "Role ID is required"),
+  }),
+  body: z.object({
+    name: z.string().min(1, "Role name is required"),
+  }),
+};
+
+export const removeRole = {
+  params: z.object({
+    roleId: z.string().uuid().min(1, "Role ID is required"),
+  }),
+};

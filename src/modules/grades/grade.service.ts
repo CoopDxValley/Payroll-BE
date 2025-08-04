@@ -1,14 +1,9 @@
 import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
-import {
-  createGradeSchema,
-  updateGradeSchema,
-  CreateGradeDto,
-  UpdateGradeDto,
-} from "../../dto/grade.dto";
+import { getGradeParams, gradeInput, updateGradeBody } from "./grade.type";
 
-const createGrade = async (data: CreateGradeDto) => {
+const createGrade = async (data: gradeInput & { companyId: string }) => {
   const { name, minSalary, maxSalary, companyId } = data;
 
   const min = Number(minSalary);
@@ -106,7 +101,7 @@ const getAllGrades = async (companyId: string) => {
   });
 };
 
-const getGradeById = async (id: string) => {
+const getGradeById = async (id: getGradeParams["id"]) => {
   const grade = await prisma.grade.findUnique({
     where: { id },
     include: {
@@ -120,83 +115,11 @@ const getGradeById = async (id: string) => {
 
   return grade;
 };
-// const updateGrade = async (gradeId: string, data: UpdateGradeDto) => {
-//   // Validate input
-//   // const validatedData = updateGradeSchema.parse(data);
-//   const { name, minSalary, maxSalary, companyId } = data;
 
-//   // Fetch existing grade
-//   const existingGrade = await prisma.grade.findUnique({
-//     where: { id: gradeId },
-//   });
-
-//   if (!existingGrade) {
-//     throw new ApiError(httpStatus.NOT_FOUND, "Grade not found");
-//   }
-
-//   const finalMinSalary = data.minSalary ?? existingGrade.minSalary;
-//   const finalMaxSalary = data.maxSalary ?? existingGrade.maxSalary;
-
-//   // Optional: Check for duplicate name
-//   if (data.name && data.name.trim() !== existingGrade.name) {
-//     const duplicate = await prisma.grade.findFirst({
-//       where: {
-//         name: data.name.trim(),
-//         companyId: existingGrade.companyId,
-//         NOT: { id: gradeId },
-//       },
-//     });
-
-//     if (duplicate) {
-//       throw new ApiError(
-//         httpStatus.BAD_REQUEST,
-//         "Grade with this name already exists in the company"
-//       );
-//     }
-//   }
-
-//   // 🔍 Check for overlapping ranges
-//   const overlappingGrade = await prisma.grade.findFirst({
-//     where: {
-//       companyId: existingGrade.companyId,
-//       NOT: { id: gradeId },
-//       OR: [
-//         {
-//           minSalary: {
-//             lte: finalMaxSalary,
-//           },
-//           maxSalary: {
-//             gte: finalMinSalary,
-//           },
-//         },
-//       ],
-//     },
-//   });
-
-//   if (overlappingGrade) {
-//     throw new ApiError(
-//       httpStatus.BAD_REQUEST,
-//       `Salary range overlaps with existing grade (${overlappingGrade.name})`
-//     );
-//   }
-
-//   // ✅ Perform update
-//   const updatedGrade = await prisma.grade.update({
-//     where: { id: gradeId },
-//     data: {
-//       ...data,
-//       name: data.name?.trim(),
-//     },
-//   });
-
-//   return updatedGrade;
-// };
-
-export const updateGrade = async (gradeId: string, data: unknown) => {
-  // Validate input data using Zod schema (partial update)
-  const validatedData: UpdateGradeDto = updateGradeSchema.parse(data);
-
-  // Fetch existing grade by ID
+export const updateGrade = async (
+  gradeId: string,
+  data: updateGradeBody & { companyId: string }
+) => {
   const existingGrade = await prisma.grade.findUnique({
     where: { id: gradeId },
   });
@@ -206,14 +129,14 @@ export const updateGrade = async (gradeId: string, data: unknown) => {
   }
 
   // Use existing values if minSalary or maxSalary not provided
-  const finalMinSalary = validatedData.minSalary ?? existingGrade.minSalary;
-  const finalMaxSalary = validatedData.maxSalary ?? existingGrade.maxSalary;
+  const finalMinSalary = data.minSalary ?? existingGrade.minSalary;
+  const finalMaxSalary = data.maxSalary ?? existingGrade.maxSalary;
 
   // Check if name is changing and if new name duplicates another grade in company
-  if (validatedData.name && validatedData.name.trim() !== existingGrade.name) {
+  if (data.name && data.name.trim() !== existingGrade.name) {
     const duplicate = await prisma.grade.findFirst({
       where: {
-        name: validatedData.name.trim(),
+        name: data.name.trim(),
         companyId: existingGrade.companyId,
         NOT: { id: gradeId },
       },
@@ -250,27 +173,12 @@ export const updateGrade = async (gradeId: string, data: unknown) => {
   // Perform the update
   const updatedGrade = await prisma.grade.update({
     where: { id: gradeId },
-    data: {
-      name: validatedData.name?.trim() ?? existingGrade.name,
-      minSalary: finalMinSalary,
-      maxSalary: finalMaxSalary,
-      // companyId is not updated here to keep integrity
-    },
+    data: data,
   });
 
   return updatedGrade;
 };
-// const deleteGrade = async (id: string) => {
-//   const existing = await prisma.grade.findUnique({ where: { id } });
-//   if (!existing) {
-//     throw new ApiError(httpStatus.NOT_FOUND, "Grade not found");
-//   }
 
-//   return prisma.grade.update({
-//     where: { id },
-//     data: { isActive: false },
-//   });
-// };
 export const deleteGrade = async (id: string) => {
   const existing = await prisma.grade.findUnique({ where: { id } });
   if (!existing) {
@@ -295,6 +203,7 @@ export const deleteGrade = async (id: string) => {
     },
   });
 };
+
 export default {
   createGrade,
   getAllGrades,

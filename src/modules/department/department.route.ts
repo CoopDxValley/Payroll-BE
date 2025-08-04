@@ -1,9 +1,15 @@
 import express from "express";
 import departmentController from "./department.controller";
-// import validate from "../../middlewares/validate";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
-// import adminValidation from "../../validations/admin.validation";
+import { validate } from "../../middlewares/validate";
+import adminValidation from "./department.validation";
+import {
+  createDepartmentInput,
+  getDepartmentByIdParams,
+  updateDepartmentBody,
+  updateDepartmentParams,
+} from "./department.type";
 
 const router = express.Router();
 
@@ -12,7 +18,9 @@ router
   .post(
     auth(),
     // checkPermission("create_system_setting"),
-    // validate(adminValidation.createDepartmentSchema),
+    validate<never, never, createDepartmentInput>(
+      adminValidation.createDepartment
+    ),
     departmentController.createDepartment
   )
   .get(
@@ -25,20 +33,29 @@ router
   .route("/:id")
   .get(
     auth(),
-    checkPermission("view_system_setting"),
-    // validate(adminValidation.getDepartmentSchema),
+    // checkPermission("view_system_setting"),
+    validate<getDepartmentByIdParams, never, never>(
+      adminValidation.getDepartmentById
+    ),
     departmentController.getDepartmentById
   )
   .post(
     auth(),
     // checkPermission("update_system_setting"),
-    // validate(adminValidation.updateDepartmentSchema),
+    validate<updateDepartmentParams, never, updateDepartmentBody>(
+      adminValidation.updateDepartment
+    ),
     departmentController.updateDepartment
-  )
-  .delete(
+  );
+
+router
+  .route("/delete/:id")
+  .post(
     auth(),
     checkPermission("delete_system_setting"),
-    // validate(adminValidation.getDepartmentSchema),
+    validate<getDepartmentByIdParams, never, never>(
+      adminValidation.getDepartmentById
+    ),
     departmentController.deleteDepartment
   );
 

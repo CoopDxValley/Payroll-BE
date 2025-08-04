@@ -3,9 +3,6 @@ import { validate } from "../../middlewares/validate";
 import {
   createApprovalWorkflowValidation,
   createRequestValidation,
-  // approvalCommentValidation,
-  // delegationValidation,
-  // escalationValidation,
   auditLogQueryValidation,
   createDelegationRuleValidation,
   approvalValidation,
@@ -22,44 +19,54 @@ import {
 } from "./approval.controller";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
+import {
+  approvalDto,
+  CreateApprovalWorkflowDto,
+  CreateDelegationRuleDto,
+  CreateRequestDto,
+} from "./approval.type";
 
 const router = Router();
 
 router.post(
   "/createWorkflow",
-  // auth(),
+  auth(),
   // checkPermission("create_system_setting"),
-  validate(createApprovalWorkflowValidation),
+  validate<never, never, CreateApprovalWorkflowDto>(
+    createApprovalWorkflowValidation
+  ),
   createWorkflow
 );
 
 router.post(
   "/createRequest",
-  // auth(),
+  auth(),
   // checkPermission("create_system_setting"),
-  validate(createRequestValidation),
+  validate<never, never, CreateRequestDto>(createRequestValidation),
   createRequest
 );
 
 router.post(
   "/createDelegation",
-  // auth(),
+  auth(),
   // checkPermission("create_system_setting"),
-  validate(createDelegationRuleValidation),
+  validate<never, never, CreateDelegationRuleDto>(
+    createDelegationRuleValidation
+  ),
   createDelegationRule
 );
 
 router.post(
   "/action",
-  // auth(),
+  auth(),
   // checkPermission("approve_request"),
-  validate(approvalValidation),
+  validate<never, never, approvalDto>(approvalValidation),
   action
 );
 
 router.post(
   "/resubmit/:instanceId",
-  // auth(),
+  auth(),
   // checkPermission("resubmit_request"),
   validate(resubmitApprovalValidation),
   resubmit
@@ -67,7 +74,7 @@ router.post(
 
 router.get(
   "/audit-log",
-  // auth(),
+  auth(),
   // checkPermission("view_audit_log"),
   validate(auditLogQueryValidation),
   getAuditLog
@@ -75,7 +82,7 @@ router.get(
 
 router.get(
   "/instance/:id",
-  // auth(),
+  auth(),
   // checkPermission("view_instance"),
   getInstanceDetails
 );

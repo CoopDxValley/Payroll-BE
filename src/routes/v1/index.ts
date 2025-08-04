@@ -7,18 +7,13 @@ import authRoute from "../../modules/auth/auth.route";
 
 import departmentRoute from "../../modules/department/department.route";
 import positionRoute from "../../modules/position/position.route";
-// import authRoute from "./auth.routes";
-// import userRoute from "./user.route";
-// import adminRoute from "./admin.route";
-
 import shiftRoute from "../../modules/shift/shift.route";
 import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
-// import attendance from "../../modules/attendance/attendance.route";
-// import swagger from "../../modules/swagger";
+import roleRoute from "../../modules/role/role.route";
 import { setupSwagger } from "../../swagger/setup";
 
 const router = express.Router();
@@ -28,15 +23,6 @@ const defaultRoutes = [
     path: "/company",
     route: companyRoute,
   },
-
-  // {
-  //   path: "/users",
-  //   route: userRoute,
-  // },
-  // {
-  //   path: "/auth",
-  //   route: authRoute,
-  // },
   {
     path: "/company",
     route: companyRoute,
@@ -89,8 +75,8 @@ const defaultRoutes = [
     route: approvalRoute,
   },
   {
-    path: "/swagger",
-    route: setupSwagger,
+    path: "/roles",
+    route: roleRoute,
   },
 ];
 
@@ -99,6 +85,10 @@ const devRoutes = [
   {
     path: "/dev",
     route: healthRoute,
+  },
+  {
+    path: "/swagger",
+    route: setupSwagger,
   },
 ];
 

@@ -1,16 +1,15 @@
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import httpStatus from "http-status";
-const create = async (data: {
-  name: string;
-  type: "AMOUNT" | "PERCENT";
-  companyId: string;
-}) => {
-  const { name, type, companyId } = data;
+import {
+  createAdditionalDeductionDefination,
+  updateAdditionalDeductionDefinationBody,
+} from "./additional-deduction-defination.type";
 
-  if (!name || !companyId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Missing required fields.");
-  }
+const create = async (
+  data: createAdditionalDeductionDefination & { companyId: string }
+) => {
+  const { name, companyId } = data;
 
   const existing = await prisma.additionalDeductionDefinition.findFirst({
     where: {
@@ -25,17 +24,11 @@ const create = async (data: {
   }
 
   return prisma.additionalDeductionDefinition.create({
-    data: {
-      name: name.trim(),
-      type,
-      companyId,
-    },
+    data,
   });
 };
 
 const getAll = async (companyId: string) => {
-  console.log("dkljdfdjfhdfhdi");
-  console.log(companyId);
   return prisma.additionalDeductionDefinition.findMany({
     where: { companyId, isActive: true },
     orderBy: { createdAt: "desc" },
@@ -43,12 +36,21 @@ const getAll = async (companyId: string) => {
 };
 
 const getById = async (id: string) => {
-  return prisma.additionalDeductionDefinition.findUnique({ where: { id } });
+  const result = await prisma.additionalDeductionDefinition.findUnique({
+    where: { id },
+  });
+
+  if (!result)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "additional deduction is not found"
+    );
+  return result;
 };
 
 const update = async (
   id: string,
-  data: Partial<{ name: string; type: "AMOUNT" | "PERCENT" }>
+  data: updateAdditionalDeductionDefinationBody
 ) => {
   return prisma.additionalDeductionDefinition.update({
     where: { id },
@@ -57,6 +59,12 @@ const update = async (
 };
 
 const remove = async (id: string) => {
+  const getData = await prisma.additionalDeductionDefinition.findUnique({
+    where: { id },
+  });
+  if (!getData)
+    throw new ApiError(httpStatus.BAD_REQUEST, "deduction is not found");
+
   return prisma.additionalDeductionDefinition.update({
     where: { id },
     data: { isActive: false },

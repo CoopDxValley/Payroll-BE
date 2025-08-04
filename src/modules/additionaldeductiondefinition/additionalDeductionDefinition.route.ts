@@ -2,8 +2,9 @@ import express from "express";
 // import validate from "../../middlewares/validate";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
-// import additionalDeductionDefinitionValidation from "../../validations/additionalDeductionDefinition.validation";
+import { validate } from "../../middlewares/validate";
 import additionalDeductionDefinitionController from "./additionalDeductionDefinition.controller";
+import additionalDeductionDefinitionValidation from "./additionalDeductionDefinition.validation";
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router
   .post(
     auth(),
     // checkPermission("create_payroll_setting"),
-    // validate(additionalDeductionDefinitionValidation.create),
+    validate(additionalDeductionDefinitionValidation.create),
     additionalDeductionDefinitionController.create
   )
   .get(
@@ -25,19 +26,21 @@ router
   .route("/:id")
   .get(
     auth(),
-    // validate(additionalDeductionDefinitionValidation.getById),
+    validate(additionalDeductionDefinitionValidation.getById),
     additionalDeductionDefinitionController.getById
   )
   .post(
     auth(),
-    // validate(additionalDeductionDefinitionValidation.update),
+    validate(additionalDeductionDefinitionValidation.update),
     additionalDeductionDefinitionController.update
   );
 
-router.route("/delete/:id").post(
-  auth(),
-  // validate(additionalDeductionDefinitionValidation.getById),
-  additionalDeductionDefinitionController.remove
-);
+router
+  .route("/delete/:id")
+  .post(
+    auth(),
+    validate(additionalDeductionDefinitionValidation.getById),
+    additionalDeductionDefinitionController.remove
+  );
 
 export default router;

@@ -7,18 +7,18 @@ const createPosition = {
   }),
 };
 
-const updatePosition = {
-  body: z.object({
-    positionName: z.string().trim().optional(),
-    description: z.string().trim().optional(),
-    companyId: z.string().uuid().optional(),
-    isActive: z.boolean().optional(),
-  }),
-};
-
 const getOrDeletePosition = {
   params: z.object({
     id: z.string().uuid(),
+  }),
+};
+
+const updatePosition = {
+  params: getOrDeletePosition.params,
+  body: z.object({
+    positionName: z.string().trim().optional(),
+    description: z.string().trim().optional(),
+    isActive: z.boolean().optional(),
   }),
 };
 

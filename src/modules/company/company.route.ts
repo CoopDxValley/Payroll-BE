@@ -12,16 +12,21 @@ import {
 } from "./company.controller";
 import auth from "../../middlewares/auth";
 import { upload } from "../../config/multer";
+import { CreateCompanyInput, UpdateCompanyInput } from "./company.type";
 
 const router = Router();
 
-router.post("/register", validate(createCompanyValidation), registerCompany);
+router.post(
+  "/register",
+  validate<never, never, CreateCompanyInput>(createCompanyValidation),
+  registerCompany
+);
 router.get("/profile", auth(), getCompany);
 router.post(
   "/update",
   auth(),
   upload.none(),
-  validate(updateCompanyValidation),
+  validate<never, never, UpdateCompanyInput>(updateCompanyValidation),
   updateCompany
 );
 

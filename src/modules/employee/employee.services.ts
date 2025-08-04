@@ -10,6 +10,7 @@ import ApiError from "../../utils/api-error";
 import {
   CreateEmployeeInput,
   CreateEmployeeServiceInput,
+  getEmployeesQuery,
 } from "./employee.type";
 import { generateRandomPassword, generateUsername } from "../../utils/helper";
 import config from "../../config/config";
@@ -21,6 +22,7 @@ import { formatPhoneNumberForSms } from "../../utils/format-phone-number";
 import logger from "../../config/logger";
 import { AuthEmployee } from "../auth/auth.type";
 import departmentService from "../department/department.service";
+import exclude from "../../utils/exclude";
 
 /**
  * Create a Employee
@@ -234,17 +236,11 @@ const getEmployeePermissions = async (
  * @returns {Promise<QueryResult>}
  */
 export const queryEmployee = async (
-  // filter: object,
   companyId: string,
-  options: {
-    limit?: string;
-    page?: string;
-    sortBy?: string;
-    sortType?: "asc" | "desc";
-  }
+  options: getEmployeesQuery
 ) => {
-  const page = options.page ? parseInt(options.page) : 1;
-  const limit = options.limit ? parseInt(options.limit) : 10;
+  const page = options.page ? options.page : 1;
+  const limit = options.limit ? options.limit : 10;
   const skip = (page - 1) * limit;
   const sortBy = options.sortBy;
   const sortType = options.sortType ?? "desc";
@@ -322,7 +318,11 @@ const getEmployeeInfoById = async (
     },
   });
 
-  return employee;
+  if (!employee) {
+    return null;
+  }
+
+  return exclude(employee, ["password"]);
 };
 
 const assignEmployeeToDepartment = async (
