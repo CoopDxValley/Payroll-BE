@@ -1,5 +1,5 @@
 import path from "path";
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import passport from "passport";
 import cors from "cors";
 import helmet from "helmet";
@@ -60,14 +60,28 @@ app.options("*name", cors());
 app.use((req, res, next) => {
   res.removeHeader("Cross-Origin-Opener-Policy");
   res.removeHeader("Origin-Agent-Cluster");
-  res.removeHeader("Strict-Transport-Security");
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
-  );
+  // res.removeHeader("Strict-Transport-Security");
+  // res.setHeader(
+  //   "Content-Security-Policy",
+  //   "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+  // );
 
   next();
 });
+
+app.use(
+  "/api/api-docs",
+  (req: Request, res: Response, next: NextFunction) => {
+    res.removeHeader?.("Strict-Transport-Security");
+    res.setHeader?.(
+      "Content-Security-Policy",
+      "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+    );
+    next();
+  },
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec)
+);
 
 // app.use("/api/v1/api-docs", (req, res, next) => {
 //   res.removeHeader("Strict-Transport-Security");
