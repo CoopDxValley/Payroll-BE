@@ -12,6 +12,10 @@ import positionRoute from "../../modules/position/position.route";
 // import adminRoute from "./admin.route";
 
 import shiftRoute from "../../modules/shift/shift.route";
+import shiftDayRoute from "../../modules/shiftDays/shiftDay.route";
+import employeeShiftRoute from "../../modules/EmployeShift/employeeShift.route";
+import shiftCoverageRoute from "../../modules/shiftCoverage/shiftCoverage.route";
+import workingCalendarRoute from "../../modules/workingCalendar/workingCalendar.route";
 import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
@@ -19,7 +23,11 @@ import additionalpayDefinition from "../../modules/additionalpaydefinition/addit
 import approvalRoute from "../../modules/approval/approval.route";
 import attendance from "../../modules/attendance/attendance.route";
 // import swagger from "../../modules/swagger";
-import { setupSwagger } from "../../swagger/setup";
+// import { setupSwagger } from "../../swagger/setup";
+
+import { setupSwagger } from "../../swagger/setup"; // ✅ correct
+import { setupSwaggerAlternative } from "../../swagger/setup-alternative"; // Alternative CDN-based
+import documentsRoute from "../../documents/documents.route"; // ✅ Documents route
 
 const router = express.Router();
 
@@ -57,6 +65,22 @@ const defaultRoutes = [
     route: shiftRoute,
   },
   {
+    path: "/shift-days",
+    route: shiftDayRoute,
+  },
+  {
+    path: "/employee-shifts",
+    route: employeeShiftRoute,
+  },
+  {
+    path: "/shift-coverage",
+    route: shiftCoverageRoute,
+  },
+  {
+    path: "/working-calendar",
+    route: workingCalendarRoute,
+  },
+  {
     path: "/grades",
     route: gradeRoute,
   },
@@ -89,8 +113,25 @@ const defaultRoutes = [
     route: approvalRoute,
   },
   {
+    path: "/test",
+    route: (req: any, res: any) => {
+      res.json({
+        message: "Server is working!",
+        timestamp: new Date().toISOString(),
+        protocol: req.protocol,
+        host: req.get('host'),
+        url: req.url
+      });
+    },
+  },
+  {
+    path: "/documents",
+    route: documentsRoute,
+  },
+  {
     path: "/swagger",
-    route: setupSwagger,
+    // route: setupSwaggerAlternative, // Try alternative setup that serves spec via URL
+    route: setupSwagger, // Try this first, switch to setupSwaggerAlternative if needed
   },
 ];
 

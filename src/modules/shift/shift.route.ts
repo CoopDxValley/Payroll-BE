@@ -1,8 +1,9 @@
 import express from "express";
 import shiftController from "./shift.controller";
+import auth from "../../middlewares/auth";
+import { checkPermission } from "../../middlewares/checkPermissions";
 // import validate from "../../middlewares/validate";
 // import shiftValidation from "../../validations/shift.validation";
-import auth from "../../middlewares/auth";
 
 const router = express.Router();
 
@@ -10,19 +11,35 @@ router
   .route("/")
   .post(
     auth(),
+    // checkPermission("create_shift"),
     // validate(shiftValidation.createShift),
     shiftController.createShift
   )
-  .get(auth(), shiftController.getShifts);
+  .get(
+    auth(),
+    // checkPermission("view_shift"),
+    shiftController.getAllShifts
+  );
 
 router
   .route("/:id")
-  .get(auth(), shiftController.getShiftById)
+  .get(
+    auth(),
+    // checkPermission("view_shift"),
+    shiftController.getShiftById
+  )
   .post(
     auth(),
-    // validate(shiftValidation.updateShift),
+    // checkPermission("update_shift"),
     shiftController.updateShift
+  )
+
+  router
+  .route("/delete/:id")
+  .post(
+    auth(),
+    // checkPermission("delete_shift"),
+    shiftController.deleteShift
   );
-router.route("/delete/:id").post(auth(), shiftController.deleteShift);
 
 export default router;

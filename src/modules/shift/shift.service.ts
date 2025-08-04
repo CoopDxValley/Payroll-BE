@@ -1,93 +1,84 @@
-// import { PrismaClient } from "@prisma/client";
+import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
-import prisma from "../../client";
 
-// const prisma = new PrismaClient();
+const createShift = async (data: {
+  name: string;
+  cycleDays: number;
+  companyId: string;
+}) => {
+  const { name, cycleDays, companyId } = data;
 
-const createShift = async (shiftData: any, companyId: string) => {
-  const shift = await prisma.shift.create({
+  if (!name || !cycleDays || !companyId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Missing required fields");
+  }
+
+  const existing = await prisma.shift.findFirst({
+    where: { name, companyId, isActive: true },
+  });
+
+  if (existing) {
+    throw new ApiError(httpStatus.CONFLICT, "Shift already exists");
+  }
+
+  return prisma.shift.create({
     data: {
-      ...shiftData,
+      name,
+      cycleDays,
       companyId,
     },
   });
-  return shift;
 };
 
-const getShifts = async (companyId: string) => {
-  const shifts = await prisma.shift.findMany({
-    where: {
-      companyId,
-      isActive: true,
+const getAllShifts = async (companyId: string) => {
+  return prisma.shift.findMany({
+    where: { companyId, isActive: true },
+    include: {
+      patternDays: true,
+      employeeShifts: true,
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: { createdAt: "desc" },
   });
-  return shifts;
 };
 
-const getShiftById = async (id: string, companyId: string) => {
-  const shift = await prisma.shift.findFirst({
-    where: {
-      id,
-      companyId,
-      isActive: true,
-    },
-  });
-  if (!shift) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Shift not found");
-  }
-  return shift;
-};
-
-const updateShift = async (id: string, companyId: string, updateData: any) => {
-  const shift = await prisma.shift.findFirst({
-    where: {
-      id,
-      companyId,
-      isActive: true,
-    },
-  });
-
-  if (!shift) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Shift not found");
-  }
-
-  const updatedShift = await prisma.shift.update({
+const getShiftById = async (id: string) => {
+  return prisma.shift.findUnique({
     where: { id },
-    data: updateData,
-  });
-
-  return updatedShift;
-};
-
-const deleteShift = async (id: string, companyId: string) => {
-  const shift = await prisma.shift.findFirst({
-    where: {
-      id,
-      companyId,
-      isActive: true,
+    include: {
+      patternDays: true,
+      employeeShifts: true,
+      company: true,
     },
   });
+};
 
-  if (!shift) {
+const updateShift = async (
+  id: string,
+  data: Partial<{ name: string; cycleDays: number }>
+) => {
+  const existing = await prisma.shift.findUnique({ where: { id } });
+  if (!existing) {
     throw new ApiError(httpStatus.NOT_FOUND, "Shift not found");
   }
 
-  // Soft delete by setting isActive to false
-  const deletedShift = await prisma.shift.update({
+  return prisma.shift.update({ where: { id }, data });
+};
+
+const deleteShift = async (id: string) => {
+  const existing = await prisma.shift.findUnique({ where: { id } });
+  if (!existing) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Shift not found");
+  }
+
+  return prisma.shift.update({
     where: { id },
     data: { isActive: false },
   });
-
-  return deletedShift;
 };
 
 export default {
   createShift,
-  getShifts,
+  getAllShifts,
   getShiftById,
   updateShift,
   deleteShift,
