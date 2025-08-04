@@ -15,6 +15,8 @@ import { errorConverter, errorHandler } from "./middlewares/error";
 import config from "./config/config";
 import morgan from "./config/morgan";
 // import { smsQueue } from "./queues";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./swagger/new-doc";
 
 // const serverAdapter = new ExpressAdapter();
 // serverAdapter.setBasePath("/ui");
@@ -58,8 +60,33 @@ app.options("*name", cors());
 app.use((req, res, next) => {
   res.removeHeader("Cross-Origin-Opener-Policy");
   res.removeHeader("Origin-Agent-Cluster");
+  res.removeHeader("Strict-Transport-Security");
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+  );
+
   next();
 });
+
+// app.use("/api/v1/api-docs", (req, res, next) => {
+//   res.removeHeader("Strict-Transport-Security");
+//   res.setHeader(
+//     "Content-Security-Policy",
+//     "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+//   );
+//   next();
+// }, swaggerUi);
+
+//     res.setHeader(
+//       "Content-Security-Policy",
+//       "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+//     );
+//     next();
+//   },
+//   swaggerUi.serve,
+//   swaggerUi.setup(swaggerSpec)
+// );
 
 // jwt authentication
 app.use(passport.initialize());
