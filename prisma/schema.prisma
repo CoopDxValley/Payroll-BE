@@ -28,6 +28,8 @@ model Company {
   employees                     Employee[]
   departments                   Department[]
   ApprovalWorkflow              ApprovalWorkflow[]
+
+  companyTaxRules               CompanyTaxRule[]                // Added relation to tax rules
 }
 
 model Account {
@@ -317,6 +319,70 @@ model Employee {
   ApprovalComment        ApprovalComment[]
   ApprovalNotification   ApprovalNotification[]
   ApprovalAuditLog       ApprovalAuditLog[]
+}
+
+
+model TaxSlab {
+  id          String          @id @default(uuid())
+  name        String?          
+  description String?         
+  type        TaxType         @default(INCOME_TAX)
+  rate        Float?          
+  deductible  Float?          
+  minIncome   Float          
+  maxIncome   Float          
+  isDefault   Boolean         @default(false) 
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  companyTaxRules CompanyTaxRule[]
+}
+
+
+model ProvidentFund {
+  id           String          @id @default(uuid())
+  name         String?          
+  description  String?         
+  type         ProvidentFundType 
+  rate         Float           
+  isDefault    Boolean         @default(false) // Indicates if this is a default Ethiopian rule
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  
+  companyTaxRules CompanyTaxRule[]
+}
+
+
+model CompanyTaxRule {
+  id              String          @id @default(uuid())
+  companyId       String
+  taxSlabId       String
+  providentFundId String?
+  isActive        Boolean         @default(true)
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taxSlab         TaxSlab         @relation(fields: [taxSlabId], references: [id], onDelete: Cascade)
+  providentFund   ProvidentFund?  @relation(fields: [providentFundId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, taxSlabId])
+  @@index([companyId])
+  @@index([taxSlabId])
+}
+
+
+enum TaxType {
+  INCOME_TAX
+  EXEMPTION
+}
+
+enum ProvidentFundType {
+  EMPLOYEE
+  EMPLOYER
 }
 
 model Department {
