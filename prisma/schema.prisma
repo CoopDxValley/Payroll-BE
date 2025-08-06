@@ -24,7 +24,9 @@ model Company {
   Grade                         Grade[]
   Shift                         Shift[]
   AdditionalDeductionDefinition AdditionalDeductionDefinition[]
+  additionalDeductions          AdditionalDeduction[]
   AdditionalPayDefinition       AdditionalPayDefinition[]
+  additionalPays                AdditionalPay[]
   employees                     Employee[]
   departments                   Department[]
   ApprovalWorkflow              ApprovalWorkflow[]
@@ -224,10 +226,12 @@ model AdditionalDeductionDefinition {
   type      DeductionType
   companyId String
   isActive  Boolean       @default(true)
+  
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
   company Company @relation(fields: [companyId], references: [id])
+  additionalDeductions  AdditionalDeduction[]
 }
 
 model AdditionalPayDefinition {
@@ -239,6 +243,7 @@ model AdditionalPayDefinition {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
+  additionalPays   AdditionalPay[]
   company Company @relation(fields: [companyId], references: [id])
 
   @@unique([name, companyId, isActive])
@@ -319,6 +324,49 @@ model Employee {
   ApprovalComment        ApprovalComment[]
   ApprovalNotification   ApprovalNotification[]
   ApprovalAuditLog       ApprovalAuditLog[]
+
+  additionalDeductions   AdditionalDeduction[]
+  additionalPays         AdditionalPay[]
+}
+
+
+model AdditionalDeduction {
+  id                                      String                        @id @default(uuid())
+  amount                                  Decimal                       @db.Decimal(10, 2)
+  employeeId                              String
+  additionalDeductionDefinitionId         String
+  companyId                               String
+
+  employee                                Employee                      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  additionalDeductionDefinition           AdditionalDeductionDefinition @relation(fields: [additionalDeductionDefinitionId], references: [id], onDelete: Cascade)
+  company                                 Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt                               DateTime                      @default(now())
+  updatedAt                               DateTime                      @updatedAt
+
+  @@index([employeeId])
+  @@index([additionalDeductionDefinitionId])
+  @@index([companyId])
+}
+
+model AdditionalPay {
+  id                         String                    @id @default(uuid())
+  amount                     Decimal                   @db.Decimal(10, 2)
+
+  additionalPayDefinitionId  String
+  employeeId                 String
+  companyId                  String
+
+  additionalPayDefinition    AdditionalPayDefinition   @relation(fields: [additionalPayDefinitionId], references: [id], onDelete: Cascade)
+  employee                   Employee                  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  company                    Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+
+  @@index([additionalPayDefinitionId])
+  @@index([employeeId])
+  @@index([companyId])
 }
 
 
