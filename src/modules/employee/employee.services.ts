@@ -239,11 +239,12 @@ export const queryEmployee = async (
   companyId: string,
   options: getEmployeesQuery
 ) => {
-  const page = options.page ? options.page : 1;
-  const limit = options.limit ? options.limit : 10;
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 10;
   const skip = (page - 1) * limit;
   const sortBy = options.sortBy;
   const sortType = options.sortType ?? "desc";
+
   const [employees, total] = await Promise.all([
     prisma.employee.findMany({
       where: { companyId },
@@ -266,7 +267,7 @@ export const queryEmployee = async (
         },
       },
       skip,
-      take: limit,
+      take: parseInt(limit.toString()),
       orderBy: sortBy ? { [sortBy]: sortType } : undefined,
     }),
     prisma.employee.count(),

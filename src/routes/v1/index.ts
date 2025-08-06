@@ -14,6 +14,7 @@ import additionalDeductionRoute from "../../modules/additionaldeductiondefinitio
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
 import roleRoute from "../../modules/role/role.route";
+import taxslabRoute from "../../modules/taxslab/taxslab.route";
 import { setupSwagger } from "../../swagger/setup";
 
 const router = express.Router();
@@ -77,6 +78,10 @@ const defaultRoutes = [
   {
     path: "/roles",
     route: roleRoute,
+  },
+  {
+    path: "/taxslab",
+    route: taxslabRoute,
   },
 ];
 

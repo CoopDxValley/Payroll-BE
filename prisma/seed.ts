@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { Gender, PrismaClient } from "@prisma/client";
+import { Gender, PrismaClient, ProvidentFundType } from "@prisma/client";
 import config from "../src/config/config";
 import { generateRandomPassword } from "../src/utils/helper";
 import { encryptPassword } from "../src/utils/encryption";
@@ -188,6 +188,123 @@ async function getPermissions() {
   return prisma.permission.findMany();
 }
 
+async function seedDefaultTaxslabProvidentFund() {
+  // Default Ethiopian Tax Slabs (Income Tax and Exemptions)
+  const defaultTaxSlabs = [
+    {
+      id: "taxslab-0-600",
+      name: "Income Tax 0%",
+      description: "Tax-free income up to 600 ETB",
+      rate: 0,
+      deductible: 0,
+      minIncome: 0,
+      maxIncome: 600,
+      isDefault: true,
+    },
+    {
+      id: "taxslab-601-1650",
+      name: "Income Tax 10%",
+      description: "Income tax for 601–1,650 ETB",
+      rate: 10,
+      deductible: 60,
+      minIncome: 601,
+      maxIncome: 1650,
+      isDefault: true,
+    },
+    {
+      id: "taxslab-1651-3200",
+      name: "Income Tax 15%",
+      description: "Income tax for 1,651–3,200 ETB",
+      rate: 15,
+      deductible: 142.5,
+      minIncome: 1651,
+      maxIncome: 3200,
+      isDefault: true,
+    },
+    {
+      id: "taxslab-3201-5250",
+      name: "Income Tax 20%",
+      description: "Income tax for 3,201–5,250 ETB",
+      rate: 20,
+      deductible: 302.5,
+      minIncome: 3201,
+      maxIncome: 5250,
+      isDefault: true,
+    },
+    {
+      id: "taxslab-5251-7800",
+      name: "Income Tax 25%",
+      description: "Income tax for 5,251–7,800 ETB",
+      rate: 25,
+      deductible: 565,
+      minIncome: 5251,
+      maxIncome: 7800,
+      isDefault: true,
+    },
+    {
+      id: "taxslab-7801-10900",
+      name: "Income Tax 30%",
+      description: "Income tax for 7,801–10,900 ETB",
+      rate: 30,
+      deductible: 955,
+      minIncome: 7801,
+      maxIncome: 10900,
+      isDefault: true,
+    },
+    {
+      id: "taxslab-10901",
+      name: "Income Tax 35%",
+      description: "Income tax for over 10,900 ETB",
+      rate: 35,
+      deductible: 1500,
+      minIncome: 10901,
+      maxIncome: 2000000, // Arbitrary high max for practical purposes
+      isDefault: true,
+    },
+  ];
+
+  // Default Ethiopian Social Security (Provident Fund)
+  const defaultSocialSecurity = [
+    {
+      id: "ss-employee",
+      name: "Employee Social Security",
+      description: "Employee contribution to social security (7%)",
+      type: ProvidentFundType.EMPLOYEE,
+      rate: 7,
+      isDefault: true,
+    },
+    {
+      id: "ss-employer",
+      name: "Employer Social Security",
+      description: "Employer contribution to social security (11%)",
+      type: ProvidentFundType.EMPLOYER,
+      rate: 11,
+      isDefault: true,
+    },
+  ];
+
+  // Seed TaxSlabs
+  for (const slab of defaultTaxSlabs) {
+    await prisma.taxSlab.upsert({
+      where: { id: slab.id },
+      update: {},
+      create: slab,
+    });
+  }
+
+  for (const ss of defaultSocialSecurity) {
+    await prisma.providentFund.upsert({
+      where: { id: ss.id },
+      update: {},
+      create: ss,
+    });
+  }
+
+  console.log(
+    "Default tax slabs and social security rules seeded successfully."
+  );
+}
+
 async function main() {
   await seedPermissions();
   const permissions = await getPermissions();
@@ -196,6 +313,7 @@ async function main() {
   const { department, position } = await seedDepartmentAndPosition(company.id);
   await seedEmployee(company.id, department.id, position.id, role.id);
   await seedGrade(company.id);
+  await seedDefaultTaxslabProvidentFund();
 
   console.log("🌱 Seeding completed!");
 }
