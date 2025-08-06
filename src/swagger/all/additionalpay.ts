@@ -1,12 +1,12 @@
 /**
  * @swagger
  * tags:
- *   - name: Additional Deduction
- *     description: Additional Deduction management
+ *   - name: Additional Pay
+ *     description: Additional Pay management
  *
  * components:
  *   schemas:
- *     Additional Deduction:
+ *     Additional Pay:
  *       type: object
  *       properties:
  *         id:
@@ -17,7 +17,7 @@
  *         employeeId:
  *           type: string
  *           format: uuid
- *         additionalDeductionDefinitionId:
+ *         additionalPayDefinitionId:
  *           type: string
  *           format: uuid
  *         companyId:
@@ -29,35 +29,36 @@
  *         updatedAt:
  *           type: string
  *           format: date-time
- *
- *     CreateAdditionalDeductionDto:
+ *     CreateAdditionalPayDto:
  *       type: object
- *       required:
- *         - amount
- *         - employeeId
+ *       required: [name, amount, employeeId]
  *       properties:
  *         amount:
  *           type: number
  *         employeeId:
  *           type: string
  *           format: uuid
- *         additionalDeductionDefinitionId:
+ *         additionalPayDefinitionId:
  *           type: string
  *           format: uuid
- *
- *     UpdateAdditionalDeductionDto:
+ *     UpdateAdditionalPayDto:
  *       type: object
  *       properties:
  *         amount:
  *           type: number
- *
- * /api/v1/additional-deduction:
+ *         employeeId:
+ *           type: string
+ *           format: uuid
+ *         additionalPayDefinitionId:
+ *           type: string
+ *           format: uuid
+ * /api/v1/additional-pay:
  *   get:
- *     summary: Get all additional deductions
- *     tags: [Additional Deduction]
+ *     summary: Get all additional pays
+ *     tags: [Additional Pay]
  *     responses:
  *       200:
- *         description: List of additional deductions
+ *         description: List of additional pays
  *         content:
  *           application/json:
  *             schema:
@@ -66,79 +67,77 @@
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Additional Deduction'
- *
+ *                     $ref: '#/components/schemas/Additional Pay'
  *   post:
- *     summary: Create additional deduction
- *     tags: [Additional Deduction]
+ *     summary: Create additional pay
+ *     tags: [Additional Pay]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/CreateAdditionalDeductionDto'
+ *             $ref: '#/components/schemas/CreateAdditionalPayDto'
  *     responses:
  *       201:
  *         description: Created
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Additional Deduction'
+ *               $ref: '#/components/schemas/Additional Pay'
  *
- * /api/v1/additional-deduction/{id}:
+ * /api/v1/additional-pay/{id}:
  *   get:
- *     summary: Get additional deduction by ID
- *     tags: [Additional Deduction]
+ *     summary: Get additional pay by ID
+ *     tags: [Additional Pay]
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
  *         schema:
  *           type: string
  *           format: uuid
+ *         required: true
  *     responses:
  *       200:
- *         description: Additional deduction found
+ *         description: Additional pay found
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Additional Deduction'
- *
+ *               $ref: '#/components/schemas/Additional Pay'
  *   post:
- *     summary: Update additional deduction
- *     tags: [Additional Deduction]
+ *     summary: Update additional pay
+ *     tags: [Additional Pay]
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
  *         schema:
  *           type: string
  *           format: uuid
+ *         required: true
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateAdditionalDeductionDto'
+ *             $ref: '#/components/schemas/UpdateAdditionalPayDto'
  *     responses:
  *       200:
  *         description: Updated
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Additional Deduction'
+ *               $ref: '#/components/schemas/Additional Pay'
  *
- * /api/v1/additional-deduction/remove/{id}:
+ * /api/v1/additional-pay/remove/{id}:
  *   post:
- *     summary: Delete additional deduction
- *     tags: [Additional Deduction]
+ *     summary: Delete additional pay
+ *     tags: [Additional Pay]
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
  *         schema:
  *           type: string
  *           format: uuid
+ *         required: true
  *     responses:
  *       200:
  *         description: Deleted
