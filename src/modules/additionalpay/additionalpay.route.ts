@@ -39,8 +39,11 @@ router
       updateAdditionalPaySchema
     ),
     additionalPayController.update
-  )
-  .delete(
+  );
+
+router
+  .route("/remove/:id")
+  .post(
     auth(),
     validate<GetAdditionalPayByIdParams, never, never>(
       getAdditionalPayByIdSchema
