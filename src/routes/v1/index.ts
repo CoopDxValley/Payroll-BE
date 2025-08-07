@@ -20,6 +20,8 @@ import additionalDeductionRoute from "../../modules/additionaldeduction/addition
 import { setupSwagger } from "../../swagger/setup";
 import deductionDefinitionRoute from "../../modules/deductiondefinition/deductionDefinition.route";
 import allowanceDefinitionRoute from "../../modules/allowancedefinition/allowanceDefinition.route";
+import deductionRoute from "../../modules/deduction/deduction.route";
+import allowanceRoute from "../../modules/allowance/allowance.route";
 
 const router = express.Router();
 
@@ -102,6 +104,14 @@ const defaultRoutes = [
   {
     path: "/allowance-definitions",
     route: allowanceDefinitionRoute,
+  },
+  {
+    path: "/deductions",
+    route: deductionRoute,
+  },
+  {
+    path: "/allowances",
+    route: allowanceRoute,
   },
 ];
 
