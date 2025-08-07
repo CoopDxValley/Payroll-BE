@@ -31,11 +31,6 @@
  *       properties:
  *         name:
  *           type: string
- *         companyId:
- *           type: string
- *           format: uuid
- *         isActive:
- *           type: boolean
  *     UpdateDeductionDefinitionDto:
  *       type: object
  *       properties:

@@ -35,9 +35,6 @@
  *         gradeId:
  *           type: string
  *           format: uuid
- *         companyId:
- *           type: string
- *           format: uuid
  *     UpdateDeductionDto:
  *       type: object
  *       properties:
