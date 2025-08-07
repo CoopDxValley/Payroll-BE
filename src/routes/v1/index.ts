@@ -10,11 +10,13 @@ import positionRoute from "../../modules/position/position.route";
 import shiftRoute from "../../modules/shift/shift.route";
 import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
-import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
+import additionalDeductionDefinitionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
 import roleRoute from "../../modules/role/role.route";
 import taxslabRoute from "../../modules/taxslab/taxslab.route";
+import additionalPayRoute from "../../modules/additionalpay/additionalpay.route";
+import additionalDeductionRoute from "../../modules/additionaldeduction/additionaldeduction.route";
 import { setupSwagger } from "../../swagger/setup";
 
 const router = express.Router();
@@ -53,7 +55,7 @@ const defaultRoutes = [
   },
   {
     path: "/additional-deduction-definitions",
-    route: additionalDeductionRoute,
+    route: additionalDeductionDefinitionRoute,
   },
   {
     path: "/additional-pay-definitions",
@@ -82,6 +84,14 @@ const defaultRoutes = [
   {
     path: "/taxslab",
     route: taxslabRoute,
+  },
+  {
+    path: "/additional-pay",
+    route: additionalPayRoute,
+  },
+  {
+    path: "/additional-deduction",
+    route: additionalDeductionRoute,
   },
 ];
 

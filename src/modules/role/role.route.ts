@@ -92,4 +92,6 @@ router.post(
   roleController.assignPermissionToRoles
 );
 
+router.get("/all/permissions", auth(), roleController.getAllPermissions);
+
 export default router;
