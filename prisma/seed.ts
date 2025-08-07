@@ -271,21 +271,18 @@ async function seedDefaultTaxslabProvidentFund() {
   ];
 
   // Default Ethiopian Social Security (Provident Fund)
-  const defaultSocialSecurity = [
+  const defaultProvidentFund = [
     {
-      id: "ss-employee",
-      name: "Employee Social Security",
-      description: "Employee contribution to social security (7%)",
-      type: ProvidentFundType.EMPLOYEE,
-      rate: 7,
+      employerContribution: 11,
+      employeeContribution: 4,
       isDefault: true,
     },
+  ];
+
+  const defaultPension = [
     {
-      id: "ss-employer",
-      name: "Employer Social Security",
-      description: "Employer contribution to social security (11%)",
-      type: ProvidentFundType.EMPLOYER,
-      rate: 11,
+      employerContribution: 11,
+      employeeContribution: 4,
       isDefault: true,
     },
   ];
@@ -299,16 +296,20 @@ async function seedDefaultTaxslabProvidentFund() {
     });
   }
 
-  for (const ss of defaultSocialSecurity) {
-    await prisma.providentFund.upsert({
-      where: { id: ss.id },
-      update: {},
-      create: ss,
+  for (const ss of defaultProvidentFund) {
+    await prisma.providentFund.create({
+      data: ss,
+    });
+  }
+
+  for (const ss of defaultPension) {
+    await prisma.pension.create({
+      data: ss,
     });
   }
 
   console.log(
-    "Default tax slabs and social security rules seeded successfully."
+    "Default tax slabs, pensions, and provident fund rules seeded successfully."
   );
 }
 

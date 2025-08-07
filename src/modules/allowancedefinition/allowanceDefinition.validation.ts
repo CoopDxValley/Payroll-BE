@@ -1,14 +1,32 @@
 import { z } from "zod";
 
-export const createAllowanceDefinitionSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  isTaxable: z.boolean().optional(),
-  isExempted: z.boolean().optional(),
-  exemptedAmount: z.number().positive("Amount must be positive").optional(),
-  startingAmount: z.number().positive("Amount must be positive").optional(),
-  //   companyId: z.string().uuid("Invalid company ID"),
-  isActive: z.boolean().optional(),
-});
+export const createAllowanceDefinitionSchema = z
+  .object({
+    name: z.string().min(2, "Name is required"),
+    isTaxable: z.boolean().optional(),
+    isExempted: z.boolean().optional(),
+    exemptedAmount: z.number().positive("Amount must be positive").nullable(),
+    startingAmount: z.number().positive("Amount must be positive").nullable(),
+    isActive: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.isExempted === true) {
+      if (data.exemptedAmount === null || data.exemptedAmount === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["exemptedAmount"],
+          message: "Exempted amount is required when isExempted is true",
+        });
+      }
+      if (data.startingAmount === null || data.startingAmount === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["startingAmount"],
+          message: "Starting amount is required when isExempted is true",
+        });
+      }
+    }
+  });
 
 export const updateAllowanceDefinitionSchema = z.object({
   name: z.string().min(2).optional(),

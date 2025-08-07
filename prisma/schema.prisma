@@ -31,11 +31,13 @@ model Company {
   departments                   Department[]
   ApprovalWorkflow              ApprovalWorkflow[]
 
-  companyTaxRules               CompanyTaxRule[]
-  DeductionDefinition           DeductionDefinition[]
-  AllowanceDefinition           AllowanceDefinition[]
-  allowances                    Allowance[]
-  deductions                    Deduction[]
+  companyTaxRules          CompanyTaxRule[]
+  DeductionDefinition      DeductionDefinition[]
+  AllowanceDefinition      AllowanceDefinition[]
+  allowances               Allowance[]
+  deductions               Deduction[]
+  CompanyPensionRule       CompanyPensionRule[]
+  CompanyProvidentFundRule CompanyProvidentFundRule[]
 }
 
 model Account {
@@ -247,7 +249,7 @@ model DeductionDefinition {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
+  company    Company     @relation(fields: [companyId], references: [id])
   deductions Deduction[]
 }
 
@@ -264,34 +266,33 @@ model AllowanceDefinition {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
+  company    Company     @relation(fields: [companyId], references: [id])
   allowances Allowance[]
 }
 
 model Allowance {
-  id                    String               @id @default(uuid())
+  id                    String @id @default(uuid())
   amount                String
   allowanceDefinitionId String
   gradeId               String
   companyId             String
 
-  allowanceDefinition   AllowanceDefinition @relation(fields: [allowanceDefinitionId], references: [id])
-  grade                 Grade               @relation(fields: [gradeId], references: [id])
-  company               Company             @relation(fields: [companyId], references: [id])
+  allowanceDefinition AllowanceDefinition @relation(fields: [allowanceDefinitionId], references: [id])
+  grade               Grade               @relation(fields: [gradeId], references: [id])
+  company             Company             @relation(fields: [companyId], references: [id])
 }
 
 model Deduction {
-  id                    String               @id @default(uuid())
+  id                    String @id @default(uuid())
   amount                String
   deductionDefinitionId String
   gradeId               String
   companyId             String
 
-  deductionDefinition   DeductionDefinition @relation(fields: [deductionDefinitionId], references: [id])
-  grade                 Grade               @relation(fields: [gradeId], references: [id])
-  company               Company             @relation(fields: [companyId], references: [id])
+  deductionDefinition DeductionDefinition @relation(fields: [deductionDefinitionId], references: [id])
+  grade               Grade               @relation(fields: [gradeId], references: [id])
+  company             Company             @relation(fields: [companyId], references: [id])
 }
-
 
 model AdditionalPayDefinition {
   id        String      @id @default(uuid())
@@ -445,36 +446,78 @@ model TaxSlab {
 }
 
 model ProvidentFund {
-  id          String            @id @default(uuid())
-  name        String?
-  description String?
-  type        ProvidentFundType
-  rate        Float
-  isDefault   Boolean           @default(false) // Indicates if this is a default Ethiopian rule
+  id                      String            @id @default(uuid())
+  employerContribution    Float
+  employeeContribution    Float     
+  isDefault               Boolean           @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  companyTaxRules CompanyTaxRule[]
+  companyProvidentFundRule CompanyProvidentFundRule[]
+}
+
+model Pension {
+  id                   String  @id @default(uuid())
+  employerContribution Float
+  employeeContribution Float
+  isDefault            Boolean @default(false)
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  companyPensionRule CompanyPensionRule[]
 }
 
 model CompanyTaxRule {
+  id        String  @id @default(uuid())
+  companyId String
+  taxSlabId String
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taxSlab TaxSlab @relation(fields: [taxSlabId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, taxSlabId])
+  @@index([companyId])
+  @@index([taxSlabId])
+}
+
+model CompanyPensionRule {
+  id        String  @id @default(uuid())
+  companyId String
+  pensionId String
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pension Pension @relation(fields: [pensionId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, pensionId])
+  @@index([companyId])
+  @@index([pensionId])
+}
+
+model CompanyProvidentFundRule {
   id              String  @id @default(uuid())
   companyId       String
-  taxSlabId       String
-  providentFundId String?
+  providentFundId String
   isActive        Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  taxSlab       TaxSlab        @relation(fields: [taxSlabId], references: [id], onDelete: Cascade)
-  providentFund ProvidentFund? @relation(fields: [providentFundId], references: [id], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  providentFund ProvidentFund @relation(fields: [providentFundId], references: [id], onDelete: Cascade)
 
-  @@unique([companyId, taxSlabId])
+  @@unique([companyId, providentFundId])
   @@index([companyId])
-  @@index([taxSlabId])
+  @@index([providentFundId])
 }
 
 enum TaxType {
