@@ -206,6 +206,48 @@
 
 /**
  * @swagger
+ * /api/v1/roles/all/permissions:
+ *   get:
+ *     summary: Get all permissions
+ *     tags: [Roles]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all permissions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       action:
+ *                         type: string
+ *                       subject:
+ *                         type: string
+ *                       action_subject:
+ *                         type: string
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized - Invalid Token
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     Role:
