@@ -31,9 +31,11 @@ model Company {
   departments                   Department[]
   ApprovalWorkflow              ApprovalWorkflow[]
 
-  companyTaxRules     CompanyTaxRule[] // Added relation to tax rules
-  DeductionDefinition DeductionDefinition[]
-  AllowanceDefinition AllowanceDefinition[]
+  companyTaxRules               CompanyTaxRule[]
+  DeductionDefinition           DeductionDefinition[]
+  AllowanceDefinition           AllowanceDefinition[]
+  allowances                    Allowance[]
+  deductions                    Deduction[]
 }
 
 model Account {
@@ -168,6 +170,8 @@ model Grade {
 
   company     Company                @relation(fields: [companyId], references: [id])
   assignments EmployeeGradeHistory[]
+  allowances  Allowance[]
+  deductions  Deduction[]
 
   @@index([companyId])
 }
@@ -244,6 +248,7 @@ model DeductionDefinition {
   updatedAt DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id])
+  deductions Deduction[]
 }
 
 model AllowanceDefinition {
@@ -260,7 +265,33 @@ model AllowanceDefinition {
   updatedAt DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id])
+  allowances Allowance[]
 }
+
+model Allowance {
+  id                    String               @id @default(uuid())
+  amount                String
+  allowanceDefinitionId String
+  gradeId               String
+  companyId             String
+
+  allowanceDefinition   AllowanceDefinition @relation(fields: [allowanceDefinitionId], references: [id])
+  grade                 Grade               @relation(fields: [gradeId], references: [id])
+  company               Company             @relation(fields: [companyId], references: [id])
+}
+
+model Deduction {
+  id                    String               @id @default(uuid())
+  amount                String
+  deductionDefinitionId String
+  gradeId               String
+  companyId             String
+
+  deductionDefinition   DeductionDefinition @relation(fields: [deductionDefinitionId], references: [id])
+  grade                 Grade               @relation(fields: [gradeId], references: [id])
+  company               Company             @relation(fields: [companyId], references: [id])
+}
+
 
 model AdditionalPayDefinition {
   id        String      @id @default(uuid())
