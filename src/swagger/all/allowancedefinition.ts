@@ -47,11 +47,6 @@
  *           type: string
  *         startingAmount:
  *           type: string
- *         companyId:
- *           type: string
- *           format: uuid
- *         isActive:
- *           type: boolean
  *     UpdateAllowanceDefinitionDto:
  *       type: object
  *       properties:

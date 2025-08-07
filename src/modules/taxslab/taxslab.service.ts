@@ -30,7 +30,9 @@ const getCompanyTaxRules = async (companyId: string) => {
     },
   });
 
-  return companyTaxRules;
+  const taxSlabs = companyTaxRules.map((rule) => rule.taxSlab);
+
+  return taxSlabs;
 };
 
 const addCompanyTaxslab = async (
