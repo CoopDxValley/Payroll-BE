@@ -45,7 +45,7 @@ router
   );
 
 router.post(
-  "/create-role-with-permission",
+  "/assign/permission",
   auth(),
   validate<never, never, createAssignPermissionToRolesInput>(
     createPermissionsToRoleSchema

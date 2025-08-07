@@ -3,6 +3,7 @@ import { Company } from "@prisma/client";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import { CreateCompanyInput, UpdateCompanyInput } from "./company.type";
+import taxslabService from "../taxslab/taxslab.service";
 
 /**
  * Create a company
@@ -17,7 +18,7 @@ export const createCompany = async (
     throw new ApiError(httpStatus.BAD_REQUEST, "Email already taken");
   }
 
-  return prisma.company.create({
+  const company = await prisma.company.create({
     data: {
       organizationName,
       phoneNumber,
@@ -26,6 +27,9 @@ export const createCompany = async (
       notes,
     },
   });
+  await taxslabService.assignDefaultTaxRulesToCompany(company.id);
+
+  return company;
 };
 
 /**

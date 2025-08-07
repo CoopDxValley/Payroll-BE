@@ -146,7 +146,7 @@
 
 /**
  * @swagger
- * /api/v1/taxslab/reset:
+ * /api/v1/taxslab/tax/reset:
  *   post:
  *     summary: Reset the company's tax slab rules to default
  *     tags: [TaxSlab]

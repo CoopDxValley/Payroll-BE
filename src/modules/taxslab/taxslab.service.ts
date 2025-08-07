@@ -16,7 +16,18 @@ const getDefaultProvidentFund = async () => {
 const getCompanyTaxRules = async (companyId: string) => {
   const companyTaxRules = await prisma.companyTaxRule.findMany({
     where: { companyId, isActive: true },
-    include: { taxSlab: true },
+    select: {
+      taxSlab: {
+        select: {
+          id: true,
+          minIncome: true,
+          maxIncome: true,
+          description: true,
+          type: true,
+          rate: true,
+        },
+      },
+    },
   });
 
   return companyTaxRules;

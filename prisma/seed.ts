@@ -206,7 +206,6 @@ async function seedDefaultTaxslabProvidentFund() {
   // Default Ethiopian Tax Slabs (Income Tax and Exemptions)
   const defaultTaxSlabs = [
     {
-      id: "taxslab-0-600",
       name: "Income Tax 0%",
       description: "Tax-free income up to 600 ETB",
       rate: 0,
@@ -216,7 +215,6 @@ async function seedDefaultTaxslabProvidentFund() {
       isDefault: true,
     },
     {
-      id: "taxslab-601-1650",
       name: "Income Tax 10%",
       description: "Income tax for 601–1,650 ETB",
       rate: 10,
@@ -226,7 +224,6 @@ async function seedDefaultTaxslabProvidentFund() {
       isDefault: true,
     },
     {
-      id: "taxslab-1651-3200",
       name: "Income Tax 15%",
       description: "Income tax for 1,651–3,200 ETB",
       rate: 15,
@@ -236,7 +233,6 @@ async function seedDefaultTaxslabProvidentFund() {
       isDefault: true,
     },
     {
-      id: "taxslab-3201-5250",
       name: "Income Tax 20%",
       description: "Income tax for 3,201–5,250 ETB",
       rate: 20,
@@ -246,7 +242,6 @@ async function seedDefaultTaxslabProvidentFund() {
       isDefault: true,
     },
     {
-      id: "taxslab-5251-7800",
       name: "Income Tax 25%",
       description: "Income tax for 5,251–7,800 ETB",
       rate: 25,
@@ -256,7 +251,6 @@ async function seedDefaultTaxslabProvidentFund() {
       isDefault: true,
     },
     {
-      id: "taxslab-7801-10900",
       name: "Income Tax 30%",
       description: "Income tax for 7,801–10,900 ETB",
       rate: 30,
@@ -266,7 +260,6 @@ async function seedDefaultTaxslabProvidentFund() {
       isDefault: true,
     },
     {
-      id: "taxslab-10901",
       name: "Income Tax 35%",
       description: "Income tax for over 10,900 ETB",
       rate: 35,
@@ -299,10 +292,10 @@ async function seedDefaultTaxslabProvidentFund() {
 
   // Seed TaxSlabs
   for (const slab of defaultTaxSlabs) {
-    await prisma.taxSlab.upsert({
-      where: { id: slab.id },
-      update: {},
-      create: slab,
+    await prisma.taxSlab.create({
+      // where: { id: slab.id },
+      // update: {},
+      data: slab,
     });
   }
 

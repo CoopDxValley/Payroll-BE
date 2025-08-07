@@ -43,6 +43,7 @@ const remove = async (id: string, companyId: string) => {
   });
   if (!existing)
     throw new ApiError(httpStatus.NOT_FOUND, "AdditionalDeduction not found");
+  // Soft delete by setting isActive to false
   return prisma.additionalDeduction.delete({ where: { id } });
 };
 
