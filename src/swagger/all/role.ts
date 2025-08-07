@@ -87,7 +87,7 @@
 
 /**
  * @swagger
- * /api/v1/roles/create-role-with-permission:
+ * /api/v1/roles/assign/permission:
  *   post:
  *     summary: Create a role and assign permissions
  *     tags: [Roles]

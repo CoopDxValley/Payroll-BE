@@ -18,6 +18,8 @@ import taxslabRoute from "../../modules/taxslab/taxslab.route";
 import additionalPayRoute from "../../modules/additionalpay/additionalpay.route";
 import additionalDeductionRoute from "../../modules/additionaldeduction/additionaldeduction.route";
 import { setupSwagger } from "../../swagger/setup";
+import deductionDefinitionRoute from "../../modules/deductiondefinition/deductionDefinition.route";
+import allowanceDefinitionRoute from "../../modules/allowancedefinition/allowanceDefinition.route";
 
 const router = express.Router();
 
@@ -92,6 +94,14 @@ const defaultRoutes = [
   {
     path: "/additional-deduction",
     route: additionalDeductionRoute,
+  },
+  {
+    path: "/deduction-definitions",
+    route: deductionDefinitionRoute,
+  },
+  {
+    path: "/allowance-definitions",
+    route: allowanceDefinitionRoute,
   },
 ];
 

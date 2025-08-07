@@ -8,15 +8,15 @@ datasource db {
 }
 
 model Company {
-  id                            String                          @id @default(uuid())
-  status                        CompanyStatus                   @default(pending)
-  organizationName              String
-  phoneNumber                   String
-  companyCode                   String
-  email                         String?
-  createdAt                     DateTime                        @default(now())
-  updatedAt                     DateTime                        @updatedAt
-  notes                         String?
+  id               String        @id @default(uuid())
+  status           CompanyStatus @default(pending)
+  organizationName String
+  phoneNumber      String
+  companyCode      String
+  email            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  notes            String?
 
   accounts                      Account[]
   positions                     Position[]
@@ -31,7 +31,9 @@ model Company {
   departments                   Department[]
   ApprovalWorkflow              ApprovalWorkflow[]
 
-  companyTaxRules               CompanyTaxRule[]                // Added relation to tax rules
+  companyTaxRules     CompanyTaxRule[] // Added relation to tax rules
+  DeductionDefinition DeductionDefinition[]
+  AllowanceDefinition AllowanceDefinition[]
 }
 
 model Account {
@@ -47,62 +49,61 @@ model Account {
 }
 
 //model Department {
- // id                      String     @id @default(uuid())
- // deptName                String
- // location                String?
- // shorthandRepresentation String?
- // companyId               String
- // isActive                Boolean    @default(true)
- // createdAt               DateTime   @default(now())
- // updatedAt               DateTime   @updatedAt
- // company                 Company    @relation(fields: [companyId], references: [id])
-  //departmentEmployees     Employee[]
+// id                      String     @id @default(uuid())
+// deptName                String
+// location                String?
+// shorthandRepresentation String?
+// companyId               String
+// isActive                Boolean    @default(true)
+// createdAt               DateTime   @default(now())
+// updatedAt               DateTime   @updatedAt
+// company                 Company    @relation(fields: [companyId], references: [id])
+//departmentEmployees     Employee[]
 
- // approvalWorkflow        ApprovalWorkflow[]
+// approvalWorkflow        ApprovalWorkflow[]
 //}
 
 model Position {
-  id                String     @id @default(uuid())
-  positionName      String
-  description       String?
-  companyId         String
-  isActive          Boolean    @default(true)
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
-  
-  company           Company    @relation(fields: [companyId], references: [id])
-  assignments       EmployeePositionHistory[]
+  id           String   @id @default(uuid())
+  positionName String
+  description  String?
+  companyId    String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company     Company                   @relation(fields: [companyId], references: [id])
+  assignments EmployeePositionHistory[]
   //employeePositions Employee[]
 }
 
 model EmployeePositionHistory {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   employeeId String
   positionId String
   fromDate   DateTime
   toDate     DateTime?
 
-  employee   Employee @relation(fields: [employeeId], references: [id])
-  position   Position @relation(fields: [positionId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+  position Position @relation(fields: [positionId], references: [id])
 
   @@unique([employeeId, positionId])
 }
 
-
 model Role {
-  id            String           @id @default(uuid())
-  name          String           @unique
-  companyId     String
-  isActive      Boolean          @default(true)
-  
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id        String  @id @default(uuid())
+  name      String  @unique
+  companyId String
+  isActive  Boolean @default(true)
 
-  company       Company          @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  permissions   RolePermission[]
+  company Company @relation(fields: [companyId], references: [id])
+
+  permissions RolePermission[]
   //employeeRoles EmployeeRole[]
-  assignments   EmployeeRoleHistory[]
+  assignments EmployeeRoleHistory[]
 }
 
 model Permission {
@@ -134,7 +135,6 @@ model Token {
   expires     DateTime
   blacklisted Boolean
   createdAt   DateTime  @default(now())
-  
 
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id])
@@ -166,8 +166,8 @@ model Grade {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company   Company  @relation(fields: [companyId], references: [id])
-  assignments  EmployeeGradeHistory[]
+  company     Company                @relation(fields: [companyId], references: [id])
+  assignments EmployeeGradeHistory[]
 
   @@index([companyId])
 }
@@ -226,12 +226,40 @@ model AdditionalDeductionDefinition {
   type      DeductionType
   companyId String
   isActive  Boolean       @default(true)
-  
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company              Company               @relation(fields: [companyId], references: [id])
+  additionalDeductions AdditionalDeduction[]
+}
+
+model DeductionDefinition {
+  id        String  @id @default(uuid())
+  name      String
+  companyId String
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id])
-  additionalDeductions  AdditionalDeduction[]
+}
+
+model AllowanceDefinition {
+  id             String   @id @default(uuid())
+  name           String
+  isTaxable      Boolean  @default(false)
+  isExempted     Boolean  @default(false)
+  exemptedAmount Decimal  @db.Decimal(10, 2)
+  startingAmount Decimal? @db.Decimal(10, 2)
+  companyId      String
+  isActive       Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
 }
 
 model AdditionalPayDefinition {
@@ -243,8 +271,8 @@ model AdditionalPayDefinition {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  additionalPays   AdditionalPay[]
-  company Company @relation(fields: [companyId], references: [id])
+  additionalPays AdditionalPay[]
+  company        Company         @relation(fields: [companyId], references: [id])
 
   @@unique([name, companyId, isActive])
 }
@@ -262,87 +290,86 @@ enum DeductionType {
 //////
 
 enum PayrollCalculationType {
-  FIXED_SALARY        // Fixed monthly/weekly salary regardless of attendance
-  HOURLY_ATTENDANCE   // Hourly rate based on attendance hours
-  MIXED               // Base salary + attendance bonuses/deductions
-  COMMISSION_BASED    // Commission/piece-rate, attendance optional
-  CONTRACT            // Contract-based, attendance may not matter
+  FIXED_SALARY // Fixed monthly/weekly salary regardless of attendance
+  HOURLY_ATTENDANCE // Hourly rate based on attendance hours
+  MIXED // Base salary + attendance bonuses/deductions
+  COMMISSION_BASED // Commission/piece-rate, attendance optional
+  CONTRACT // Contract-based, attendance may not matter
 }
 
 enum AttendanceRequirement {
-  REQUIRED            // Must track attendance for payroll
-  OPTIONAL            // Attendance tracked but doesn't affect pay
-  NOT_REQUIRED        // No attendance tracking needed
+  REQUIRED // Must track attendance for payroll
+  OPTIONAL // Attendance tracked but doesn't affect pay
+  NOT_REQUIRED // No attendance tracking needed
 }
 
 model Employee {
-  id                     String                  @id @default(uuid())
-  name                   String
-  username               String                  @unique
-  phoneNumber            String
-  password               String
-  employeeIdNumber       String?                 @unique // Device user ID from attendance device
-  
-  attendanceRequirement  AttendanceRequirement   @default(REQUIRED)
+  id               String  @id @default(uuid())
+  name             String
+  username         String  @unique
+  phoneNumber      String
+  password         String
+  employeeIdNumber String? @unique // Device user ID from attendance device
 
-  isSuperAdmin           Boolean                 @default(false)
-  email                  String?                 @unique
-  optionalPhoneNumber    String?
-  gender                 Gender
-  dateOfBirth            DateTime?
-  nationality            String?                 @default("Ethiopia")
-  imageUrl               String?
-  status                 EmploymentStatus        @default(ACTIVE)
-  idNumber               String?
-  idImageUrl             String?
-  idType                 IdType                  @default(KEBELE)
+  attendanceRequirement AttendanceRequirement @default(REQUIRED)
 
-  companyId              String
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  isFirstTimeLoggedIn    Boolean                 @default(true)
-  Token                  Token[]
-  company                Company                 @relation(fields: [companyId], references: [id])
+  isSuperAdmin        Boolean          @default(false)
+  email               String?          @unique
+  optionalPhoneNumber String?
+  gender              Gender
+  dateOfBirth         DateTime?
+  nationality         String?          @default("Ethiopia")
+  imageUrl            String?
+  status              EmploymentStatus @default(ACTIVE)
+  idNumber            String?
+  idImageUrl          String?
+  idType              IdType           @default(KEBELE)
 
-  gradeHistory           EmployeeGradeHistory[] 
-  payrollInfo            PayrollInfo?
-  terminations           TerminationRecord[]
-  departmentHistory      EmployeeDepartmentHistory[]
-  roleHistory            EmployeeRoleHistory[]
-  positionHistory        EmployeePositionHistory[]
-  emergencyContacts      EmergencyContact[]
+  companyId           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  isFirstTimeLoggedIn Boolean  @default(true)
+  Token               Token[]
+  company             Company  @relation(fields: [companyId], references: [id])
 
-  stageEmployees         StageEmployee[]
-  requests               Request[]
-  stageStatuses          StageStatus[]
+  gradeHistory      EmployeeGradeHistory[]
+  payrollInfo       PayrollInfo?
+  terminations      TerminationRecord[]
+  departmentHistory EmployeeDepartmentHistory[]
+  roleHistory       EmployeeRoleHistory[]
+  positionHistory   EmployeePositionHistory[]
+  emergencyContacts EmergencyContact[]
 
-  delegatedFrom          Delegation[]           @relation("FromEmployee")
-  delegatedTo            Delegation[]           @relation("ToEmployee")
+  stageEmployees StageEmployee[]
+  requests       Request[]
+  stageStatuses  StageStatus[]
 
-  delegatedRuleFrom      DelegationRule[]       @relation("FromEmployeeDelegationRule")
-  delegatedRuleTo        DelegationRule[]       @relation("ToEmployeeDelegationRule")
-  ApprovalComment        ApprovalComment[]
-  ApprovalNotification   ApprovalNotification[]
-  ApprovalAuditLog       ApprovalAuditLog[]
+  delegatedFrom Delegation[] @relation("FromEmployee")
+  delegatedTo   Delegation[] @relation("ToEmployee")
 
-  additionalDeductions   AdditionalDeduction[]
-  additionalPays         AdditionalPay[]
+  delegatedRuleFrom    DelegationRule[]       @relation("FromEmployeeDelegationRule")
+  delegatedRuleTo      DelegationRule[]       @relation("ToEmployeeDelegationRule")
+  ApprovalComment      ApprovalComment[]
+  ApprovalNotification ApprovalNotification[]
+  ApprovalAuditLog     ApprovalAuditLog[]
+
+  additionalDeductions AdditionalDeduction[]
+  additionalPays       AdditionalPay[]
 }
 
-
 model AdditionalDeduction {
-  id                                      String                        @id @default(uuid())
-  amount                                  Decimal                       @db.Decimal(10, 2)
-  employeeId                              String
-  additionalDeductionDefinitionId         String
-  companyId                               String
+  id                              String  @id @default(uuid())
+  amount                          Decimal @db.Decimal(10, 2)
+  employeeId                      String
+  additionalDeductionDefinitionId String
+  companyId                       String
 
-  employee                                Employee                      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  additionalDeductionDefinition           AdditionalDeductionDefinition @relation(fields: [additionalDeductionDefinitionId], references: [id], onDelete: Cascade)
-  company                                 Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee                      Employee                      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  additionalDeductionDefinition AdditionalDeductionDefinition @relation(fields: [additionalDeductionDefinitionId], references: [id], onDelete: Cascade)
+  company                       Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  createdAt                               DateTime                      @default(now())
-  updatedAt                               DateTime                      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([employeeId])
   @@index([additionalDeductionDefinitionId])
@@ -350,78 +377,74 @@ model AdditionalDeduction {
 }
 
 model AdditionalPay {
-  id                         String                    @id @default(uuid())
-  amount                     Decimal                   @db.Decimal(10, 2)
+  id     String  @id @default(uuid())
+  amount Decimal @db.Decimal(10, 2)
 
-  additionalPayDefinitionId  String
-  employeeId                 String
-  companyId                  String
+  additionalPayDefinitionId String
+  employeeId                String
+  companyId                 String
 
-  additionalPayDefinition    AdditionalPayDefinition   @relation(fields: [additionalPayDefinitionId], references: [id], onDelete: Cascade)
-  employee                   Employee                  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  company                    Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  additionalPayDefinition AdditionalPayDefinition @relation(fields: [additionalPayDefinitionId], references: [id], onDelete: Cascade)
+  employee                Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  company                 Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  createdAt                  DateTime                  @default(now())
-  updatedAt                  DateTime                  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([additionalPayDefinitionId])
   @@index([employeeId])
   @@index([companyId])
 }
 
-
 model TaxSlab {
-  id          String          @id @default(uuid())
-  name        String?          
-  description String?         
-  type        TaxType         @default(INCOME_TAX)
-  rate        Float?          
-  deductible  Float?          
-  minIncome   Float          
-  maxIncome   Float          
-  isDefault   Boolean         @default(false) 
+  id          String  @id @default(uuid())
+  name        String?
+  description String?
+  type        TaxType @default(INCOME_TAX)
+  rate        Float?
+  deductible  Float?
+  minIncome   Float
+  maxIncome   Float
+  isDefault   Boolean @default(false)
 
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   companyTaxRules CompanyTaxRule[]
 }
-
 
 model ProvidentFund {
-  id           String          @id @default(uuid())
-  name         String?          
-  description  String?         
-  type         ProvidentFundType 
-  rate         Float           
-  isDefault    Boolean         @default(false) // Indicates if this is a default Ethiopian rule
+  id          String            @id @default(uuid())
+  name        String?
+  description String?
+  type        ProvidentFundType
+  rate        Float
+  isDefault   Boolean           @default(false) // Indicates if this is a default Ethiopian rule
 
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   companyTaxRules CompanyTaxRule[]
 }
 
-
 model CompanyTaxRule {
-  id              String          @id @default(uuid())
+  id              String  @id @default(uuid())
   companyId       String
   taxSlabId       String
   providentFundId String?
-  isActive        Boolean         @default(true)
-  
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  taxSlab         TaxSlab         @relation(fields: [taxSlabId], references: [id], onDelete: Cascade)
-  providentFund   ProvidentFund?  @relation(fields: [providentFundId], references: [id], onDelete: Cascade)
+  isActive        Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taxSlab       TaxSlab        @relation(fields: [taxSlabId], references: [id], onDelete: Cascade)
+  providentFund ProvidentFund? @relation(fields: [providentFundId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, taxSlabId])
   @@index([companyId])
   @@index([taxSlabId])
 }
-
 
 enum TaxType {
   INCOME_TAX
@@ -434,22 +457,22 @@ enum ProvidentFundType {
 }
 
 model Department {
-  id        String   @id @default(uuid())
+  id                      String   @id @default(uuid())
   deptName                String
-  parentId  String? // optional for tree structure
+  parentId                String? // optional for tree structure
   location                String?
   shorthandRepresentation String?
   companyId               String
   //departmentEmployees     Employee[]
-  isActive  Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime   @updatedAt
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
-  parent    Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  children  Department[] @relation("DepartmentHierarchy")
-  assignments EmployeeDepartmentHistory[]
-  company     Company    @relation(fields: [companyId], references: [id])
-  approvalWorkflow        ApprovalWorkflow[]
+  parent           Department?                 @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children         Department[]                @relation("DepartmentHierarchy")
+  assignments      EmployeeDepartmentHistory[]
+  company          Company                     @relation(fields: [companyId], references: [id])
+  approvalWorkflow ApprovalWorkflow[]
 }
 
 model EmployeeDepartmentHistory {
@@ -459,24 +482,23 @@ model EmployeeDepartmentHistory {
   fromDate     DateTime
   toDate       DateTime?
 
-  employee     Employee   @relation(fields: [employeeId], references: [id])
-  department   Department @relation(fields: [departmentId], references: [id])
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
 
   @@unique([employeeId, departmentId])
 }
 
 model EmployeeGradeHistory {
-  employeeId   String
-  gradeId      String
-  fromDate     DateTime
-  toDate       DateTime?
+  employeeId String
+  gradeId    String
+  fromDate   DateTime
+  toDate     DateTime?
 
-  employee     Employee   @relation(fields: [employeeId], references: [id])
-  grade        Grade @relation(fields: [gradeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+  grade    Grade    @relation(fields: [gradeId], references: [id])
 
   @@unique([employeeId, gradeId])
 }
-
 
 enum Gender {
   MALE
@@ -499,16 +521,16 @@ enum IdType {
 }
 
 model PayrollInfo {
-  id             String   @id @default(uuid())
-  employeeId     String   @unique
-  tinNumber      String   @unique
+  id             String         @id @default(uuid())
+  employeeId     String         @unique
+  tinNumber      String         @unique
   basicSalary    Float
-  currency       String   @default("ETB")
+  currency       String         @default("ETB")
   employmentType EmploymentType
-  payFrequency   PayFrequency       @default(MONTHLY)
-  accountNumber  String   @unique
+  payFrequency   PayFrequency   @default(MONTHLY)
+  accountNumber  String         @unique
 
-  employee       Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
 }
 
 enum EmploymentType {
@@ -525,15 +547,15 @@ enum PayFrequency {
 }
 
 model TerminationRecord {
-  id            String   @id @default(uuid())
-  employeeId    String
-  reason        String
+  id              String          @id @default(uuid())
+  employeeId      String
+  reason          String
   terminationType TerminationType
-  noticeDate    DateTime
+  noticeDate      DateTime
   terminationDate DateTime
-  remarks       String?
+  remarks         String?
 
-  employee      Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
 }
 
 enum TerminationType {
@@ -543,11 +565,9 @@ enum TerminationType {
   DECEASED
 }
 
-
-
 model Attendance {
   id           String    @id @default(uuid())
-  deviceUserId String    // ✅ now the only identifier
+  deviceUserId String // ✅ now the only identifier
   date         DateTime  @db.Date
   checkTime    DateTime
   checkType    CheckType // ✅ enum for punch type
@@ -561,8 +581,6 @@ model Attendance {
   @@index([deviceUserId, date])
 }
 
-
-
 enum CheckType {
   PUNCHIN
   PUNCHOUT
@@ -574,26 +592,25 @@ model EmployeeRoleHistory {
   fromDate   DateTime
   toDate     DateTime?
 
-  role       Role     @relation(fields: [roleId], references: [id])
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  role     Role     @relation(fields: [roleId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
 
   @@id([employeeId, roleId])
 }
 
 model EmergencyContact {
-  id          String   @id @default(uuid())
-  employeeId  String
-  fullName    String
+  id           String  @id @default(uuid())
+  employeeId   String
+  fullName     String
   relationship String
-  phone       String
-  email       String?
-  address     String?
+  phone        String
+  email        String?
+  address      String?
 
-  employee    Employee @relation(fields: [employeeId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
 
 //////
 
@@ -627,10 +644,10 @@ model ApprovalWorkflow {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  company       Company            @relation(fields: [companyId], references: [id])
-  department    Department?        @relation(fields: [departmentId], references: [id])
-  stages        ApprovalStage[]
-  instances     ApprovalInstance[]
+  company    Company            @relation(fields: [companyId], references: [id])
+  department Department?        @relation(fields: [departmentId], references: [id])
+  stages     ApprovalStage[]
+  instances  ApprovalInstance[]
 
   @@unique([requestType, companyId, departmentId])
 }
@@ -763,13 +780,13 @@ model Delegation {
 }
 
 model DelegationRule {
-  id               String      @id @default(uuid())
-  requestType      RequestType
-  fromEmployeeId   String      // The employee that would normally approve
-  toEmployeeId     String          // The employee to whom it should be delegated
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id             String      @id @default(uuid())
+  requestType    RequestType
+  fromEmployeeId String // The employee that would normally approve
+  toEmployeeId   String // The employee to whom it should be delegated
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  fromEmployee     Employee        @relation("FromEmployeeDelegationRule", fields: [fromEmployeeId], references: [id])
-  toEmployee       Employee        @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
+  fromEmployee Employee @relation("FromEmployeeDelegationRule", fields: [fromEmployeeId], references: [id])
+  toEmployee   Employee @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
 }

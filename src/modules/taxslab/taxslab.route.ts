@@ -39,9 +39,7 @@ router
     taxslabController.fetchTaxslabById
   );
 
-router
-  .route("/taxslab/reset")
-  .post(auth(), taxslabController.resetCompanyTaxslab);
+router.route("/tax/reset").post(auth(), taxslabController.resetCompanyTaxslab);
 
 router
   .route("/assign/default")
