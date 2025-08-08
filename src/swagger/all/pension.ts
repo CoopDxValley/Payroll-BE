@@ -157,8 +157,47 @@
 
 /**
  * @swagger
+ * /api/v1/pension/update/{ruleId}:
+ *   post:
+ *     summary: Update a specific pension rule by ID
+ *     tags: [Pension]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: ruleId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the pension rule to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdatePensionInput'
+ *     responses:
+ *       200:
+ *         description: Pension rule updated successfully
+ *       400:
+ *         description: Invalid rule ID
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Pension rule not found
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
+ *     UpdatePensionInput:
+ *       type: object
+ *       properties:
+ *         employerContribution:
+ *           type: number
+ *         employeeContribution:
+ *           type: number
  *     Pension:
  *       type: object
  *       properties:

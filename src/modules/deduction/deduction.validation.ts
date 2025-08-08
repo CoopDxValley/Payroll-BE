@@ -1,17 +1,14 @@
 import { z } from "zod";
 
 export const createDeductionSchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount"),
+  amount: z.number().min(0, "amount must be non-negative"),
   deductionDefinitionId: z.string().uuid("Invalid deduction definition ID"),
   gradeId: z.string().uuid("Invalid grade ID"),
   //   companyId: z.string().uuid("Invalid company ID"),
 });
 
 export const updateDeductionSchema = z.object({
-  amount: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Invalid amount")
-    .optional(),
+  amount: z.number().min(0, "amount must be non-negative").optional(),
   deductionDefinitionId: z
     .string()
     .uuid("Invalid deduction definition ID")

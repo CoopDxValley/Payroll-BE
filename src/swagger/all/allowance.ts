@@ -13,7 +13,7 @@
  *           type: string
  *           format: uuid
  *         amount:
- *           type: string
+ *           type: number
  *         allowanceDefinitionId:
  *           type: string
  *           format: uuid
@@ -28,7 +28,7 @@
  *       required: [amount, allowanceDefinitionId, gradeId, companyId]
  *       properties:
  *         amount:
- *           type: string
+ *           type: number
  *         allowanceDefinitionId:
  *           type: string
  *           format: uuid
@@ -39,7 +39,7 @@
  *       type: object
  *       properties:
  *         amount:
- *           type: string
+ *           type: number
  *         allowanceDefinitionId:
  *           type: string
  *           format: uuid

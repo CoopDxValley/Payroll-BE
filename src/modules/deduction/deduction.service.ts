@@ -4,6 +4,15 @@ import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 
 const create = async (data: CreateDeductionInput & { companyId: string }) => {
+  const deductionDefinition = await prisma.deductionDefinition.findFirst({
+    where: {
+      id: data.deductionDefinitionId,
+      companyId: data.companyId,
+      isActive: true,
+    },
+  });
+  if (!deductionDefinition)
+    throw new ApiError(httpStatus.NOT_FOUND, "Deduction definition not found");
   return prisma.deduction.create({ data });
 };
 
@@ -21,6 +30,15 @@ const update = async (
   id: string,
   data: UpdateDeductionInput & { companyId: string }
 ) => {
+  const deductionDefinition = await prisma.deductionDefinition.findFirst({
+    where: {
+      id: data.deductionDefinitionId,
+      companyId: data.companyId,
+      isActive: true,
+    },
+  });
+  if (!deductionDefinition)
+    throw new ApiError(httpStatus.NOT_FOUND, "Deduction definition not found");
   const existing = await prisma.deduction.findFirst({
     where: { id, companyId: data.companyId },
   });

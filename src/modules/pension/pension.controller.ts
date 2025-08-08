@@ -4,7 +4,11 @@ import pensionService from "./pension.service";
 import catchAsync from "../../utils/catch-async";
 import { AuthEmployee } from "../auth/auth.type";
 import { CustomRequest } from "../../middlewares/validate";
-import { CreatePensionInput, PensionParams } from "./pension.type";
+import {
+  CreatePensionInput,
+  PensionParams,
+  UpdatePensionInput,
+} from "./pension.type";
 
 const createPension = catchAsync<
   CustomRequest<never, never, CreatePensionInput>
@@ -109,6 +113,13 @@ const fetchPensionById = catchAsync<CustomRequest<PensionParams, never, never>>(
   }
 );
 
+const update = catchAsync<
+  CustomRequest<PensionParams, never, UpdatePensionInput>
+>(async (req, res) => {
+  const data = await pensionService.update(req.params.ruleId, req.body);
+  res.status(httpStatus.OK).json({ message: "Updated", data });
+});
+
 export default {
   createPension,
   getDefaultPension,
@@ -117,4 +128,5 @@ export default {
   resetCompanyPensionRules,
   assignDefaultPensionFundsToCompany,
   fetchPensionById,
+  update,
 };

@@ -28,7 +28,8 @@ router
     auth(),
     // validate(positionValidation.updatePosition),
     positionController.updatePosition
-  )
-  .delete(auth(), positionController.deletePosition);
+  );
+
+router.route("/delete/:id").post(auth(), positionController.deletePosition);
 
 export default router;

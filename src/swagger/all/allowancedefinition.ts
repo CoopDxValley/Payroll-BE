@@ -19,9 +19,9 @@
  *         isExempted:
  *           type: boolean
  *         exemptedAmount:
- *           type: string
+ *           type: number
  *         startingAmount:
- *           type: string
+ *           type: number
  *         companyId:
  *           type: string
  *           format: uuid
@@ -44,9 +44,9 @@
  *         isExempted:
  *           type: boolean
  *         exemptedAmount:
- *           type: string
+ *           type: number
  *         startingAmount:
- *           type: string
+ *           type: number
  *     UpdateAllowanceDefinitionDto:
  *       type: object
  *       properties:
@@ -57,11 +57,9 @@
  *         isExempted:
  *           type: boolean
  *         exemptedAmount:
- *           type: string
+ *           type: amount
  *         startingAmount:
- *           type: string
- *         isActive:
- *           type: boolean
+ *           type: amount
  *
  * /api/v1/allowance-definitions:
  *   get:

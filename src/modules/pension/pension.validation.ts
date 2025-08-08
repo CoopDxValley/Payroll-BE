@@ -17,4 +17,18 @@ const pensionParams = {
   }),
 };
 
-export default { createPension, pensionParams };
+const updatePension = {
+  body: z.object({
+    employeeContribution: z
+      .number()
+      .min(0, "Employee contribution must be non-negative")
+      .optional(),
+    employerContribution: z
+      .number()
+      .min(0, "Employer contribution must be non-negative")
+      .optional(),
+  }),
+  params: pensionParams.params,
+};
+
+export default { createPension, updatePension, pensionParams };

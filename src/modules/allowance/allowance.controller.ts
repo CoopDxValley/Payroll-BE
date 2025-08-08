@@ -12,12 +12,12 @@ import { AuthEmployee } from "../auth/auth.type";
 
 export const create = catchAsync<
   CustomRequest<never, never, CreateAllowanceInput>
->(async (req, res) => {
+>(async (req: CustomRequest<never, never, CreateAllowanceInput>, res) => {
   const authEmployee = req.employee as AuthEmployee;
-  const input = await allowanceService.create({
+  const input = {
     ...req.body,
     companyId: authEmployee.companyId,
-  });
+  };
   const data = await allowanceService.create(input);
   res.status(httpStatus.CREATED).json({ message: "Created", data });
 });

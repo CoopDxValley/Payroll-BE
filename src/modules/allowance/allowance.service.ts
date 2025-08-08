@@ -4,6 +4,15 @@ import ApiError from "../../utils/api-error";
 import httpStatus from "http-status";
 
 const create = async (data: CreateAllowanceInput & { companyId: string }) => {
+  const allowanceDefinition = await prisma.allowanceDefinition.findFirst({
+    where: {
+      id: data.allowanceDefinitionId,
+      companyId: data.companyId,
+      isActive: true,
+    },
+  });
+  if (!allowanceDefinition)
+    throw new ApiError(httpStatus.NOT_FOUND, "Allowance definition not found");
   return prisma.allowance.create({ data });
 };
 
@@ -21,6 +30,15 @@ const update = async (
   id: string,
   data: UpdateAllowanceInput & { companyId: string }
 ) => {
+  const allowanceDefinition = await prisma.allowanceDefinition.findFirst({
+    where: {
+      id: data.allowanceDefinitionId,
+      companyId: data.companyId,
+      isActive: true,
+    },
+  });
+  if (!allowanceDefinition)
+    throw new ApiError(httpStatus.NOT_FOUND, "Allowance definition not found");
   const existing = await prisma.allowance.findFirst({
     where: { id, companyId: data.companyId },
   });

@@ -272,7 +272,7 @@ model AllowanceDefinition {
 
 model Allowance {
   id                    String @id @default(uuid())
-  amount                String
+  amount                Float
   allowanceDefinitionId String
   gradeId               String
   companyId             String
@@ -284,7 +284,7 @@ model Allowance {
 
 model Deduction {
   id                    String @id @default(uuid())
-  amount                String
+  amount                Float
   deductionDefinitionId String
   gradeId               String
   companyId             String

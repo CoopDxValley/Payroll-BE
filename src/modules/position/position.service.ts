@@ -78,7 +78,7 @@ const deletePosition = async (id: string, companyId: string) => {
     where: { id, companyId },
   });
   if (!existing) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
+    throw new ApiError(httpStatus.NOT_FOUND, "Position not found");
   }
 
   return prisma.position.update({
