@@ -8,3 +8,7 @@ export type CreatePensionInput = z.infer<
 export type PensionParams = z.infer<
   typeof pensionValidation.pensionParams.params
 >;
+
+export type UpdatePensionInput = z.infer<
+  typeof pensionValidation.updatePension.body
+>;

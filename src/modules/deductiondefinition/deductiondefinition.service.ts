@@ -13,7 +13,9 @@ const create = async (
 };
 
 const getAll = async (companyId: string) => {
-  return prisma.deductionDefinition.findMany({ where: { companyId } });
+  return prisma.deductionDefinition.findMany({
+    where: { companyId, isActive: true },
+  });
 };
 
 const getById = async (id: string, companyId: string) => {
@@ -43,7 +45,10 @@ const remove = async (id: string, companyId: string) => {
   });
   if (!existing)
     throw new ApiError(httpStatus.NOT_FOUND, "DeductionDefinition not found");
-  return prisma.deductionDefinition.delete({ where: { id } });
+  return prisma.deductionDefinition.update({
+    where: { id },
+    data: { isActive: false },
+  });
 };
 
 export default { create, getAll, getById, update, remove };

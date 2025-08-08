@@ -1,7 +1,7 @@
 import httpStatus from "http-status";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
-import { CreatePensionInput } from "./pension.type";
+import { CreatePensionInput, UpdatePensionInput } from "./pension.type";
 
 const getDefaultPension = async () => {
   return await prisma.pension.findMany({ where: { isDefault: true } });
@@ -179,6 +179,26 @@ const getPensionFundById = async (pensionFundId: string) => {
   return pensionFund;
 };
 
+const update = async (ruleId: string, data: UpdatePensionInput) => {
+  const existingRule = await prisma.companyPensionRule.findUnique({
+    where: { id: ruleId },
+  });
+
+  if (!existingRule) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Pension rule not found");
+  }
+
+  const updatedRule = await prisma.companyPensionRule.update({
+    where: { id: ruleId },
+    data: {
+      ...data,
+      companyId: existingRule.companyId,
+    },
+  });
+
+  return updatedRule;
+};
+
 export default {
   getDefaultPension,
   getCompanyPension,
@@ -187,4 +207,5 @@ export default {
   resetCompanyPensionRules,
   assignDefaultPensionFundsToCompany,
   getPensionFundById,
+  update,
 };

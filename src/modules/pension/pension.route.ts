@@ -1,9 +1,14 @@
 import express from "express";
-import providentFundController from "./pension.controller";
-import providentFundValidation from "./pension.validation";
+
 import auth from "../../middlewares/auth";
 import { validate } from "../../middlewares/validate";
-import { CreatePensionInput, PensionParams } from "./pension.type";
+import pensionController from "./pension.controller";
+import {
+  UpdatePensionInput,
+  CreatePensionInput,
+  PensionParams,
+} from "./pension.type";
+import pensionValidation from "./pension.validation";
 
 const router = express.Router();
 
@@ -11,48 +16,42 @@ router
   .route("/")
   .post(
     auth(),
-    validate<never, never, CreatePensionInput>(
-      providentFundValidation.createPension
-    ),
-    providentFundController.createPension
+    validate<never, never, CreatePensionInput>(pensionValidation.createPension),
+    pensionController.createPension
   )
-  .get(auth(), providentFundController.getCompanyPension);
+  .get(auth(), pensionController.getCompanyPension);
 
-router.route("/default").get(auth(), providentFundController.getDefaultPension);
+router.route("/default").get(auth(), pensionController.getDefaultPension);
 
 router
   .route("/:ruleId")
   .post(
     auth(),
-    validate<PensionParams, never, never>(
-      providentFundValidation.pensionParams
-    ),
-    providentFundController.removeCompanyPension
+    validate<PensionParams, never, never>(pensionValidation.pensionParams),
+    pensionController.removeCompanyPension
   )
   .get(
     auth(),
-    validate<PensionParams, never, never>(
-      providentFundValidation.pensionParams
-    ),
-    providentFundController.fetchPensionById
+    validate<PensionParams, never, never>(pensionValidation.pensionParams),
+    pensionController.fetchPensionById
   );
 
 router
-  .route("/:ruleId")
-  .get(
+  .route("/update/:ruleId")
+  .post(
     auth(),
-    validate<PensionParams, never, never>(
-      providentFundValidation.pensionParams
+    validate<PensionParams, never, UpdatePensionInput>(
+      pensionValidation.updatePension
     ),
-    providentFundController.fetchPensionById
+    pensionController.update
   );
 
 router
   .route("/tax/reset")
-  .post(auth(), providentFundController.resetCompanyPensionRules);
+  .post(auth(), pensionController.resetCompanyPensionRules);
 
 router
   .route("/assign/default")
-  .post(auth(), providentFundController.assignDefaultPensionFundsToCompany);
+  .post(auth(), pensionController.assignDefaultPensionFundsToCompany);
 
 export default router;
