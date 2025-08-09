@@ -5,7 +5,7 @@ import ApiError from "../../utils/api-error";
 // const createShiftDay = async (data: {
 //   shiftId: string;
 //   dayNumber: number;
-//   dayType: "WORK" | "HALF_DAY" | "OFF" | "NIGHT";
+//   dayType: "FULL_DAY" | "HALF_DAY" | "REST_DAY" | "NIGHT";
 //   startTime: string;
 //   endTime: string;
 //   breakTime: number;
@@ -128,7 +128,7 @@ import ApiError from "../../utils/api-error";
 const createShiftDay = async (data: {
   shiftId: string;
   dayNumber: number;
-  dayType: "WORK" | "HALF_DAY" | "OFF" | "NIGHT" | string; // include string to catch invalid ones
+  dayType: "FULL_DAY" | "HALF_DAY" | "REST_DAY" | "NIGHT" | string; // include string to catch invalid ones
   startTime: string; // HH:MM
   endTime: string; // HH:MM
   breakTime: number;
@@ -166,7 +166,7 @@ const createShiftDay = async (data: {
   }
 
   // ✅ Step 2: Enum validation for dayType
-  const validDayTypes = ["WORK", "HALF_DAY", "OFF", "NIGHT"];
+  const validDayTypes = ["FULL_DAY", "HALF_DAY", "REST_DAY", "NIGHT"];
   if (!validDayTypes.includes(dayType)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
@@ -240,7 +240,7 @@ const createShiftDay = async (data: {
     data: {
       shiftId,
       dayNumber,
-      dayType: dayType as "WORK" | "HALF_DAY" | "OFF" | "NIGHT", // safe cast
+      dayType: dayType as "FULL_DAY" | "HALF_DAY" | "REST_DAY" | "NIGHT", // safe cast
       startTime: startDateTime,
       endTime: endDateTime,
       breakTime,
@@ -289,7 +289,7 @@ const updateShiftDay = async (
   id: string,
   data: Partial<{
     dayNumber: number;
-    dayType: "WORK" | "HALF_DAY" | "OFF" | "NIGHT";
+    dayType: "FULL_DAY" | "HALF_DAY" | "REST_DAY" | "NIGHT";
     startTime: string;
     endTime: string;
     breakTime: number;

@@ -23,6 +23,291 @@ interface DeviceAttendanceRecord {
   device_ip?: string;
 }
 
+// Helper function to check if overtime already exists for the same employee/date/reason
+const checkExistingOvertime = async (
+  employeeId: string,
+  date: Date,
+  reason: string
+): Promise<boolean> => {
+  const existingOvertime = await prisma.overtime.findFirst({
+    where: {
+      employeeId,
+      date,
+      reason: reason as any, // Cast to enum type
+    },
+  });
+  return !!existingOvertime;
+};
+
+// Helper function to create overtime record
+const createOvertimeRecord = async (
+  employeeId: string,
+  date: Date,
+  startTime: Date,
+  endTime: Date,
+  reason: string,
+  status: string = "APPROVED"
+) => {
+  const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+  
+  return await prisma.overtime.create({
+    data: {
+      employeeId,
+      date,
+      startTime,
+      endTime,
+      duration,
+      reason: reason as any, // Cast to enum type
+      status: status as any, // Cast to enum type
+      approvedAt: status === "APPROVED" ? new Date() : null,
+    },
+  });
+};
+
+// Helper function to get employee with company and shift information
+const getEmployeeWithDetails = async (deviceUserId: string) => {
+  return await prisma.employee.findFirst({
+    where: { deviceUserId },
+    include: {
+      company: true,
+      employeeShifts: {
+        where: {
+          isActive: true,
+          startDate: { lte: new Date() },
+          OR: [
+            { endDate: null },
+            { endDate: { gte: new Date() } },
+          ],
+        },
+        include: {
+          shift: {
+            include: {
+              patternDays: true,
+            },
+          },
+        },
+      },
+    },
+  });
+};
+
+// Helper function to check if date is a holiday
+const checkHoliday = async (companyId: string, date: Date) => {
+  return await prisma.workingCalendar.findFirst({
+    where: {
+      companyId,
+      date,
+      dayType: "HOLIDAY",
+      isActive: true,
+    },
+  });
+};
+
+// Helper function to get shift day for a specific date
+const getShiftDayForDate = async (shiftId: string, date: Date, cycleDays: number) => {
+  // Calculate which day in the cycle this date represents
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+  const cycleDay = (dayOfYear % cycleDays) + 1;
+  
+  return await prisma.shiftDay.findFirst({
+    where: {
+      shiftId,
+      dayNumber: cycleDay,
+    },
+  });
+};
+
+// Helper function to check shift coverage
+const getShiftCoverage = async (employeeId: string, date: Date) => {
+  return await prisma.shiftCoverage.findFirst({
+    where: {
+      OR: [
+        { originalEmployeeId: employeeId },
+        { coveringEmployeeId: employeeId },
+      ],
+      coverageDate: date,
+      status: "APPROVED",
+    },
+  });
+};
+
+// Helper function to get paired punches for overtime calculation
+const getPairedPunches = async (deviceUserId: string, date: Date) => {
+  const punches = await prisma.attendance.findMany({
+    where: {
+      deviceUserId,
+      date,
+      isAbsent: false,
+    },
+    orderBy: {
+      checkTime: "asc",
+    },
+  });
+  
+  const punchIn = punches.find(p => p.checkType === "PUNCHIN");
+  const punchOut = punches.find(p => p.checkType === "PUNCHOUT");
+  
+  return { punchIn, punchOut };
+};
+
+// Helper function to process overtime logic for a single attendance record
+const processOvertimeLogic = async (
+  tx: any,
+  deviceUserId: string,
+  checkTimeDate: Date,
+  dateOnly: Date,
+  isAbsent: boolean = false
+) => {
+  // Get employee details with company and shift information
+  const employee = await getEmployeeWithDetails(deviceUserId);
+  if (!employee) {
+    return; // No employee found, skip overtime processing
+  }
+
+  // Check for holiday
+  const holiday = await checkHoliday(employee.companyId, dateOnly);
+  
+  // Check for shift coverage
+  const shiftCoverage = await getShiftCoverage(employee.id, dateOnly);
+  
+  // Get active shift for the employee
+  const activeShift = employee.employeeShifts[0];
+  
+  // Get paired punches for overtime calculation
+  const { punchIn, punchOut } = await getPairedPunches(deviceUserId, dateOnly);
+  
+  // Holiday overtime logic
+  if (holiday) {
+    const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "HOLIDAY_WORK");
+    
+    if (!overtimeExists && (punchIn || punchOut)) {
+      const startTime = punchIn?.checkTime || checkTimeDate;
+      const endTime = punchOut?.checkTime || checkTimeDate;
+      
+      await tx.overtime.create({
+        data: {
+          employeeId: employee.id,
+          date: dateOnly,
+          startTime,
+          endTime,
+          duration: Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)),
+          reason: "HOLIDAY_WORK",
+          status: "APPROVED",
+          approvedAt: new Date(),
+        },
+      });
+    }
+  }
+
+  // Shift range overtime logic
+  if (activeShift && !isAbsent) {
+    const shiftDay = await getShiftDayForDate(
+      activeShift.shiftId,
+      dateOnly,
+      activeShift.shift.cycleDays
+    );
+    
+    if (shiftDay) {
+      const shiftStartTime = new Date(shiftDay.startTime);
+      const shiftEndTime = new Date(shiftDay.endTime);
+      const gracePeriodMs = shiftDay.gracePeriod * 60 * 1000; // Convert minutes to milliseconds
+      
+      const earlyStart = new Date(shiftStartTime.getTime() - gracePeriodMs);
+      const lateEnd = new Date(shiftEndTime.getTime() + gracePeriodMs);
+      
+      // Check if punch is outside shift range
+      if (checkTimeDate < earlyStart) {
+        // Before shift start - UNSCHEDULED_WORK
+        const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "UNSCHEDULED_WORK");
+        
+        if (!overtimeExists) {
+          const endTime = punchOut?.checkTime || new Date(shiftStartTime.getTime() + gracePeriodMs);
+          await tx.overtime.create({
+            data: {
+              employeeId: employee.id,
+              date: dateOnly,
+              startTime: checkTimeDate,
+              endTime,
+              duration: Math.round((endTime.getTime() - checkTimeDate.getTime()) / (1000 * 60)),
+              reason: "UNSCHEDULED_WORK",
+              status: "PENDING",
+            },
+          });
+        }
+      } else if (checkTimeDate > lateEnd) {
+        // After shift end - EXTENDED_SHIFT
+        const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "EXTENDED_SHIFT");
+        
+        if (!overtimeExists) {
+          const startTime = punchIn?.checkTime || new Date(shiftEndTime.getTime() - gracePeriodMs);
+          await tx.overtime.create({
+            data: {
+              employeeId: employee.id,
+              date: dateOnly,
+              startTime,
+              endTime: checkTimeDate,
+              duration: Math.round((checkTimeDate.getTime() - startTime.getTime()) / (1000 * 60)),
+              reason: "EXTENDED_SHIFT",
+              status: "PENDING",
+            },
+          });
+        }
+      }
+    }
+  }
+
+  // Shift coverage logic
+  if (shiftCoverage) {
+    if (shiftCoverage.coveringEmployeeId === employee.id) {
+      // Employee is covering someone else's shift
+      if (activeShift) {
+        const shiftDay = await getShiftDayForDate(
+          activeShift.shiftId,
+          dateOnly,
+          activeShift.shift.cycleDays
+        );
+        
+        if (shiftDay) {
+          const shiftStartTime = new Date(shiftDay.startTime);
+          const shiftEndTime = new Date(shiftDay.endTime);
+          const gracePeriodMs = shiftDay.gracePeriod * 60 * 1000;
+          
+          const earlyStart = new Date(shiftStartTime.getTime() - gracePeriodMs);
+          const lateEnd = new Date(shiftEndTime.getTime() + gracePeriodMs);
+          
+          // If working outside normal shift range, create coverage overtime
+          if (checkTimeDate < earlyStart || checkTimeDate > lateEnd) {
+            const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "COVERAGE");
+            
+            if (!overtimeExists) {
+              const startTime = punchIn?.checkTime || checkTimeDate;
+              const endTime = punchOut?.checkTime || checkTimeDate;
+              
+              await tx.overtime.create({
+                data: {
+                  employeeId: employee.id,
+                  date: dateOnly,
+                  startTime,
+                  endTime,
+                  duration: Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)),
+                  reason: "COVERAGE",
+                  status: "APPROVED",
+                  approvedAt: new Date(),
+                },
+              });
+            }
+          }
+        }
+      }
+    } else if (shiftCoverage.originalEmployeeId === employee.id) {
+      // Employee is the original employee but someone is covering their shift
+      // Log this as unusual attendance (could be configurable)
+      console.log(`Unusual attendance: Employee ${employee.id} punched in on date ${dateOnly} despite having approved coverage`);
+    }
+  }
+};
+
 const createAttendance = async (data: CreateAttendanceData) => {
   const {
     deviceUserId,
@@ -78,8 +363,148 @@ const createAttendance = async (data: CreateAttendanceData) => {
     isAbsent,
   };
 
-  return await prisma.attendance.create({
-    data: attendanceData,
+  // Use transaction to ensure atomicity of attendance + overtime operations
+  return await prisma.$transaction(async (tx) => {
+    // Create attendance record
+    const attendance = await tx.attendance.create({
+      data: attendanceData,
+    });
+
+    // Get employee details with company and shift information
+    const employee = await getEmployeeWithDetails(deviceUserId);
+    if (!employee) {
+      return attendance; // No employee found, just return attendance
+    }
+
+    // Check for holiday
+    const holiday = await checkHoliday(employee.companyId, dateOnly);
+    
+    // Check for shift coverage
+    const shiftCoverage = await getShiftCoverage(employee.id, dateOnly);
+    
+    // Get active shift for the employee
+    const activeShift = employee.employeeShifts[0];
+    
+    // Get paired punches for overtime calculation
+    const { punchIn, punchOut } = await getPairedPunches(deviceUserId, dateOnly);
+    
+    // Holiday overtime logic
+    if (holiday) {
+      const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "HOLIDAY_WORK");
+      
+      if (!overtimeExists && (punchIn || punchOut)) {
+        const startTime = punchIn?.checkTime || checkTimeDate;
+        const endTime = punchOut?.checkTime || checkTimeDate;
+        
+        await createOvertimeRecord(
+          employee.id,
+          dateOnly,
+          startTime,
+          endTime,
+          "HOLIDAY_WORK",
+          "APPROVED"
+        );
+      }
+    }
+
+    // Shift range overtime logic
+    if (activeShift && !isAbsent) {
+      const shiftDay = await getShiftDayForDate(
+        activeShift.shiftId,
+        dateOnly,
+        activeShift.shift.cycleDays
+      );
+      
+      if (shiftDay) {
+        const shiftStartTime = new Date(shiftDay.startTime);
+        const shiftEndTime = new Date(shiftDay.endTime);
+        const gracePeriodMs = shiftDay.gracePeriod * 60 * 1000; // Convert minutes to milliseconds
+        
+        const earlyStart = new Date(shiftStartTime.getTime() - gracePeriodMs);
+        const lateEnd = new Date(shiftEndTime.getTime() + gracePeriodMs);
+        
+        // Check if punch is outside shift range
+        if (checkTimeDate < earlyStart) {
+          // Before shift start - UNSCHEDULED_WORK
+          const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "UNSCHEDULED_WORK");
+          
+          if (!overtimeExists) {
+            const endTime = punchOut?.checkTime || new Date(shiftStartTime.getTime() + gracePeriodMs);
+            await createOvertimeRecord(
+              employee.id,
+              dateOnly,
+              checkTimeDate,
+              endTime,
+              "UNSCHEDULED_WORK",
+              "PENDING"
+            );
+          }
+        } else if (checkTimeDate > lateEnd) {
+          // After shift end - EXTENDED_SHIFT
+          const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "EXTENDED_SHIFT");
+          
+          if (!overtimeExists) {
+            const startTime = punchIn?.checkTime || new Date(shiftEndTime.getTime() - gracePeriodMs);
+            await createOvertimeRecord(
+              employee.id,
+              dateOnly,
+              startTime,
+              checkTimeDate,
+              "EXTENDED_SHIFT",
+              "PENDING"
+            );
+          }
+        }
+      }
+    }
+
+    // Shift coverage logic
+    if (shiftCoverage) {
+      if (shiftCoverage.coveringEmployeeId === employee.id) {
+        // Employee is covering someone else's shift
+        if (activeShift) {
+          const shiftDay = await getShiftDayForDate(
+            activeShift.shiftId,
+            dateOnly,
+            activeShift.shift.cycleDays
+          );
+          
+          if (shiftDay) {
+            const shiftStartTime = new Date(shiftDay.startTime);
+            const shiftEndTime = new Date(shiftDay.endTime);
+            const gracePeriodMs = shiftDay.gracePeriod * 60 * 1000;
+            
+            const earlyStart = new Date(shiftStartTime.getTime() - gracePeriodMs);
+            const lateEnd = new Date(shiftEndTime.getTime() + gracePeriodMs);
+            
+            // If working outside normal shift range, create coverage overtime
+            if (checkTimeDate < earlyStart || checkTimeDate > lateEnd) {
+              const overtimeExists = await checkExistingOvertime(employee.id, dateOnly, "COVERAGE");
+              
+              if (!overtimeExists) {
+                const startTime = punchIn?.checkTime || checkTimeDate;
+                const endTime = punchOut?.checkTime || checkTimeDate;
+                
+                await createOvertimeRecord(
+                  employee.id,
+                  dateOnly,
+                  startTime,
+                  endTime,
+                  "COVERAGE",
+                  "APPROVED"
+                );
+              }
+            }
+          }
+        }
+      } else if (shiftCoverage.originalEmployeeId === employee.id) {
+        // Employee is the original employee but someone is covering their shift
+        // Log this as unusual attendance (could be configurable)
+        console.log(`Unusual attendance: Employee ${employee.id} punched in on date ${dateOnly} despite having approved coverage`);
+      }
+    }
+
+    return attendance;
   });
 };
 const determineCheckType = async (
@@ -188,77 +613,93 @@ const bulkDeviceRegistration = async (records: DeviceAttendanceRecord[]) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "No records provided");
   }
 
-  const processedRecords = [];
-  const errors = [];
+  const processedRecords: any[] = [];
+  const errors: string[] = [];
   let skippedComplete = 0; // Users who already have both punch in and out
+  let overtimeRecordsCreated = 0; // Track overtime records created
 
-  // Process records in order to maintain correct punch in/out sequence
-  for (const record of records) {
-    try {
-      const checkTimeDate = new Date(record.timestamp);
+  // Use transaction to ensure atomicity of all operations
+  await prisma.$transaction(async (tx) => {
+    // Process records in order to maintain correct punch in/out sequence
+    for (const record of records) {
+      try {
+        const checkTimeDate = new Date(record.timestamp);
 
-      if (isNaN(checkTimeDate.getTime())) {
-        errors.push(
-          `Invalid timestamp for user ${record.user_id}: ${record.timestamp}`
-        );
-        continue;
-      }
+        if (isNaN(checkTimeDate.getTime())) {
+          errors.push(
+            `Invalid timestamp for user ${record.user_id}: ${record.timestamp}`
+          );
+          continue;
+        }
 
-      const dateOnly = new Date(checkTimeDate.toDateString());
+        const dateOnly = new Date(checkTimeDate.toDateString());
 
-      // Check if this exact record already exists (prevent duplicates)
-      const existingRecord = await prisma.attendance.findFirst({
-        where: {
+        // Check if this exact record already exists (prevent duplicates)
+        const existingRecord = await tx.attendance.findFirst({
+          where: {
+            deviceUserId: record.user_id,
+            checkTime: checkTimeDate,
+            date: dateOnly,
+          },
+        });
+
+        if (existingRecord) {
+          // Skip duplicate records
+          continue;
+        }
+
+        // Determine check type automatically
+        const checkType = await determineCheckType(record.user_id, checkTimeDate);
+
+        // Skip record if user already has both PUNCHIN and PUNCHOUT for the day
+        if (checkType === null) {
+          skippedComplete++;
+          continue;
+        }
+
+        const attendanceData = {
           deviceUserId: record.user_id,
-          checkTime: checkTimeDate,
           date: dateOnly,
-        },
-      });
+          checkTime: checkTimeDate,
+          checkType: checkType,
+          verifyMode: record.status, // Map device status to verifyMode
+          workCode: record.punch, // Map device punch to workCode
+          sensorId: record.uid, // Map device UID to sensorId
+          deviceIp: record.device_ip,
+          isAbsent: false,
+        };
 
-      if (existingRecord) {
-        // Skip duplicate records
-        continue;
+        // Create attendance record within transaction
+        const createdRecord = await tx.attendance.create({
+          data: attendanceData,
+        });
+
+        processedRecords.push(createdRecord);
+
+        // Process overtime logic for this attendance record
+        try {
+          await processOvertimeLogic(tx, record.user_id, checkTimeDate, dateOnly, false);
+          overtimeRecordsCreated++;
+        } catch (overtimeError) {
+          // Log overtime processing errors but don't fail the entire transaction
+          console.error(`Overtime processing error for user ${record.user_id}:`, overtimeError);
+        }
+
+      } catch (error) {
+        errors.push(
+          `Error processing record for user ${record.user_id}: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
-
-      // Determine check type automatically
-      const checkType = await determineCheckType(record.user_id, checkTimeDate);
-
-      // Skip record if user already has both PUNCHIN and PUNCHOUT for the day
-      if (checkType === null) {
-        skippedComplete++;
-        continue;
-      }
-
-      const attendanceData = {
-        deviceUserId: record.user_id,
-        date: dateOnly,
-        checkTime: checkTimeDate,
-        checkType: checkType,
-        verifyMode: record.status, // Map device status to verifyMode
-        workCode: record.punch, // Map device punch to workCode
-        sensorId: record.uid, // Map device UID to sensorId
-        deviceIp: record.device_ip,
-        isAbsent: false,
-      };
-
-      const createdRecord = await prisma.attendance.create({
-        data: attendanceData,
-      });
-
-      processedRecords.push(createdRecord);
-    } catch (error) {
-      errors.push(
-        `Error processing record for user ${record.user_id}: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
     }
-  }
+  });
 
   return {
     success: true,
     totalRecords: records.length,
     processedRecords: processedRecords.length,
+    overtimeRecordsCreated: overtimeRecordsCreated,
     skippedDuplicates:
       records.length -
       processedRecords.length -

@@ -27,12 +27,12 @@
  *           example: "2025-07-27"
  *         dayType:
  *           type: string
- *           description: Type of day (e.g., "WORK_DAY", "HOLIDAY", "WEEKEND")
- *           example: "WORK_DAY"
+ *           description: Type of day (e.g., "WORKING_DAY", "HOLIDAY", "WEEKEND")
+ *           example: "WORKING_DAY"
  *         description:
  *           type: string
  *           description: Optional description of the calendar entry
- *           example: "Regular WORK_DAY"
+ *           example: "Regular WORKING_DAY"
  *         isActive:
  *           type: boolean
  *           description: Indicates if this entry is active
@@ -61,10 +61,10 @@
  *           example: "2025-07-27"
  *         dayType:
  *           type: string
- *           example: "WORK_DAY"
+ *           example: "WORKING_DAY"
  *         description:
  *           type: string
- *           example: "Regular WORK_DAY"
+ *           example: "Regular WORKING_DAY"
  *         isActive:
  *           type: boolean
  *           example: true
@@ -140,7 +140,7 @@
  *         name: dayType
  *         schema:
  *           type: string
- *         description: Filter by day type (e.g., WORK_DAY, HOLIDAY)
+ *         description: Filter by day type (e.g., WORKING_DAY, HOLIDAY)
  *       - in: query
  *         name: date
  *         schema:

@@ -7,6 +7,52 @@
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     CreateShift:
+ *       type: object
+ *       required:
+ *         - name
+ *         - cycleDays
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: "Day Shift"
+ *         cycleDays:
+ *           type: integer
+ *           example: 7
+ *     UpdateShift:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: "Updated Shift Name"
+ *         cycleDays:
+ *           type: integer
+ *           example: 14
+ *     Shift:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         cycleDays:
+ *           type: integer
+ *         companyId:
+ *           type: string
+ *         isActive:
+ *           type: boolean
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ */
+
+/**
+ * @swagger
  * /api/v1/shifts:
  *   post:
  *     summary: Create a new shift
@@ -18,29 +64,20 @@
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - name
- *               - startTime
- *               - endTime
- *               - breakTime
- *               - gracePeriod
- *             properties:
- *               name:
- *                 type: string
- *               startTime:
- *                 type: string
- *                 format: date-time
- *               endTime:
- *                 type: string
- *                 format: date-time
- *               breakTime:
- *                 type: integer
- *               gracePeriod:
- *                 type: integer
+ *             $ref: '#/components/schemas/CreateShift'
  *     responses:
  *       201:
  *         description: Shift created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Shift created
+ *                 data:
+ *                   $ref: '#/components/schemas/Shift'
  *       400:
  *         description: Bad Request
  */
@@ -49,13 +86,25 @@
  * @swagger
  * /api/v1/shifts:
  *   get:
- *     summary: Get all shifts for the company
+ *     summary: Get all shifts for the authenticated company
  *     tags: [Shifts]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of shifts
+ *         description: A list of active shifts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Shift'
+ *                 count:
+ *                   type: integer
+ *                   example: 3
  */
 
 /**
@@ -67,14 +116,22 @@
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Shift ID
  *     responses:
  *       200:
  *         description: Shift found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Shift'
  *       404:
  *         description: Shift not found
  */
@@ -88,32 +145,32 @@
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Shift ID
  *     requestBody:
+ *       description: Fields to update
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               startTime:
- *                 type: string
- *                 format: date-time
- *               endTime:
- *                 type: string
- *                 format: date-time
- *               breakTime:
- *                 type: integer
- *               gracePeriod:
- *                 type: integer
+ *             $ref: '#/components/schemas/UpdateShift'
  *     responses:
  *       200:
- *         description: Shift updated successfully
+ *         description: Shift updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Shift updated
+ *                 data:
+ *                   $ref: '#/components/schemas/Shift'
  *       404:
  *         description: Shift not found
  */
@@ -122,19 +179,30 @@
  * @swagger
  * /api/v1/shifts/delete/{id}:
  *   post:
- *     summary: Soft delete a shift
+ *     summary: Soft delete a shift by ID
  *     tags: [Shifts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Shift ID
  *     responses:
  *       200:
- *         description: Shift deleted successfully
+ *         description: Shift deactivated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Shift deactivated
+ *                 data:
+ *                   $ref: '#/components/schemas/Shift'
  *       404:
  *         description: Shift not found
  */

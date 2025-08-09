@@ -519,7 +519,7 @@ model Employee {
   position               Position?               @relation(fields: [positionId], references: [id])
   employeeRoles          EmployeeRole[]
   //attendanceLogs         Attendance[]
-
+   overtimes Overtime[]   
   stageEmployees StageEmployee[]
   requests       Request[]
   stageStatuses  StageStatus[]
@@ -641,13 +641,47 @@ enum CoverageType {
 }
 
 enum ShiftDayType {
-  WORK
+  FULL_DAY
   HALF_DAY
-  OFF
+  REST_DAY
   NIGHT
 }
 
 
-////
+////=======OVERTIME MANAGEMENT=============
 
+model Overtime {
+  id              String    @id @default(uuid())
+  employeeId     String
+  date           DateTime  @db.Date
+  startTime      DateTime
+  endTime        DateTime
+  duration       Int       // Duration in minutes
+  status         OvertimeStatus @default(PENDING)
+  reason         OvertimeReason
+  //approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
+  employee       Employee  @relation(fields: [employeeId], references: [id])
+  //approver       Employee? @relation("OvertimeApprover", fields: [approvedBy], references: [id])
+
+  @@index([employeeId, date])
+  @@index([status])
+}
+
+enum OvertimeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum OvertimeReason {
+  UNSCHEDULED_WORK     // Work outside of scheduled shift
+  EXTENDED_SHIFT       // Staying beyond scheduled end time
+  EMERGENCY            // Emergency work requirement
+  SPECIAL_PROJECT      // Special project requiring extra hours
+  COVERAGE             // Covering for another employee
+}
