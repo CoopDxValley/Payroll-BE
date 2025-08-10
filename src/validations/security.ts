@@ -22,6 +22,13 @@ export const safeName = z
   .max(100, "Name too long")
   .regex(safeNameRegex, "Invalid characters");
 
+export const safeUsername = z
+  .string()
+  .trim()
+  .min(3, "username is required")
+  .max(100, "username too long")
+  .regex(safeNameRegex, "Invalid characters");
+
 export const safeText = z
   .string()
   .min(1, "Text is required")
@@ -62,3 +69,19 @@ export const unique = <T, K extends keyof any>(arr: T[], by?: (v: T) => K) => {
   }
   return true;
 };
+
+export const password = z
+  .string()
+  .min(8, "Password must be at least 8 characters long.")
+  .max(128, "Password must be at most 128 characters long.")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter.")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter.")
+  .regex(/[0-9]/, "Password must contain at least one number.")
+  .regex(
+    /[^A-Za-z0-9]/,
+    "Password must contain at least one special character."
+  )
+  .refine((val) => !/\s/.test(val), {
+    message: "Password must not contain spaces.",
+  })
+  .transform((s) => s.trim());

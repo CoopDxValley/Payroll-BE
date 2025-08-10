@@ -1,6 +1,11 @@
 // validations/company.validation.ts
 import { z } from "zod";
-import { email, phoneNumber, safeName } from "../../validations/security";
+import {
+  email,
+  phoneNumber,
+  safeName,
+  safeOptionalText,
+} from "../../validations/security";
 
 export const createCompanySchema = z
   .object({
@@ -8,7 +13,7 @@ export const createCompanySchema = z
     organizationName: safeName,
     phoneNumber,
     companyCode: safeName,
-    notes: safeName.optional(),
+    notes: safeOptionalText,
   })
   .strict();
 
@@ -18,7 +23,7 @@ export const updateCompanySchema = z
     organizationName: safeName.optional(),
     phoneNumber: phoneNumber.optional(),
     companyCode: safeName.optional(),
-    notes: safeName.optional(),
+    notes: safeOptionalText,
   })
   .strict();
 

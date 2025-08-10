@@ -1,13 +1,15 @@
 import { z } from "zod";
+import { safeName, UUID } from "../../validations/security";
 
 export const createPayrollDefinitionSchema = z
   .object({
-    payrollName: z.string().min(2, "Payroll name is required"),
+    payrollName: safeName,
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
-    payPeriod: z.string().min(2, "Pay period is required"),
+    payPeriod: safeName,
     payDate: z.coerce.date(),
   })
+  .strict()
   .refine((v) => v.endDate >= v.startDate, {
     message: "endDate must be on or after startDate",
     path: ["endDate"],
@@ -19,11 +21,11 @@ export const createPayrollDefinitionBulkSchema = z
 
 export const updatePayrollDefinitionSchema = z
   .object({
-    payrollName: z.string().min(2).optional(),
+    payrollName: safeName.optional(),
     startDate: z.coerce.date().optional(),
     endDate: z.coerce.date().optional(),
-    status: z.string().optional(),
   })
+  .strict()
   .refine(
     (v) =>
       !v.startDate ||
@@ -36,5 +38,5 @@ export const updatePayrollDefinitionSchema = z
   );
 
 export const getPayrollDefinitionByIdSchema = z.object({
-  id: z.string().uuid("Invalid ID"),
+  id: UUID,
 });
