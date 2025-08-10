@@ -1,14 +1,16 @@
 import { z } from "zod";
+import { amount, safeName, UUID } from "../../validations/security";
 
 export const createAllowanceDefinitionSchema = z
   .object({
-    name: z.string().min(2, "Name is required"),
+    name: safeName,
     isTaxable: z.boolean().optional(),
     isExempted: z.boolean().optional(),
-    exemptedAmount: z.number().positive("Amount must be positive").nullable(),
-    startingAmount: z.number().positive("Amount must be positive").nullable(),
+    exemptedAmount: amount.nullable(),
+    startingAmount: amount.nullable(),
     isActive: z.boolean().optional(),
   })
+  .strict()
   .superRefine((data, ctx) => {
     if (data.isExempted === true) {
       if (data.exemptedAmount === null || data.exemptedAmount === undefined) {
@@ -28,21 +30,19 @@ export const createAllowanceDefinitionSchema = z
     }
   });
 
-export const updateAllowanceDefinitionSchema = z.object({
-  name: z.string().min(2).optional(),
-  isTaxable: z.boolean().optional(),
-  isExempted: z.boolean().optional(),
-  exemptedAmount: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Invalid decimal")
-    .optional(),
-  startingAmount: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, "Invalid decimal")
-    .optional(),
-  isActive: z.boolean().optional(),
-});
+export const updateAllowanceDefinitionSchema = z
+  .object({
+    name: safeName.optional(),
+    isTaxable: z.boolean().optional(),
+    isExempted: z.boolean().optional(),
+    exemptedAmount: amount.optional(),
+    startingAmount: amount.optional(),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
 
-export const getAllowanceDefinitionByIdSchema = z.object({
-  id: z.string().uuid("Invalid ID"),
-});
+export const getAllowanceDefinitionByIdSchema = z
+  .object({
+    id: UUID,
+  })
+  .strict();

@@ -56,6 +56,7 @@ import { NextFunction, Request, Response } from "express";
 import { z, ZodError } from "zod";
 import ApiError from "../utils/api-error";
 import { AuthEmployee } from "../modules/auth/auth.type";
+import { deepSanitize, ensureStrict } from "../validations/security";
 
 // Define a generic request type for better type safety
 export interface CustomRequest<
@@ -82,20 +83,25 @@ export const validate =
     try {
       // Validate and assign params
       if (schema.params) {
-        (req as CustomRequest<TParams, TQuery, TBody>).params =
-          schema.params.parse(req.params);
+        const s = ensureStrict(schema.params);
+        (req as CustomRequest<TParams, TQuery, TBody>).params = s.parse(
+          deepSanitize(req.params)
+        );
       }
 
       // Validate and assign query (store separately to avoid overwriting req.query)
       if (schema.query) {
-        (req as CustomRequest<TParams, TQuery, TBody>).validatedQuery =
-          schema.query.parse(req.query);
+        const s = ensureStrict(schema.query);
+        (req as CustomRequest<TParams, TQuery, TBody>).validatedQuery = s.parse(
+          deepSanitize(req.query)
+        );
       }
 
       // Validate and assign body
       if (schema.body) {
-        (req as CustomRequest<TParams, TQuery, TBody>).body = schema.body.parse(
-          req.body
+        const s = ensureStrict(schema.body);
+        (req as CustomRequest<TParams, TQuery, TBody>).body = s.parse(
+          deepSanitize(req.body)
         );
       }
 
