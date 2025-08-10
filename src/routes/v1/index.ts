@@ -24,6 +24,7 @@ import deductionRoute from "../../modules/deduction/deduction.route";
 import allowanceRoute from "../../modules/allowance/allowance.route";
 import providentFundRoute from "../../modules/providentFund/providentFund.route";
 import pensionRoute from "../../modules/pension/pension.route";
+import payrollDefinitionRoute from "../../modules/payrolldefinition/payrollDefinition.route";
 
 const router = express.Router();
 
@@ -122,6 +123,10 @@ const defaultRoutes = [
   {
     path: "/pension",
     route: pensionRoute,
+  },
+  {
+    path: "/payroll-definitions",
+    route: payrollDefinitionRoute,
   },
 ];
 
