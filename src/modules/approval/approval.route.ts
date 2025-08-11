@@ -7,6 +7,8 @@ import {
   createDelegationRuleValidation,
   approvalValidation,
   resubmitApprovalValidation,
+  getDepartmentApprovalWorkflowValidation,
+  getApprovalWorkflowStageValidation,
 } from "./approval.validation";
 import {
   createRequest,
@@ -16,6 +18,9 @@ import {
   getInstanceDetails,
   createDelegationRule,
   resubmit,
+  getApprovalWorkflows,
+  getDepartmentApprovalWorkflow,
+  getApprovalWorkflowStage,
 } from "./approval.controller";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
@@ -24,6 +29,8 @@ import {
   CreateApprovalWorkflowDto,
   CreateDelegationRuleDto,
   CreateRequestDto,
+  GetApprovalWorkflowStageDto,
+  GetDepartmentApprovalWorkflowDto,
 } from "./approval.type";
 
 const router = Router();
@@ -85,6 +92,26 @@ router.get(
   auth(),
   // checkPermission("view_instance"),
   getInstanceDetails
+);
+
+router.get("/workflows", auth(), getApprovalWorkflows);
+
+router.get(
+  "/workflows/:departmentId",
+  auth(),
+  validate<GetDepartmentApprovalWorkflowDto, never, never>(
+    getDepartmentApprovalWorkflowValidation
+  ),
+  getDepartmentApprovalWorkflow
+);
+
+router.get(
+  "/workflows/:workflowId/stages",
+  auth(),
+  validate<GetApprovalWorkflowStageDto, never, never>(
+    getApprovalWorkflowStageValidation
+  ),
+  getApprovalWorkflowStage
 );
 
 export default router;

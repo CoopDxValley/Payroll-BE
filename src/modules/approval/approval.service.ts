@@ -775,3 +775,47 @@ export const getInstanceDetails = async (id: string) => {
     },
   });
 };
+
+export const getApprovalWorkflows = async (companyId: string) => {
+  return prisma.approvalWorkflow.findMany({
+    where: { companyId },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+};
+
+export const getDepartmentApprovalWorkflow = async (
+  companyId: string,
+  departmentId: string
+) => {
+  const department = await prisma.department.findUnique({
+    where: { id: departmentId },
+  });
+  if (!department)
+    throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
+
+  return prisma.approvalWorkflow.findMany({
+    where: { companyId, departmentId },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+};
+
+// generate service for approval workflow stage called getApprovalWorkflowStage no stageID
+export const getApprovalWorkflowStage = async (workflowId: string) => {
+  const workflow = await prisma.approvalWorkflow.findUnique({
+    where: { id: workflowId },
+  });
+  if (!workflow) throw new ApiError(httpStatus.NOT_FOUND, "Workflow not found");
+
+  return await prisma.approvalWorkflow.findMany({
+    where: { id: workflowId },
+    select: {
+      stages: true,
+    },
+  });
+};

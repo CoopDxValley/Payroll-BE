@@ -7,6 +7,9 @@ import {
   CreateApprovalWorkflowDto,
   CreateDelegationRuleDto,
   CreateRequestDto,
+  GetDepartmentApprovalWorkflowDto,
+  // Add the missing type import below if it exists
+  GetApprovalWorkflowStageDto,
 } from "./approval.type";
 import { AuthEmployee } from "../auth/auth.type";
 import catchAsync from "../../utils/catch-async";
@@ -110,7 +113,7 @@ export const getInstanceDetails = catchAsync(async (req, res) => {
 
 export const resubmit = catchAsync(async (req, res) => {
   const { instanceId } = req.params;
-   const user = req.employee as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const { reason } = req.body;
   const newInstance = await resubmitApprovalInstance({
     instanceId,
@@ -121,3 +124,47 @@ export const resubmit = catchAsync(async (req, res) => {
     .status(httpStatus.CREATED)
     .send({ message: "Request resubmitted", data: newInstance });
 });
+
+export const getApprovalWorkflows = catchAsync(async (req, res) => {
+  const authEmployee = req.employee as AuthEmployee;
+  const workflows = await workflowService.getApprovalWorkflows(
+    authEmployee.companyId
+  );
+  res
+    .status(httpStatus.OK)
+    .send({ message: "Approval workflows", data: workflows });
+});
+
+export const getDepartmentApprovalWorkflow = catchAsync<
+  CustomRequest<GetDepartmentApprovalWorkflowDto, never, never>
+>(
+  async (
+    req: CustomRequest<GetDepartmentApprovalWorkflowDto, never, never>,
+    res
+  ) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const { departmentId } = req.params;
+    const workflows = await workflowService.getDepartmentApprovalWorkflow(
+      authEmployee.companyId,
+      departmentId
+    );
+    res
+      .status(httpStatus.OK)
+      .send({ message: "Department Approval workflows", data: workflows });
+  }
+);
+
+export const getApprovalWorkflowStage = catchAsync<
+  CustomRequest<GetApprovalWorkflowStageDto, never, never>
+>(
+  async (
+    req: CustomRequest<GetApprovalWorkflowStageDto, never, never>,
+    res: Response
+  ) => {
+    const { workflowId } = req.params;
+    const stage = await workflowService.getApprovalWorkflowStage(workflowId);
+    res
+      .status(httpStatus.OK)
+      .send({ message: "Approval workflow stage", data: stage });
+  }
+);

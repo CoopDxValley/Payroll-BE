@@ -162,6 +162,136 @@
 
 /**
  * @swagger
+ * /api/v1/approvals/workflows:
+ *   get:
+ *     summary: Get all approval workflows
+ *     tags: [Approvals]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Workflows fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized access
+ */
+
+/**
+ * @swagger
+ * /api/v1/approvals/workflows/{departmentId}:
+ *   get:
+ *     summary: Get approval workflows for a specific department
+ *     tags: [Approvals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Department ID to fetch workflows for
+ *     responses:
+ *       200:
+ *         description: Workflows fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized access
+ *       404:
+ *         description: Department not found
+ */
+
+/**
+ * @swagger
+ * /api/v1/approvals/workflows/{workflowId}/stages:
+ *   get:
+ *     summary: Get all stages for a specific approval workflow
+ *     tags: [Approvals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workflowId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Workflow ID to fetch stages for
+ *     responses:
+ *       200:
+ *         description: Approval workflow stages fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Approval workflow stage
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     stages:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           workflowId:
+ *                             type: string
+ *                             format: uuid
+ *                           isParallel:
+ *                             type: boolean
+ *                           order:
+ *                             type: integer
+ *                           approvalRules:
+ *                             type: object
+ *                             description: JSON rules for approval logic
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *       401:
+ *         description: Unauthorized access
+ *       404:
+ *         description: Workflow not found
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     CreateApprovalWorkflowDto:
