@@ -804,3 +804,18 @@ export const getDepartmentApprovalWorkflow = async (
     },
   });
 };
+
+// generate service for approval workflow stage called getApprovalWorkflowStage no stageID
+export const getApprovalWorkflowStage = async (workflowId: string) => {
+  const workflow = await prisma.approvalWorkflow.findUnique({
+    where: { id: workflowId },
+  });
+  if (!workflow) throw new ApiError(httpStatus.NOT_FOUND, "Workflow not found");
+
+  return await prisma.approvalWorkflow.findMany({
+    where: { id: workflowId },
+    select: {
+      stages: true,
+    },
+  });
+};

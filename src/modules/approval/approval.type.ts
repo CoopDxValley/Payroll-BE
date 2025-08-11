@@ -9,6 +9,7 @@ import {
   approvalValidation,
   createApprovalWorkflowValidation,
   getDepartmentApprovalWorkflowValidation,
+  getApprovalWorkflowStageValidation,
 } from "./approval.validation";
 
 export type CreateApprovalWorkflowDto = z.infer<
@@ -31,4 +32,9 @@ export type approvalDto = z.infer<typeof approvalValidation.body>;
 
 export type GetDepartmentApprovalWorkflowDto = z.infer<
   typeof getDepartmentApprovalWorkflowValidation.params
+>;
+
+// Get Approval Workflow Stage
+export type GetApprovalWorkflowStageDto = z.infer<
+  typeof getApprovalWorkflowStageValidation.params
 >;

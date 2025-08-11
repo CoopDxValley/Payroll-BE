@@ -8,6 +8,8 @@ import {
   CreateDelegationRuleDto,
   CreateRequestDto,
   GetDepartmentApprovalWorkflowDto,
+  // Add the missing type import below if it exists
+  GetApprovalWorkflowStageDto,
 } from "./approval.type";
 import { AuthEmployee } from "../auth/auth.type";
 import catchAsync from "../../utils/catch-async";
@@ -149,5 +151,20 @@ export const getDepartmentApprovalWorkflow = catchAsync<
     res
       .status(httpStatus.OK)
       .send({ message: "Department Approval workflows", data: workflows });
+  }
+);
+
+export const getApprovalWorkflowStage = catchAsync<
+  CustomRequest<GetApprovalWorkflowStageDto, never, never>
+>(
+  async (
+    req: CustomRequest<GetApprovalWorkflowStageDto, never, never>,
+    res: Response
+  ) => {
+    const { workflowId } = req.params;
+    const stage = await workflowService.getApprovalWorkflowStage(workflowId);
+    res
+      .status(httpStatus.OK)
+      .send({ message: "Approval workflow stage", data: stage });
   }
 );

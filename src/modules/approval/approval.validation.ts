@@ -351,3 +351,11 @@ export const getDepartmentApprovalWorkflowValidation = {
     })
     .strict(),
 };
+
+export const getApprovalWorkflowStageValidation = {
+  params: z
+    .object({
+      workflowId: UUID,
+    })
+    .strict(),
+};
