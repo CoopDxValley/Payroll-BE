@@ -11,6 +11,7 @@ const getCompanyProvidentFund = async (companyId: string) => {
   const companyTaxRules = await prisma.companyProvidentFundRule.findMany({
     where: { companyId, isActive: true },
     select: {
+      id: true,
       providentFund: {
         select: {
           id: true,
@@ -21,7 +22,11 @@ const getCompanyProvidentFund = async (companyId: string) => {
     },
   });
 
-  const providentFunds = companyTaxRules.map((rule) => rule.providentFund);
+  const providentFunds = companyTaxRules.map((rule) => ({
+    id: rule.id,
+    employeeContribution: rule.providentFund.employeeContribution,
+    employerContribution: rule.providentFund.employerContribution,
+  }));
 
   return providentFunds;
 };
@@ -33,6 +38,7 @@ const addCompanyProvidentFund = async (
   const existing = await prisma.companyProvidentFundRule.findFirst({
     where: {
       companyId: data.companyId,
+      isActive: true,
       providentFund: {
         employeeContribution: data.employeeContribution,
         employerContribution: data.employerContribution,
@@ -193,10 +199,41 @@ const getProvidentFundById = async (providentFundId: string) => {
   return providentFund;
 };
 
+const update = async (
+  ruleId: string,
+  data: CreateProvidentFundInput & { companyId: string }
+) => {
+  const existingRule = await prisma.companyProvidentFundRule.findUnique({
+    where: {
+      id: ruleId,
+      isActive: true,
+    },
+  });
+
+  if (!existingRule) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Provident Fund rule not found");
+  }
+
+  const updatedRule = await prisma.companyProvidentFundRule.update({
+    where: { id: ruleId },
+    data: {
+      isActive: false,
+    },
+  });
+
+  const createdRule = await addCompanyProvidentFund({
+    ...data,
+    companyId: existingRule.companyId,
+  });
+
+  return createdRule;
+};
+
 export default {
   getDefaultProvidentFund,
   getCompanyProvidentFund,
   addCompanyProvidentFund,
+  update,
   removeCompanyProvidentFundRule,
   resetCompanyProvidentFundRules,
   assignDefaultProvidentFundsToCompany,

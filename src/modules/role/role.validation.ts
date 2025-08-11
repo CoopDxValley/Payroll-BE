@@ -1,49 +1,66 @@
 import { z } from "zod";
+import { safeName, UUID } from "../../validations/security";
 
 export const assignPermissionsToRoleSchema = {
-  params: z.object({
-    roleId: z.string().uuid().min(1, "Role ID is required"),
-  }),
-  body: z.object({
-    permissions: z
-      .array(z.string().uuid().min(1, "Permission ID is required"))
-      .min(1, "At least one permission must be assigned"),
-  }),
+  params: z
+    .object({
+      roleId: UUID,
+    })
+    .strict(),
+  body: z
+    .object({
+      permissions: z
+        .array(UUID)
+        .min(1, "At least one permission must be assigned"),
+    })
+    .strict(),
 };
 
 export const createPermissionsToRoleSchema = {
-  body: z.object({
-    name: z.string().min(1, "Name is required"),
-    permissions: z
-      .array(z.string().uuid().min(1, "Permission ID is required"))
-      .min(1, "At least one permission must be assigned"),
-  }),
+  body: z
+    .object({
+      name: safeName,
+      permissions: z
+        .array(UUID)
+        .min(1, "At least one permission must be assigned"),
+    })
+    .strict(),
 };
 
 export const assignRoleToEmployeeSchema = {
-  body: z.object({
-    employeeId: z.string().min(1, "User ID is required"),
-    roleId: z.string().min(1, "Role ID is required"),
-  }),
+  body: z
+    .object({
+      employeeId: UUID,
+      roleId: UUID,
+    })
+    .strict(),
 };
 
 export const createRoleSchema = {
-  body: z.object({
-    name: z.string().min(1, "Role name is required"),
-  }),
+  body: z
+    .object({
+      name: safeName,
+    })
+    .strict(),
 };
 
 export const updateRole = {
-  params: z.object({
-    roleId: z.string().uuid().min(1, "Role ID is required"),
-  }),
-  body: z.object({
-    name: z.string().min(1, "Role name is required"),
-  }),
+  params: z
+    .object({
+      roleId: UUID,
+    })
+    .strict(),
+  body: z
+    .object({
+      name: safeName,
+    })
+    .strict(),
 };
 
 export const removeRole = {
-  params: z.object({
-    roleId: z.string().uuid().min(1, "Role ID is required"),
-  }),
+  params: z
+    .object({
+      roleId: UUID,
+    })
+    .strict(),
 };

@@ -1,26 +1,33 @@
 import { z } from "zod";
+import { safeName, UUID } from "../../validations/security";
 
 const createDepartment = {
-  body: z.object({
-    deptName: z.string().trim().min(3, "dept name is required"),
-    location: z.string().trim().optional(),
-    shorthandRepresentation: z.string().trim().optional(),
-  }),
+  body: z
+    .object({
+      deptName: safeName,
+      location: safeName.optional(),
+      shorthandRepresentation: safeName.optional(),
+    })
+    .strict(),
 };
 
 const getDepartmentById = {
-  params: z.object({
-    id: z.string().uuid(),
-  }),
+  params: z
+    .object({
+      id: UUID,
+    })
+    .strict(),
 };
 
 const updateDepartment = {
   params: getDepartmentById.params,
-  body: z.object({
-    deptName: z.string().trim().optional(),
-    location: z.string().trim().optional(),
-    shorthandRepresentation: z.string().trim().optional(),
-  }),
+  body: z
+    .object({
+      deptName: safeName.optional(),
+      location: safeName.optional(),
+      shorthandRepresentation: safeName.optional(),
+    })
+    .strict(),
 };
 
 export default {

@@ -127,7 +127,7 @@
 
 /**
  * @swagger
- * /api/v1/provident-fund/reset:
+ * /api/v1/provident-fund/restore/reset:
  *   post:
  *     summary: Reset the company's provident fund rules to default
  *     tags: [ProvidentFund]
@@ -151,6 +151,62 @@
  *     responses:
  *       200:
  *         description: Default provident fund rules applied
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/v1/provident-fund/rules/update/{ruleId}:
+ *   post:
+ *     summary: Update a specific provident fund rule by ID
+ *     tags: [ProvidentFund]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: ruleId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the pension rule to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               employeeContribution:
+ *                 type: number
+ *                 example: 7
+ *               employerContribution:
+ *                 type: number
+ *                 example: 11
+ *     responses:
+ *       201:
+ *         description: Provident fund created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 companyId:
+ *                   type: string
+ *                 isActive:
+ *                   type: boolean
+ *                 providentFundId:
+ *                   type: string
+ *       400:
+ *         description: Bad Request - Validation Error
  *       401:
  *         description: Unauthorized
  */

@@ -1,19 +1,18 @@
 import { z } from "zod";
+import { amount, UUID } from "../../validations/security";
 
 const createProvidentFund = {
-  body: z.object({
-    employeeContribution: z
-      .number()
-      .min(0, "Employee contribution must be non-negative"),
-    employerContribution: z
-      .number()
-      .min(0, "Employer contribution must be non-negative"),
-  }),
+  body: z
+    .object({
+      employeeContribution: amount,
+      employerContribution: amount,
+    })
+    .strict(),
 };
 
 const providentFundParams = {
   params: z.object({
-    ruleId: z.string().uuid(),
+    ruleId: UUID,
   }),
 };
 

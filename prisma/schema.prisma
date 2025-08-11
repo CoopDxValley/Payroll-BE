@@ -42,6 +42,7 @@ model Company {
   workingCalendar               WorkingCalendar[]
   shift                         Shift[]
   OvertimeGracePeriod OvertimeGracePeriod[]
+  payrollDefinitions            PayrollDefinition[]
 }
 
 model Account {
@@ -1060,4 +1061,34 @@ model OvertimeGracePeriod {
   company            Company  @relation(fields: [companyId], references: [id])
  isActive    Boolean  @default(true)
   @@index([companyId])
+}
+
+
+
+enum PayrollDefinitionStatus {
+  created
+  ordered
+  pending
+  approved
+  active
+  paid
+  rejected
+}
+
+model PayrollDefinition {
+  id                         String        @id @default(uuid())
+  payrollName                String
+  startDate                  DateTime
+  endDate                    DateTime
+  payDate                    DateTime
+  payPeriod                  String
+  status                     PayrollDefinitionStatus @default(created)
+
+  createdAt                  DateTime    @default(now())
+  updatedAt                  DateTime    @updatedAt
+
+  companyId                  String
+  company                    Company       @relation(fields: [companyId], references: [id])
+
+
 }

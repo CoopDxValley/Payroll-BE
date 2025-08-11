@@ -1,24 +1,29 @@
 import { z } from "zod";
+import { amount, UUID } from "../../validations/security";
 
 export const createAdditionalPaySchema = {
-  body: z.object({
-    amount: z.number().positive("Amount must be positive"),
-    employeeId: z.string().uuid("Invalid employee ID"),
-    additionalPayDefinitionId: z
-      .string()
-      .uuid("Invalid additional pay definition ID"),
-  }),
+  body: z
+    .object({
+      amount,
+      employeeId: UUID,
+      additionalPayDefinitionId: UUID,
+    })
+    .strict(),
 };
 
 export const getAdditionalPayByIdSchema = {
-  params: z.object({
-    id: z.string().uuid("Invalid ID"),
-  }),
+  params: z
+    .object({
+      id: UUID,
+    })
+    .strict(),
 };
 
 export const updateAdditionalPaySchema = {
-  body: z.object({
-    amount: z.number().positive().optional(),
-  }),
+  body: z
+    .object({
+      amount: amount.optional(),
+    })
+    .strict(),
   params: getAdditionalPayByIdSchema.params,
 };
