@@ -3,7 +3,8 @@ import swaggerJsdoc from "swagger-jsdoc";
 
 import swaggerUi from "swagger-ui-express";
 import { Express } from "express";
-import config from "../../config/config";
+import path from "path";
+import fs from "fs";
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -20,44 +21,22 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url:
-          process.env.NODE_ENV === "production"
-            ? "https://api.payrollsystem.com"
-            : config.swaggerURL,
-        description:
-          process.env.NODE_ENV === "production"
-            ? "Production server"
-            : "Development server",
+        url: "http://10.12.53.67:4400/api/v1", // ✅ Force HTTP
+        description: "API Server",
       },
     ],
-    tags: [
-      {
-        name: "Attendance",
-        description: "Basic attendance operations",
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
       },
+    },
+    security: [
       {
-        name: "Attendance - Device Integration",
-        description: "ZKTeck SpeedH5 device data processing",
-      },
-      {
-        name: "Attendance - Bulk Operations",
-        description: "Bulk attendance operations",
-      },
-      {
-        name: "Attendance - Queries",
-        description: "Attendance data queries and reports",
-      },
-      {
-        name: "Authentication",
-        description: "User authentication and authorization",
-      },
-      {
-        name: "Employee",
-        description: "Employee management",
-      },
-      {
-        name: "Company",
-        description: "Company management",
+        bearerAuth: [],
       },
     ],
   },
@@ -71,29 +50,90 @@ const options: swaggerJsdoc.Options = {
 const specs = swaggerJsdoc(options);
 
 export const setupSwagger = (app: Express): void => {
-  // Serve swagger docs
-  app.use(
-    "/api-docs",
-    swaggerUi.serve,
-    swaggerUi.setup(specs, {
-      explorer: true,
-      customCss: `
-      .swagger-ui .topbar { display: none }
-      .swagger-ui .info { margin: 50px 0 }
-      .swagger-ui .scheme-container { background: #f7f7f7; padding: 20px; margin: 20px 0; border-radius: 5px; }
-    `,
-      customSiteTitle: "Payroll Management API Documentation",
-      customfavIcon: "/favicon.ico",
-      swaggerOptions: {
-        persistAuthorization: true,
-        displayRequestDuration: true,
-        docExpansion: "none",
+  // Get absolute path to swagger assets
+  const swaggerUiDistPath = path.dirname(require.resolve("swagger-ui-dist"));
+  const swaggerUiCss = fs.readFileSync(path.join(swaggerUiDistPath, "swagger-ui.css"), "utf8");
+  const swaggerUiBundle = fs.readFileSync(path.join(swaggerUiDistPath, "swagger-ui-bundle.js"), "utf8");
+  const swaggerUiPreset = fs.readFileSync(path.join(swaggerUiDistPath, "swagger-ui-standalone-preset.js"), "utf8");
+
+  // Serve custom Swagger UI with local assets
+  app.get("/api-docs", (req, res) => {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Payroll Management API Documentation</title>
+  <style>${swaggerUiCss}</style>
+  <style>
+    .swagger-ui .topbar { display: none }
+    .swagger-ui .info { margin: 50px 0 }
+    .swagger-ui .scheme-container { background: #f7f7f7; padding: 20px; margin: 20px 0; border-radius: 5px; }
+  </style>
+  <script>
+    // Polyfill for crypto.randomUUID
+    if (!window.crypto?.randomUUID) {
+      window.crypto = {
+        ...window.crypto,
+        randomUUID: function() {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script>${swaggerUiBundle}</script>
+  <script>${swaggerUiPreset}</script>
+  <script>
+    window.onload = function() {
+      window.ui = SwaggerUIBundle({
+        spec: ${JSON.stringify(specs)},
+        dom_id: '#swagger-ui',
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "StandaloneLayout",
+        supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+        docExpansion: 'none',
         filter: true,
         showRequestHeaders: true,
+        persistAuthorization: true,
+        displayRequestDuration: true,
         tryItOutEnabled: true,
-      },
-    })
-  );
+        // ✅ Force HTTP and prevent HTTPS redirects
+        requestInterceptor: function(request) {
+          console.log('Original request URL:', request.url);
+          
+          // Force HTTP protocol for all requests to our server
+          if (request.url && request.url.includes('10.12.53.67:4400')) {
+            const originalUrl = request.url;
+            request.url = request.url.replace(/^https:\/\//, 'http://');
+            console.log('Converted URL:', originalUrl, '->', request.url);
+          }
+          
+          // Also check and fix any other HTTPS URLs
+          if (request.url && request.url.startsWith('https://')) {
+            const originalUrl = request.url;
+            request.url = request.url.replace(/^https:\/\//, 'http://');
+            console.log('Fixed HTTPS URL:', originalUrl, '->', request.url);
+          }
+          
+          return request;
+        }
+      });
+    }
+  </script>
+</body>
+</html>`;
+    
+    res.send(html);
+  });
 
   // Serve swagger JSON
   app.get("/api-docs.json", (req, res) => {
@@ -102,11 +142,7 @@ export const setupSwagger = (app: Express): void => {
   });
 
   console.log(
-    `📚 Swagger documentation available at: ${
-      process.env.NODE_ENV === "production"
-        ? "https://api.payrollsystem.com"
-        : config.swaggerURL
-    }/api-docs`
+    `📚 Swagger documentation available at: http://10.12.53.67:4400/api-docs`
   );
 };
 

@@ -3,13 +3,12 @@ import { z } from "zod";
 
 const createShift = {
   body: z.object({
-    name: z.string(),
-    startTime: z.date(),
-    endTime: z.date(),
-    breakTime: z.number(),
-    gracePeriod: z.number(),
+    name: z.string().min(3, "Shift name is required"),
+    cycleDays: z.number().min(1),
+    companyId: z.string().uuid().optional(), // Will be injected from auth
   }),
 };
+
 
 const updateShift = {
   params: z.object({

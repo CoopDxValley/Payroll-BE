@@ -1,49 +1,59 @@
 import { Request, Response } from "express";
-import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
+import catchAsync from "../../utils/catch-async";
 import shiftService from "./shift.service";
+import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 
 const createShift = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const shift = await shiftService.createShift(req.body, user.companyId);
+  const user = req.employee as AuthEmployee;
+
+  if (!user.companyId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
+  }
+
+  const shift = await shiftService.createShift({
+    ...req.body,
+    companyId: user.companyId,
+  });
+
   res
     .status(httpStatus.CREATED)
-    .send({ message: "Shift created successfully", data: shift });
+    .send({ message: "Shift created", data: shift });
 });
 
-const getShifts = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const shifts = await shiftService.getShifts(user.companyId);
-  res.status(httpStatus.OK).send({ data: shifts });
+const getAllShifts = catchAsync(async (req: Request, res: Response) => {
+  const user = req.employee as AuthEmployee;
+  const shifts = await shiftService.getAllShifts(user.companyId);
+  res.send({ data: shifts, count: shifts.length });
 });
 
 const getShiftById = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
   const { id } = req.params;
-  const shift = await shiftService.getShiftById(id, user.companyId);
-  res.status(httpStatus.OK).send({ data: shift });
+  const shift = await shiftService.getShiftById(id);
+
+  if (!shift) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Shift not found");
+  }
+
+  res.send({ data: shift });
 });
 
 const updateShift = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
   const { id } = req.params;
-  const shift = await shiftService.updateShift(id, user.companyId, req.body);
-  res
-    .status(httpStatus.OK)
-    .send({ message: "Shift updated successfully", data: shift });
+  const shift = await shiftService.updateShift(id, req.body);
+  res.send({ message: "Shift updated", data: shift });
 });
 
 const deleteShift = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
   const { id } = req.params;
-  await shiftService.deleteShift(id, user.companyId);
-  res.status(httpStatus.OK).send({ message: "Shift deleted successfully" });
+  const result = await shiftService.deleteShift(id);
+  res.send({ message: "Shift deactivated", data: result });
 });
 
 export default {
   createShift,
-  getShifts,
+  getAllShifts,
   getShiftById,
   updateShift,
   deleteShift,
