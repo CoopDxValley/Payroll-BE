@@ -775,3 +775,32 @@ export const getInstanceDetails = async (id: string) => {
     },
   });
 };
+
+export const getApprovalWorkflows = async (companyId: string) => {
+  return prisma.approvalWorkflow.findMany({
+    where: { companyId },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+};
+
+export const getDepartmentApprovalWorkflow = async (
+  companyId: string,
+  departmentId: string
+) => {
+  const department = await prisma.department.findUnique({
+    where: { id: departmentId },
+  });
+  if (!department)
+    throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
+
+  return prisma.approvalWorkflow.findMany({
+    where: { companyId, departmentId },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+};

@@ -16,6 +16,8 @@ import {
   getInstanceDetails,
   createDelegationRule,
   resubmit,
+  getApprovalWorkflows,
+  getDepartmentApprovalWorkflow,
 } from "./approval.controller";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
@@ -86,5 +88,9 @@ router.get(
   // checkPermission("view_instance"),
   getInstanceDetails
 );
+
+router.get("/workflows", auth(), getApprovalWorkflows);
+
+router.get("/workflows/:departmentId", auth(), getDepartmentApprovalWorkflow);
 
 export default router;

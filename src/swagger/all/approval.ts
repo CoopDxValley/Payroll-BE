@@ -162,6 +162,76 @@
 
 /**
  * @swagger
+ * /api/v1/approvals/workflows:
+ *   get:
+ *     summary: Get all approval workflows
+ *     tags: [Approvals]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Workflows fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized access
+ */
+
+/**
+ * @swagger
+ * /api/v1/approvals/workflows/{departmentId}:
+ *   get:
+ *     summary: Get approval workflows for a specific department
+ *     tags: [Approvals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Department ID to fetch workflows for
+ *     responses:
+ *       200:
+ *         description: Workflows fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized access
+ *       404:
+ *         description: Department not found
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     CreateApprovalWorkflowDto:
