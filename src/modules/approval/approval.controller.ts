@@ -110,7 +110,7 @@ export const getInstanceDetails = catchAsync(async (req, res) => {
 
 export const resubmit = catchAsync(async (req, res) => {
   const { instanceId } = req.params;
-  const user = req.user as AuthEmployee;
+   const user = req.employee as AuthEmployee;
   const { reason } = req.body;
   const newInstance = await resubmitApprovalInstance({
     instanceId,
