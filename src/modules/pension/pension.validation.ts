@@ -1,33 +1,30 @@
 import { z } from "zod";
+import { amount, UUID } from "../../validations/security";
 
 const createPension = {
-  body: z.object({
-    employeeContribution: z
-      .number()
-      .min(0, "Employee contribution must be non-negative"),
-    employerContribution: z
-      .number()
-      .min(0, "Employer contribution must be non-negative"),
-  }),
+  body: z
+    .object({
+      employeeContribution: amount,
+      employerContribution: amount,
+    })
+    .strict(),
 };
 
 const pensionParams = {
-  params: z.object({
-    ruleId: z.string().uuid(),
-  }),
+  params: z
+    .object({
+      ruleId: UUID,
+    })
+    .strict(),
 };
 
 const updatePension = {
-  body: z.object({
-    employeeContribution: z
-      .number()
-      .min(0, "Employee contribution must be non-negative")
-      .optional(),
-    employerContribution: z
-      .number()
-      .min(0, "Employer contribution must be non-negative")
-      .optional(),
-  }),
+  body: z
+    .object({
+      employeeContribution: amount.optional(),
+      employerContribution: amount.optional(),
+    })
+    .strict(),
   params: pensionParams.params,
 };
 

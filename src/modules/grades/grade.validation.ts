@@ -1,29 +1,38 @@
 import { z } from "zod";
+import { amount, safeName, UUID } from "../../validations/security";
 
 const createGrade = {
-  body: z.object({
-    name: z.string().trim(),
-    minSalary: z.number().positive(),
-    maxSalary: z.number().positive(),
-  }),
+  body: z
+    .object({
+      name: safeName,
+      minSalary: amount,
+      maxSalary: amount,
+    })
+    .strict(),
 };
 
 const updateGrade = {
-  params: z.object({
-    id: z.string(),
-  }),
-  body: z.object({
-    name: z.string().trim().optional(),
-    minSalary: z.number().positive().optional(),
-    maxSalary: z.number().positive().optional(),
-    isActive: z.boolean().optional(),
-  }),
+  params: z
+    .object({
+      id: UUID,
+    })
+    .strict(),
+  body: z
+    .object({
+      name: safeName.optional(),
+      minSalary: amount.optional(),
+      maxSalary: amount.optional(),
+      isActive: z.boolean().optional(),
+    })
+    .strict(),
 };
 
 const getGrade = {
-  params: z.object({
-    id: z.string().uuid(),
-  }),
+  params: z
+    .object({
+      id: UUID,
+    })
+    .strict(),
 };
 
 export default {

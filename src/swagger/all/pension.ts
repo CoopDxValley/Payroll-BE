@@ -127,7 +127,7 @@
 
 /**
  * @swagger
- * /api/v1/pension/reset:
+ * /api/v1/pension/rules/reset:
  *   post:
  *     summary: Reset the company's pension rules to default
  *     tags: [Pension]
@@ -157,7 +157,7 @@
 
 /**
  * @swagger
- * /api/v1/pension/update/{ruleId}:
+ * /api/v1/pension/rules/update/{ruleId}:
  *   post:
  *     summary: Update a specific pension rule by ID
  *     tags: [Pension]

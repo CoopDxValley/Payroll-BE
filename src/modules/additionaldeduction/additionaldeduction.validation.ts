@@ -1,24 +1,29 @@
 import { z } from "zod";
+import { amount, UUID } from "../../validations/security";
 
 export const createAdditionalDeductionSchema = {
-  body: z.object({
-    amount: z.number().positive("Amount must be positive"),
-    employeeId: z.string().uuid("Invalid employee ID"),
-    additionalDeductionDefinitionId: z
-      .string()
-      .uuid("Invalid additional deduction definition ID"),
-  }),
+  body: z
+    .object({
+      amount,
+      employeeId: UUID,
+      additionalDeductionDefinitionId: UUID,
+    })
+    .strict(),
 };
 
 export const getAdditionalDeductionByIdSchema = {
-  params: z.object({
-    id: z.string().uuid("Invalid ID"),
-  }),
+  params: z
+    .object({
+      id: UUID,
+    })
+    .strict(),
 };
 
 export const updateAdditionalDeductionSchema = {
-  body: z.object({
-    amount: z.number().positive().optional(),
-  }),
+  body: z
+    .object({
+      amount: amount.optional(),
+    })
+    .strict(),
   params: getAdditionalDeductionByIdSchema.params,
 };

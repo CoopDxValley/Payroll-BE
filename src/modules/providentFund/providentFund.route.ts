@@ -53,11 +53,21 @@ router
   );
 
 router
-  .route("/tax/reset")
+  .route("/restore/reset")
   .post(auth(), providentFundController.resetCompanyProvidentFundRules);
 
 router
   .route("/assign/default")
   .post(auth(), providentFundController.assignDefaultProvidentFundsToCompany);
+
+router
+  .route("/rules/update/:ruleId")
+  .post(
+    auth(),
+    validate<ProvidentFundParams, never, CreateProvidentFundInput>(
+      providentFundValidation.createProvidentFund
+    ),
+    providentFundController.update
+  );
 
 export default router;

@@ -9,6 +9,7 @@ import {
   PensionParams,
   UpdatePensionInput,
 } from "./pension.type";
+import { UUID } from "crypto";
 
 const createPension = catchAsync<
   CustomRequest<never, never, CreatePensionInput>
@@ -62,10 +63,7 @@ const removeCompanyPension = catchAsync<
 >(async (req: CustomRequest<PensionParams, never, never>, res: Response) => {
   const authEmployee = req.employee as AuthEmployee;
   const { ruleId } = req.params;
-  const pension = await pensionService.removeCompanyPensionRule(
-    authEmployee.companyId,
-    ruleId
-  );
+  const pension = await pensionService.removeCompanyPensionRule(ruleId);
 
   res.status(httpStatus.OK).send({
     data: pension,
@@ -114,9 +112,14 @@ const fetchPensionById = catchAsync<CustomRequest<PensionParams, never, never>>(
 );
 
 const update = catchAsync<
-  CustomRequest<PensionParams, never, UpdatePensionInput>
+  CustomRequest<PensionParams, never, CreatePensionInput>
 >(async (req, res) => {
-  const data = await pensionService.update(req.params.ruleId, req.body);
+  const authEmployee = req.employee as AuthEmployee;
+  const input: CreatePensionInput & { companyId: string } = {
+    ...req.body,
+    companyId: authEmployee.companyId,
+  };
+  const data = await pensionService.update(req.params.ruleId, input);
   res.status(httpStatus.OK).json({ message: "Updated", data });
 });
 

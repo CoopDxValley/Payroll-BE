@@ -31,13 +31,14 @@ model Company {
   departments                   Department[]
   ApprovalWorkflow              ApprovalWorkflow[]
 
-  companyTaxRules          CompanyTaxRule[]
-  DeductionDefinition      DeductionDefinition[]
-  AllowanceDefinition      AllowanceDefinition[]
-  allowances               Allowance[]
-  deductions               Deduction[]
-  CompanyPensionRule       CompanyPensionRule[]
-  CompanyProvidentFundRule CompanyProvidentFundRule[]
+  companyTaxRules               CompanyTaxRule[]
+  DeductionDefinition           DeductionDefinition[]
+  AllowanceDefinition           AllowanceDefinition[]
+  allowances                    Allowance[]
+  deductions                    Deduction[]
+  CompanyPensionRule            CompanyPensionRule[]
+  CompanyProvidentFundRule      CompanyProvidentFundRule[]
+  payrollDefinitions            PayrollDefinition[]
 }
 
 model Account {
@@ -863,4 +864,32 @@ model DelegationRule {
 
   fromEmployee Employee @relation("FromEmployeeDelegationRule", fields: [fromEmployeeId], references: [id])
   toEmployee   Employee @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
+}
+
+enum PayrollDefinitionStatus {
+  created
+  ordered
+  pending
+  approved
+  active
+  paid
+  rejected
+}
+
+model PayrollDefinition {
+  id                         String        @id @default(uuid())
+  payrollName                String
+  startDate                  DateTime
+  endDate                    DateTime
+  payDate                    DateTime
+  payPeriod                  String
+  status                     PayrollDefinitionStatus @default(created)
+
+  createdAt                  DateTime    @default(now())
+  updatedAt                  DateTime    @updatedAt
+
+  companyId                  String
+  company                    Company       @relation(fields: [companyId], references: [id])
+
+
 }

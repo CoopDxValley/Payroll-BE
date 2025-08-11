@@ -1,21 +1,24 @@
 import { z } from "zod";
+import { amount, UUID } from "../../validations/security";
 
-export const createDeductionSchema = z.object({
-  amount: z.number().min(0, "amount must be non-negative"),
-  deductionDefinitionId: z.string().uuid("Invalid deduction definition ID"),
-  gradeId: z.string().uuid("Invalid grade ID"),
-  //   companyId: z.string().uuid("Invalid company ID"),
-});
+export const createDeductionSchema = z
+  .object({
+    amount,
+    deductionDefinitionId: UUID,
+    gradeId: UUID,
+  })
+  .strict();
 
-export const updateDeductionSchema = z.object({
-  amount: z.number().min(0, "amount must be non-negative").optional(),
-  deductionDefinitionId: z
-    .string()
-    .uuid("Invalid deduction definition ID")
-    .optional(),
-  gradeId: z.string().uuid("Invalid grade ID").optional(),
-});
+export const updateDeductionSchema = z
+  .object({
+    amount: amount.optional(),
+    deductionDefinitionId: UUID.optional(),
+    gradeId: UUID.optional(),
+  })
+  .strict();
 
-export const getDeductionByIdSchema = z.object({
-  id: z.string().uuid("Invalid ID"),
-});
+export const getDeductionByIdSchema = z
+  .object({
+    id: UUID,
+  })
+  .strict();

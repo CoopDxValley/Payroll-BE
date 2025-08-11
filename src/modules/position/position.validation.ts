@@ -1,25 +1,31 @@
 import { z } from "zod";
+import { safeName, safeOptionalText, UUID } from "../../validations/security";
 
 const createPosition = {
-  body: z.object({
-    positionName: z.string().trim(),
-    description: z.string().trim().optional(),
-  }),
+  body: z
+    .object({
+      positionName: safeName,
+      description: safeOptionalText,
+    })
+    .strict(),
 };
 
 const getOrDeletePosition = {
-  params: z.object({
-    id: z.string().uuid(),
-  }),
+  params: z
+    .object({
+      id: UUID,
+    })
+    .strict(),
 };
 
 const updatePosition = {
   params: getOrDeletePosition.params,
-  body: z.object({
-    positionName: z.string().trim().optional(),
-    description: z.string().trim().optional(),
-    isActive: z.boolean().optional(),
-  }),
+  body: z
+    .object({
+      positionName: safeName.optional(),
+      description: safeOptionalText,
+    })
+    .strict(),
 };
 
 export default {
