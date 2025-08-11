@@ -7,10 +7,6 @@ import authRoute from "../../modules/auth/auth.route";
 
 import departmentRoute from "../../modules/department/department.route";
 import positionRoute from "../../modules/position/position.route";
-// import authRoute from "./auth.routes";
-// import userRoute from "./user.route";
-// import adminRoute from "./admin.route";
-
 import shiftRoute from "../../modules/shift/shift.route";
 import shiftDayRoute from "../../modules/shiftDays/shiftDay.route";
 import employeeShiftRoute from "../../modules/EmployeShift/employeeShift.route";
@@ -18,17 +14,28 @@ import shiftCoverageRoute from "../../modules/shiftCoverage/shiftCoverage.route"
 import workingCalendarRoute from "../../modules/workingCalendar/workingCalendar.route";
 import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
-import additionalDeductionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
+import additionalDeductionDefinitionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
 import attendance from "../../modules/attendance/attendance.route";
 // import swagger from "../../modules/swagger";
 // import { setupSwagger } from "../../swagger/setup";
 
-import { setupSwagger } from "../../swagger/setup"; // ✅ correct
+// import { setupSwagger } from "../../swagger/setup"; // ✅ correct
 import { setupSwaggerAlternative } from "../../swagger/setup-alternative"; // Alternative CDN-based
 import documentsRoute from "../../documents/documents.route"; // ✅ Documents route
-
+import roleRoute from "../../modules/role/role.route";
+import taxslabRoute from "../../modules/taxslab/taxslab.route";
+import additionalPayRoute from "../../modules/additionalpay/additionalpay.route";
+import additionalDeductionRoute from "../../modules/additionaldeduction/additionaldeduction.route";
+import { setupSwagger } from "../../swagger/setup";
+import deductionDefinitionRoute from "../../modules/deductiondefinition/deductionDefinition.route";
+import allowanceDefinitionRoute from "../../modules/allowancedefinition/allowanceDefinition.route";
+import deductionRoute from "../../modules/deduction/deduction.route";
+import allowanceRoute from "../../modules/allowance/allowance.route";
+import providentFundRoute from "../../modules/providentFund/providentFund.route";
+import pensionRoute from "../../modules/pension/pension.route";
+import overtimeGradePeriod from "../../modules/OvertimeGracePeriod/overtimeGracePeriod.route";
 const router = express.Router();
 
 const defaultRoutes = [
@@ -36,15 +43,6 @@ const defaultRoutes = [
     path: "/company",
     route: companyRoute,
   },
-
-  // {
-  //   path: "/users",
-  //   route: userRoute,
-  // },
-  // {
-  //   path: "/auth",
-  //   route: authRoute,
-  // },
   {
     path: "/company",
     route: companyRoute,
@@ -85,12 +83,16 @@ const defaultRoutes = [
     route: gradeRoute,
   },
   {
+    path: "/attendance",
+    route: attendance,
+  },
+  {
     path: "/leave-requests",
     route: leaveRequestRoute,
   },
   {
     path: "/additional-deduction-definitions",
-    route: additionalDeductionRoute,
+    route: additionalDeductionDefinitionRoute,
   },
   {
     path: "/additional-pay-definitions",
@@ -104,13 +106,17 @@ const defaultRoutes = [
     path: "/auth",
     route: authRoute,
   },
-  {
-    path: "/attendance",
-    route: attendance,
-  },
+  // {
+  //   path: "/attendance",
+  //   route: attendance,
+  // },
   {
     path: "/approvals",
     route: approvalRoute,
+  },
+  {
+    path: "/overtime-grace-period",
+    route: overtimeGradePeriod,
   },
   {
     path: "/test",
@@ -119,8 +125,8 @@ const defaultRoutes = [
         message: "Server is working!",
         timestamp: new Date().toISOString(),
         protocol: req.protocol,
-        host: req.get('host'),
-        url: req.url
+        host: req.get("host"),
+        url: req.url,
       });
     },
   },
@@ -128,10 +134,48 @@ const defaultRoutes = [
     path: "/documents",
     route: documentsRoute,
   },
+  // {
+  //   path: "/swagger",
+  //   // route: setupSwaggerAlternative, // Try alternative setup that serves spec via URL
+  //   route: setupSwagger, // Try this first, switch to setupSwaggerAlternative if needed
+  //   path: "/roles",
+  //   route: roleRoute,
+  // },
   {
-    path: "/swagger",
-    // route: setupSwaggerAlternative, // Try alternative setup that serves spec via URL
-    route: setupSwagger, // Try this first, switch to setupSwaggerAlternative if needed
+    path: "/taxslab",
+    route: taxslabRoute,
+  },
+  {
+    path: "/additional-pay",
+    route: additionalPayRoute,
+  },
+  {
+    path: "/additional-deduction",
+    route: additionalDeductionRoute,
+  },
+  {
+    path: "/deduction-definitions",
+    route: deductionDefinitionRoute,
+  },
+  {
+    path: "/allowance-definitions",
+    route: allowanceDefinitionRoute,
+  },
+  {
+    path: "/deductions",
+    route: deductionRoute,
+  },
+  {
+    path: "/allowances",
+    route: allowanceRoute,
+  },
+  {
+    path: "/provident-fund",
+    route: providentFundRoute,
+  },
+  {
+    path: "/pension",
+    route: pensionRoute,
   },
 ];
 
@@ -140,6 +184,10 @@ const devRoutes = [
   {
     path: "/dev",
     route: healthRoute,
+  },
+  {
+    path: "/swagger",
+    route: setupSwagger,
   },
 ];
 

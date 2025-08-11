@@ -1,9 +1,21 @@
 import { z } from "zod";
-
+const isoDateTimeRegex =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|([+-]\d{2}:\d{2}))$/;
 const createAttendance = {
   body: z.object({
-    date: z.string().datetime().optional(), // Optional for manual entry
-    checkTime: z.string().datetime(),
+    // date: z.string().datetime().optional(), // Optional for manual entry
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+
+    checkTime: z
+      .string()
+      .transform((val) => val.replace(" ", "T") + "Z")
+      .refine((val) => isoDateTimeRegex.test(val), {
+        message: "Invalid ISO datetime format",
+      }),
+
     checkType: z.enum(["PUNCHIN", "PUNCHOUT"]).optional(),
     verifyMode: z.number().optional(),
     workCode: z.number().optional(),

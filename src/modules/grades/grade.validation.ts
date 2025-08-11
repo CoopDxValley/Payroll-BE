@@ -13,10 +13,10 @@ const updateGrade = {
     id: z.string(),
   }),
   body: z.object({
-    name: z.string().trim(),
-    minSalary: z.number().positive(),
-    maxSalary: z.number().positive(),
-    isActive: z.boolean(),
+    name: z.string().trim().optional(),
+    minSalary: z.number().positive().optional(),
+    maxSalary: z.number().positive().optional(),
+    isActive: z.boolean().optional(),
   }),
 };
 
@@ -26,15 +26,8 @@ const getGrade = {
   }),
 };
 
-const deleteGrade = {
-  params: z.object({
-    id: z.string().uuid(),
-  }),
-};
-
 export default {
   createGrade,
   updateGrade,
   getGrade,
-  deleteGrade,
 };

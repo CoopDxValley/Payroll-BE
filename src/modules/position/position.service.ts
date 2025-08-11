@@ -1,21 +1,11 @@
 import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
+import { CreatePositionInput, UpdatePositionInput } from "./position.type";
 
-const createPosition = async (data: {
-  positionName: string;
-  description?: string;
-  companyId: string;
-}) => {
-  const { positionName, description, companyId } = data;
-
-  console.log(companyId);
-  console.log("ddkdfkdkdk");
-
-  if (!companyId || typeof companyId !== "string") {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Valid companyId is required");
-  }
-
+const createPosition = async (
+  data: CreatePositionInput & { companyId: string }
+) => {
   const existing = await prisma.position.findFirst({
     where: {
       positionName: data.positionName,
@@ -33,7 +23,7 @@ const createPosition = async (data: {
   return prisma.position.create({ data });
 };
 
-const getAllPositions = async (companyId?: string) => {
+const getAllPositions = async (companyId: string) => {
   return prisma.position.findMany({
     where: { isActive: true, companyId: companyId },
     include: {
@@ -50,24 +40,20 @@ const getPositionById = async (id: string) => {
     where: { id },
     include: {
       company: true,
-      employeePositions: true,
+      // employeePositions: true,
     },
   });
 };
 
 const updatePosition = async (
   id: string,
-  data: Partial<{
-    positionName: string;
-    description?: string;
-    companyId?: string;
-    isActive?: boolean;
-  }>
+  data: UpdatePositionInput & { companyId: string }
 ) => {
   if (data.positionName) {
     const duplicate = await prisma.position.findFirst({
       where: {
         positionName: data.positionName,
+        companyId: data.companyId,
         NOT: { id },
       },
     });
@@ -92,7 +78,7 @@ const deletePosition = async (id: string, companyId: string) => {
     where: { id, companyId },
   });
   if (!existing) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
+    throw new ApiError(httpStatus.NOT_FOUND, "Position not found");
   }
 
   return prisma.position.update({

@@ -1,7 +1,7 @@
 import express from "express";
 import attendanceController from "./attendance.controller";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+// import { checkPermission } from "../../middlewares/checkPermissions";
 import { validate } from "../../middlewares/validate";
 import attendanceValidation from "./attendance.validation";
 

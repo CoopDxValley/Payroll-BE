@@ -7,7 +7,7 @@ import { AuthEmployee } from "../auth/auth.type";
 
 // Request coverage for a shift
 const requestCoverage = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
 
   if (!user.companyId) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
@@ -27,7 +27,7 @@ const requestCoverage = catchAsync(async (req: Request, res: Response) => {
 
 // Approve/reject coverage request
 const updateCoverageStatus = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const { id } = req.params;
   const { status, reason } = req.body;
 
@@ -52,7 +52,7 @@ const updateCoverageStatus = catchAsync(async (req: Request, res: Response) => {
 // Get all coverage requests (with filters)
 const getAllCoverageRequests = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
     const { status, employeeId, coverageDate, reason } = req.query;
 
     if (!user.companyId) {
@@ -93,7 +93,7 @@ const getCoverageRequestById = catchAsync(
 // Get coverage requests for specific employee
 const getEmployeeCoverageRequests = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
     const { employeeId } = req.params;
     const { status } = req.query;
 
@@ -117,7 +117,7 @@ const getEmployeeCoverageRequests = catchAsync(
 
 // // Get pending coverage requests for approval
 // const getPendingCoverageRequests = catchAsync(async (req: Request, res: Response) => {
-//   const user = req.user as AuthEmployee;
+//   const user = req.employee as AuthEmployee;
 
 //   if (!user.companyId) {
 //     throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
@@ -134,7 +134,7 @@ const getEmployeeCoverageRequests = catchAsync(
 // });
 
 const getCoverageRequests = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const { status } = req.query;
 
   if (!user.companyId) {
@@ -162,7 +162,7 @@ const getCoverageRequests = catchAsync(async (req: Request, res: Response) => {
 });
 
 // const getCoverageRequests = catchAsync(async (req: Request, res: Response) => {
-//   const user = req.user as AuthEmployee;
+//   const user = req.employee as AuthEmployee;
 //   const { status } = req.query;
 
 //   if (!user.companyId) {
@@ -183,7 +183,7 @@ const getCoverageRequests = catchAsync(async (req: Request, res: Response) => {
 // Cancel coverage request
 const cancelCoverageRequest = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
     const { id } = req.params;
 
     if (!user.companyId) {

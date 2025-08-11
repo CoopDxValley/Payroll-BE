@@ -5,7 +5,7 @@ import attendanceService from "./attendance.service";
 import { AuthEmployee } from "../auth/auth.type";
 
 const createAttendance = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+ const user = req.employee as AuthEmployee;
 
   const log = await attendanceService.createAttendance({
     ...req.body,
@@ -19,8 +19,8 @@ const createAttendance = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllAttendanceLogs = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
 
+ const user = req.employee as AuthEmployee;
   const logs = await attendanceService.getAllAttendanceLogs();
 
   res.json({ data: logs, count: logs.length });

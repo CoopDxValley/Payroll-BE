@@ -8,15 +8,15 @@ datasource db {
 }
 
 model Company {
-  id                            String                          @id @default(uuid())
-  status                        CompanyStatus                   @default(pending)
-  organizationName              String
-  phoneNumber                   String
-  companyCode                   String
-  email                         String?
-  createdAt                     DateTime                        @default(now())
-  updatedAt                     DateTime                        @updatedAt
-  notes                         String?
+  id               String        @id @default(uuid())
+  status           CompanyStatus @default(pending)
+  organizationName String
+  phoneNumber      String
+  companyCode      String
+  email            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  notes            String?
 
   accounts                      Account[]
   positions                     Position[]
@@ -24,16 +24,24 @@ model Company {
   Grade                         Grade[]
 
   AdditionalDeductionDefinition AdditionalDeductionDefinition[]
+  additionalDeductions          AdditionalDeduction[]
   AdditionalPayDefinition       AdditionalPayDefinition[]
+  additionalPays                AdditionalPay[]
   employees                     Employee[]
   departments                   Department[]
   ApprovalWorkflow              ApprovalWorkflow[]
 
+  companyTaxRules          CompanyTaxRule[]
+  DeductionDefinition      DeductionDefinition[]
+  AllowanceDefinition      AllowanceDefinition[]
+  allowances               Allowance[]
+  deductions               Deduction[]
+  CompanyPensionRule       CompanyPensionRule[]
+  CompanyProvidentFundRule CompanyProvidentFundRule[]
 
-
-  ////
   workingCalendar               WorkingCalendar[]
   shift                         Shift[]
+  OvertimeGracePeriod OvertimeGracePeriod[]
 }
 
 model Account {
@@ -48,44 +56,62 @@ model Account {
   company       Company  @relation(fields: [companyId], references: [id])
 }
 
-model Department {
-  id                      String     @id @default(uuid())
-  deptName                String
-  location                String?
-  shorthandRepresentation String?
-  companyId               String
-  isActive                Boolean    @default(true)
-  createdAt               DateTime   @default(now())
-  updatedAt               DateTime   @updatedAt
-  company                 Company    @relation(fields: [companyId], references: [id])
-  departmentEmployees     Employee[]
+//model Department {
+// id                      String     @id @default(uuid())
+// deptName                String
+// location                String?
+// shorthandRepresentation String?
+// companyId               String
+// isActive                Boolean    @default(true)
+// createdAt               DateTime   @default(now())
+// updatedAt               DateTime   @updatedAt
+// company                 Company    @relation(fields: [companyId], references: [id])
+//departmentEmployees     Employee[]
 
-  approvalWorkflow ApprovalWorkflow[]
-}
+// approvalWorkflow        ApprovalWorkflow[]
+//}
 
 model Position {
-  id                String     @id @default(uuid())
-  positionName      String
-  description       String?
-  companyId         String
-  createdAt         DateTime   @default(now())
-  isActive          Boolean    @default(true)
-  updatedAt         DateTime   @updatedAt
-  company           Company    @relation(fields: [companyId], references: [id])
-  employeePositions Employee[]
+  id           String   @id @default(uuid())
+  positionName String
+  description  String?
+  companyId    String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company     Company                   @relation(fields: [companyId], references: [id])
+  assignments EmployeePositionHistory[]
+  //employeePositions Employee[]
 }
 
+model EmployeePositionHistory {
+  id         String    @id @default(uuid())
+  employeeId String
+  positionId String
+  fromDate   DateTime
+  toDate     DateTime?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  position Position @relation(fields: [positionId], references: [id])
+
+  @@unique([employeeId, positionId])
+}
 
 model Role {
-  id            String           @id @default(uuid())
-  name          String           @unique
-  companyId     String
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  company       Company          @relation(fields: [companyId], references: [id])
+  id        String  @id @default(uuid())
+  name      String  @unique
+  companyId String
+  isActive  Boolean @default(true)
 
-  permissions   RolePermission[]
-  employeeRoles EmployeeRole[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  permissions RolePermission[]
+  //employeeRoles EmployeeRole[]
+  assignments EmployeeRoleHistory[]
 }
 
 model Permission {
@@ -117,7 +143,6 @@ model Token {
   expires     DateTime
   blacklisted Boolean
   createdAt   DateTime  @default(now())
-  
 
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id])
@@ -148,7 +173,11 @@ model Grade {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  company   Company  @relation(fields: [companyId], references: [id])
+
+  company     Company                @relation(fields: [companyId], references: [id])
+  assignments EmployeeGradeHistory[]
+  allowances  Allowance[]
+  deductions  Deduction[]
 
   @@index([companyId])
 }
@@ -207,10 +236,66 @@ model AdditionalDeductionDefinition {
   type      DeductionType
   companyId String
   isActive  Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company              Company               @relation(fields: [companyId], references: [id])
+  additionalDeductions AdditionalDeduction[]
+}
+
+model DeductionDefinition {
+  id        String  @id @default(uuid())
+  name      String
+  companyId String
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id])
+  deductions Deduction[]
+}
+
+model AllowanceDefinition {
+  id             String   @id @default(uuid())
+  name           String
+  isTaxable      Boolean  @default(false)
+  isExempted     Boolean  @default(false)
+  exemptedAmount Decimal  @db.Decimal(10, 2)
+  startingAmount Decimal? @db.Decimal(10, 2)
+  companyId      String
+  isActive       Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id])
+  allowances Allowance[]
+}
+
+model Allowance {
+  id                    String @id @default(uuid())
+  amount                Float
+  allowanceDefinitionId String
+  gradeId               String
+  companyId             String
+
+  allowanceDefinition AllowanceDefinition @relation(fields: [allowanceDefinitionId], references: [id])
+  grade               Grade               @relation(fields: [gradeId], references: [id])
+  company             Company             @relation(fields: [companyId], references: [id])
+}
+
+model Deduction {
+  id                    String @id @default(uuid())
+  amount                Float
+  deductionDefinitionId String
+  gradeId               String
+  companyId             String
+
+  deductionDefinition DeductionDefinition @relation(fields: [deductionDefinitionId], references: [id])
+  grade               Grade               @relation(fields: [gradeId], references: [id])
+  company             Company             @relation(fields: [companyId], references: [id])
 }
 
 model AdditionalPayDefinition {
@@ -222,7 +307,8 @@ model AdditionalPayDefinition {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
+  additionalPays AdditionalPay[]
+  company        Company         @relation(fields: [companyId], references: [id])
 
   @@unique([name, companyId, isActive])
 }
@@ -240,24 +326,274 @@ enum DeductionType {
 //////
 
 enum PayrollCalculationType {
-  FIXED_SALARY        // Fixed monthly/weekly salary regardless of attendance
-  HOURLY_ATTENDANCE   // Hourly rate based on attendance hours
-  MIXED               // Base salary + attendance bonuses/deductions
-  COMMISSION_BASED    // Commission/piece-rate, attendance optional
-  CONTRACT            // Contract-based, attendance may not matter
+  FIXED_SALARY // Fixed monthly/weekly salary regardless of attendance
+  HOURLY_ATTENDANCE // Hourly rate based on attendance hours
+  MIXED // Base salary + attendance bonuses/deductions
+  COMMISSION_BASED // Commission/piece-rate, attendance optional
+  CONTRACT // Contract-based, attendance may not matter
 }
 
 enum AttendanceRequirement {
-  REQUIRED            // Must track attendance for payroll
-  OPTIONAL            // Attendance tracked but doesn't affect pay
-  NOT_REQUIRED        // No attendance tracking needed
+  REQUIRED // Must track attendance for payroll
+  OPTIONAL // Attendance tracked but doesn't affect pay
+  NOT_REQUIRED // No attendance tracking needed
 }
 
 
 
+model AdditionalDeduction {
+  id                              String  @id @default(uuid())
+  amount                          Decimal @db.Decimal(10, 2)
+  employeeId                      String
+  additionalDeductionDefinitionId String
+  companyId                       String
+
+  employee                      Employee                      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  additionalDeductionDefinition AdditionalDeductionDefinition @relation(fields: [additionalDeductionDefinitionId], references: [id], onDelete: Cascade)
+  company                       Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([additionalDeductionDefinitionId])
+  @@index([companyId])
+}
+
+model AdditionalPay {
+  id     String  @id @default(uuid())
+  amount Decimal @db.Decimal(10, 2)
+
+  additionalPayDefinitionId String
+  employeeId                String
+  companyId                 String
+
+  additionalPayDefinition AdditionalPayDefinition @relation(fields: [additionalPayDefinitionId], references: [id], onDelete: Cascade)
+  employee                Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  company                 Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([additionalPayDefinitionId])
+  @@index([employeeId])
+  @@index([companyId])
+}
+
+model TaxSlab {
+  id          String  @id @default(uuid())
+  name        String?
+  description String?
+  type        TaxType @default(INCOME_TAX)
+  rate        Float?
+  deductible  Float?
+  minIncome   Float
+  maxIncome   Float
+  isDefault   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyTaxRules CompanyTaxRule[]
+}
+
+model ProvidentFund {
+  id                      String            @id @default(uuid())
+  employerContribution    Float
+  employeeContribution    Float     
+  isDefault               Boolean           @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyProvidentFundRule CompanyProvidentFundRule[]
+}
+
+model Pension {
+  id                   String  @id @default(uuid())
+  employerContribution Float
+  employeeContribution Float
+  isDefault            Boolean @default(false)
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  companyPensionRule CompanyPensionRule[]
+}
+
+model CompanyTaxRule {
+  id        String  @id @default(uuid())
+  companyId String
+  taxSlabId String
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taxSlab TaxSlab @relation(fields: [taxSlabId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, taxSlabId])
+  @@index([companyId])
+  @@index([taxSlabId])
+}
+
+model CompanyPensionRule {
+  id        String  @id @default(uuid())
+  companyId String
+  pensionId String
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pension Pension @relation(fields: [pensionId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, pensionId])
+  @@index([companyId])
+  @@index([pensionId])
+}
+
+model CompanyProvidentFundRule {
+  id              String  @id @default(uuid())
+  companyId       String
+  providentFundId String
+  isActive        Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  providentFund ProvidentFund @relation(fields: [providentFundId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, providentFundId])
+  @@index([companyId])
+  @@index([providentFundId])
+}
+
+enum TaxType {
+  INCOME_TAX
+  EXEMPTION
+}
+
+enum ProvidentFundType {
+  EMPLOYEE
+  EMPLOYER
+}
+
+model Department {
+  id                      String   @id @default(uuid())
+  deptName                String
+  parentId                String? // optional for tree structure
+  location                String?
+  shorthandRepresentation String?
+  companyId               String
+  //departmentEmployees     Employee[]
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  parent           Department?                 @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children         Department[]                @relation("DepartmentHierarchy")
+  assignments      EmployeeDepartmentHistory[]
+  company          Company                     @relation(fields: [companyId], references: [id])
+  approvalWorkflow ApprovalWorkflow[]
+}
+
+model EmployeeDepartmentHistory {
+  id           String    @id @default(uuid())
+  employeeId   String
+  departmentId String
+  fromDate     DateTime
+  toDate       DateTime?
+
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+
+  @@unique([employeeId, departmentId])
+}
+
+model EmployeeGradeHistory {
+  employeeId String
+  gradeId    String
+  fromDate   DateTime
+  toDate     DateTime?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  grade    Grade    @relation(fields: [gradeId], references: [id])
+
+  @@unique([employeeId, gradeId])
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+  ON_LEAVE
+  RETIRED
+}
+
+enum IdType {
+  KEBELE
+  PASSPORT
+  LICENSE
+  NATIONALID
+}
+
+model PayrollInfo {
+  id             String         @id @default(uuid())
+  employeeId     String         @unique
+  tinNumber      String         @unique
+  basicSalary    Float
+  currency       String         @default("ETB")
+  employmentType EmploymentType
+  payFrequency   PayFrequency   @default(MONTHLY)
+  accountNumber  String         @unique
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+enum EmploymentType {
+  PERMANENT
+  CONTRACT
+  HOURLY
+}
+
+enum PayFrequency {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+  DAILY
+}
+
+model TerminationRecord {
+  id              String          @id @default(uuid())
+  employeeId      String
+  reason          String
+  terminationType TerminationType
+  noticeDate      DateTime
+  terminationDate DateTime
+  remarks         String?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+enum TerminationType {
+  RESIGNATION
+  DISMISSAL
+  RETIREMENT
+  DECEASED
+}
+
 model Attendance {
   id           String    @id @default(uuid())
-  deviceUserId String    // ✅ now the only identifier
+  deviceUserId String // ✅ now the only identifier
   date         DateTime  @db.Date
   checkTime    DateTime
   checkType    CheckType // ✅ enum for punch type
@@ -271,22 +607,35 @@ model Attendance {
   @@index([deviceUserId, date])
 }
 
-
-
 enum CheckType {
   PUNCHIN
   PUNCHOUT
 }
 
-model EmployeeRole {
+model EmployeeRoleHistory {
   employeeId String
   roleId     String
-  assignedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  role       Role     @relation(fields: [roleId], references: [id])
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  fromDate   DateTime
+  toDate     DateTime?
+
+  role     Role     @relation(fields: [roleId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
 
   @@id([employeeId, roleId])
+}
+
+model EmergencyContact {
+  id           String  @id @default(uuid())
+  employeeId   String
+  fullName     String
+  relationship String
+  phone        String
+  email        String?
+  address      String?
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 //////
@@ -321,10 +670,10 @@ model ApprovalWorkflow {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  company       Company            @relation(fields: [companyId], references: [id])
-  department    Department?        @relation(fields: [departmentId], references: [id])
-  stages        ApprovalStage[]
-  instances     ApprovalInstance[]
+  company    Company            @relation(fields: [companyId], references: [id])
+  department Department?        @relation(fields: [departmentId], references: [id])
+  stages     ApprovalStage[]
+  instances  ApprovalInstance[]
 
   @@unique([requestType, companyId, departmentId])
 }
@@ -457,15 +806,15 @@ model Delegation {
 }
 
 model DelegationRule {
-  id               String      @id @default(uuid())
-  requestType      RequestType
-  fromEmployeeId   String      // The employee that would normally approve
-  toEmployeeId     String          // The employee to whom it should be delegated
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id             String      @id @default(uuid())
+  requestType    RequestType
+  fromEmployeeId String // The employee that would normally approve
+  toEmployeeId   String // The employee to whom it should be delegated
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  fromEmployee     Employee        @relation("FromEmployeeDelegationRule", fields: [fromEmployeeId], references: [id])
-  toEmployee       Employee        @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
+  fromEmployee Employee @relation("FromEmployeeDelegationRule", fields: [fromEmployeeId], references: [id])
+  toEmployee   Employee @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
 }
 
 
@@ -496,36 +845,54 @@ enum CalendarDayType {
 ///////////SHIFT MANAGEMENT  /////////////////////////////////////
 
 model Employee {
-  id                     String                  @id @default(uuid())
-  name                   String
-  username               String                  @unique
-  phoneNumber            String
-  password               String
-  deviceUserId           String?                 @unique // Device user ID from attendance device
-  //payrollCalculationType PayrollCalculationType @default(FIXED_SALARY)
-  attendanceRequirement  AttendanceRequirement  @default(REQUIRED)
- // hourlyRate             Float?                 // For hourly employees
- // baseSalary             Float?                 // For fixed/mixed salary employees
-  isSuperAdmin           Boolean                 @default(false)
-  companyId              String
-  departmentId           String?
-  positionId             String?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  isFirstTimeLoggedIn    Boolean                 @default(true)
-  Token                  Token[]
-  company                Company                 @relation(fields: [companyId], references: [id])
-  department             Department?             @relation(fields: [departmentId], references: [id])
-  position               Position?               @relation(fields: [positionId], references: [id])
-  employeeRoles          EmployeeRole[]
-  //attendanceLogs         Attendance[]
-   overtimes Overtime[]   
+  id               String  @id @default(uuid())
+  name             String
+  username         String  @unique
+  phoneNumber      String
+  optionalPhoneNumber String?
+  password         String
+  email            String? @unique
+
+  // IDs from both models (keeping both if they might differ in meaning)
+  employeeIdNumber String? @unique // From first model (Device user ID from attendance device)
+  deviceUserId     String? @unique // From second model
+
+  attendanceRequirement AttendanceRequirement @default(REQUIRED)
+
+  isSuperAdmin        Boolean          @default(false)
+  gender              Gender
+  dateOfBirth         DateTime?
+  nationality         String?          @default("Ethiopia")
+  imageUrl            String?
+  status              EmploymentStatus @default(ACTIVE)
+  idNumber            String?
+  idImageUrl          String?
+  idType              IdType           @default(KEBELE)
+
+  companyId           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  isFirstTimeLoggedIn Boolean  @default(true)
+
+  // Relations
+  Token               Token[]
+  company             Company @relation(fields: [companyId], references: [id])
+
+  gradeHistory        EmployeeGradeHistory[]
+  payrollInfo         PayrollInfo?
+  terminations        TerminationRecord[]
+  departmentHistory   EmployeeDepartmentHistory[]
+  roleHistory         EmployeeRoleHistory[]
+  positionHistory     EmployeePositionHistory[]
+  emergencyContacts   EmergencyContact[]
+  overtimes           Overtime[] // From second model
+
   stageEmployees StageEmployee[]
   requests       Request[]
   stageStatuses  StageStatus[]
 
-  delegatedFrom        Delegation[]           @relation("FromEmployee")
-  delegatedTo          Delegation[]           @relation("ToEmployee")
+  delegatedFrom Delegation[] @relation("FromEmployee")
+  delegatedTo   Delegation[] @relation("ToEmployee")
 
   delegatedRuleFrom    DelegationRule[]       @relation("FromEmployeeDelegationRule")
   delegatedRuleTo      DelegationRule[]       @relation("ToEmployeeDelegationRule")
@@ -533,22 +900,18 @@ model Employee {
   ApprovalNotification ApprovalNotification[]
   ApprovalAuditLog     ApprovalAuditLog[]
 
+  additionalDeductions AdditionalDeduction[]
+  additionalPays       AdditionalPay[]
 
-  // ADD THIS MISSING RELATION:
-  employeeShifts          EmployeeShift[]
-  originalShiftCoverages  ShiftCoverage[] @relation("OriginalShiftEmployee")
-  coveringShiftCoverages  ShiftCoverage[] @relation("CoveringShiftEmployee")
-  requestedCoverages      ShiftCoverage[] @relation("ShiftCoverageRequester")
-  approvedCoverages       ShiftCoverage[] @relation("ShiftCoverageApprover")
+  // Shift coverage relations from second model
+  employeeShifts         EmployeeShift[]
+  originalShiftCoverages ShiftCoverage[] @relation("OriginalShiftEmployee")
+  coveringShiftCoverages ShiftCoverage[] @relation("CoveringShiftEmployee")
+  requestedCoverages     ShiftCoverage[] @relation("ShiftCoverageRequester")
+  approvedCoverages      ShiftCoverage[] @relation("ShiftCoverageApprover")
 }
 
 
-
-
-
-
-
-////////////////////////////////NEW B.  /////////////////////////////////////////
 
 
 model Shift {
@@ -684,4 +1047,17 @@ enum OvertimeReason {
   EMERGENCY            // Emergency work requirement
   SPECIAL_PROJECT      // Special project requiring extra hours
   COVERAGE             // Covering for another employee
+}
+
+
+model OvertimeGracePeriod {
+  id                 String   @id @default(uuid())
+  companyId          String   
+  gracePeriodMinutes  Int      @default(10)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company            Company  @relation(fields: [companyId], references: [id])
+ isActive    Boolean  @default(true)
+  @@index([companyId])
 }

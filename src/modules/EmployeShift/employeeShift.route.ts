@@ -1,7 +1,7 @@
 import express from "express";
 import employeeShiftController from "./employeeShift.controller";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+// import { checkPermission } from "../../middlewares/checkPermissions";
 // import validate from "../../middlewares/validate";
 // import employeeShiftValidation from "./employeeShift.validation";
 

@@ -6,7 +6,7 @@ import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 
 const createShiftDay = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
 
   if (!user.companyId) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
@@ -23,7 +23,7 @@ const createShiftDay = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllShiftDays = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const { shiftId } = req.query;
 
   const shiftDays = await shiftDayService.getAllShiftDays(

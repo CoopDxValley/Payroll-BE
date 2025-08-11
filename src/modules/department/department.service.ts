@@ -1,28 +1,18 @@
 import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
+import employeeServices from "../employee/employee.services";
+import {
+  createDepartmentInput,
+  getDepartmentByIdParams,
+  updateDepartmentBody,
+} from "./department.type";
 
-const createDepartment = async (data: {
-  deptName: string;
-  location?: string;
-  shorthandRepresentation?: string;
-  companyId: string; // assuming UUID based on your Position model
-}) => {
+const createDepartment = async (
+  data: createDepartmentInput & { companyId: string }
+) => {
   const { deptName, location, shorthandRepresentation, companyId } = data;
 
-  // Validate deptName
-  if (!deptName || typeof deptName !== "string" || !deptName.trim()) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Department name is required");
-  }
-
-  // Validate shorthandRepresentation
-
-  // Validate companyId
-  if (!companyId || typeof companyId !== "string") {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Valid companyId is required");
-  }
-
-  // Check for duplicate department in the same company
   const existing = await prisma.department.findFirst({
     where: {
       deptName: deptName.trim(),
@@ -48,7 +38,7 @@ const createDepartment = async (data: {
   });
 };
 
-const getAllDepartments = async (companyId?: string) => {
+const getAllDepartments = async (companyId: string) => {
   return await prisma.department.findMany({
     where: {
       companyId: companyId,
@@ -63,36 +53,16 @@ const getAllDepartments = async (companyId?: string) => {
   });
 };
 
-const getDepartmentById = async (id: string) => {
+const getDepartmentById = async (id: getDepartmentByIdParams["id"]) => {
   return prisma.department.findUnique({
     where: { id },
     include: {
       company: true,
-      departmentEmployees: true,
     },
   });
 };
 
-const updateDepartment = async (
-  id: string,
-  data: Partial<{
-    deptName: string;
-    location: string;
-    shorthandRepresentation: string;
-    companyId: string;
-  }>
-) => {
-  //   if (data.deptName) {
-  //     const duplicate = await prisma.department.findFirst({
-  //       where: {
-  //         deptName: data.deptName,
-  //         NOT: { id }, // exclude current department
-  //       },
-  //     });
-  //     if (duplicate) {
-  //       throw new ApiError(httpStatus.CONFLICT, "Department name must be unique");
-  //     }
-  //   }
+const updateDepartment = async (id: string, data: updateDepartmentBody) => {
   const existing = await prisma.department.findUnique({ where: { id } });
   if (!existing) {
     throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
@@ -106,6 +76,7 @@ const updateDepartment = async (
 
 const deleteDepartment = async (id: string) => {
   const existing = await prisma.department.findUnique({ where: { id } });
+
   if (!existing) {
     throw new ApiError(httpStatus.NOT_FOUND, "Department not found");
   }
@@ -116,27 +87,44 @@ const deleteDepartment = async (id: string) => {
   });
 };
 
-// const getDepartmentsByCenter = async (centerId: string) => {
-//   const center = await prisma.departmentCenter.findUnique({
-//     where: { id: centerId },
-//     include: {
-//       departments: {
-//         where: {
-//           isActive: true,
-//         },
-//         orderBy: {
-//           deptName: "asc",
-//         },
-//       },
-//     },
-//   });
+/**
+ * Assign department to employee
+ * @param {string} employeeId
+ * @param {string} departmentId
+ * @returns {Promise<string | null>}
+ */
+const assignDepartmentToEmployee = async (
+  employeeId: string,
+  departmentId: string
+): Promise<string> => {
+  const user = await employeeServices.getEmployeeById(employeeId);
+  const department = await getDepartmentById(departmentId);
 
-//   if (!center) {
-//     throw new ApiError(httpStatus.NOT_FOUND, "Department Center not found");
-//   }
+  if (!user || !department) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Department or Employee not found"
+    );
+  }
+  const existing = await prisma.employeeDepartmentHistory.findUnique({
+    where: {
+      employeeId_departmentId: { employeeId, departmentId },
+    },
+  });
 
-//   return center.departments;
-// };
+  if (existing) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Employee already has this department."
+    );
+  }
+
+  await prisma.employeeDepartmentHistory.create({
+    data: { employeeId, departmentId, fromDate: new Date() },
+  });
+
+  return "Department assigned to employee successfully";
+};
 
 export default {
   createDepartment,
@@ -144,5 +132,6 @@ export default {
   getDepartmentById,
   updateDepartment,
   deleteDepartment,
+  assignDepartmentToEmployee,
   // getDepartmentsByCenter,
 };

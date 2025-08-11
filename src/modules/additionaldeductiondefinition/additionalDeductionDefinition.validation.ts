@@ -13,7 +13,10 @@ const update = {
   params: z.object({
     id: z.string().uuid(),
   }),
-  body: commonBody,
+  body: z.object({
+    name: z.string().trim().optional(),
+    type: z.enum(["AMOUNT", "PERCENT"]).optional(),
+  }),
 };
 
 const getById = {

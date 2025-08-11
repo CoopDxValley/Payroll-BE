@@ -1,125 +1,145 @@
 /**
  * @swagger
  * tags:
- *   name: Additional Deduction Definitions
- *   description: Manage additional deduction definitions
- */
-
-/**
- * @swagger
- * /api/v1/additional-deduction-definitions:
+ *   - name: Additional Deduction
+ *     description: Additional Deduction management
+ *
+ * components:
+ *   schemas:
+ *     Additional Deduction:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         amount:
+ *           type: number
+ *         employeeId:
+ *           type: string
+ *           format: uuid
+ *         additionalDeductionDefinitionId:
+ *           type: string
+ *           format: uuid
+ *         companyId:
+ *           type: string
+ *           format: uuid
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *
+ *     CreateAdditionalDeductionDto:
+ *       type: object
+ *       required:
+ *         - amount
+ *         - employeeId
+ *       properties:
+ *         amount:
+ *           type: number
+ *         employeeId:
+ *           type: string
+ *           format: uuid
+ *         additionalDeductionDefinitionId:
+ *           type: string
+ *           format: uuid
+ *
+ *     UpdateAdditionalDeductionDto:
+ *       type: object
+ *       properties:
+ *         amount:
+ *           type: number
+ *
+ * /api/v1/additional-deduction:
+ *   get:
+ *     summary: Get all additional deductions
+ *     tags: [Additional Deduction]
+ *     responses:
+ *       200:
+ *         description: List of additional deductions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Additional Deduction'
+ *
  *   post:
- *     summary: Create a new additional deduction definition
- *     tags: [Additional Deduction Definitions]
- *     security:
- *       - bearerAuth: []
+ *     summary: Create additional deduction
+ *     tags: [Additional Deduction]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - name
- *               - type
- *             properties:
- *               name:
- *                 type: string
- *                 example: NEW
- *               type:
- *                 type: string
- *                 enum: [AMOUNT, PERCENT]
- *                 example: PERCENT
+ *             $ref: '#/components/schemas/CreateAdditionalDeductionDto'
  *     responses:
  *       201:
- *         description: Deduction definition created successfully
- *       400:
- *         description: Bad Request
- */
-
-/**
- * @swagger
- * /api/v1/additional-deduction-definitions:
+ *         description: Created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Additional Deduction'
+ *
+ * /api/v1/additional-deduction/{id}:
  *   get:
- *     summary: Get all additional deduction definitions
- *     tags: [Additional Deduction Definitions]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: A list of deduction definitions
- */
-
-/**
- * @swagger
- * /api/v1/additional-deduction-definitions/{id}:
- *   get:
- *     summary: Get a deduction definition by ID
- *     tags: [Additional Deduction Definitions]
- *     security:
- *       - bearerAuth: []
+ *     summary: Get additional deduction by ID
+ *     tags: [Additional Deduction]
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *     responses:
  *       200:
- *         description: Deduction definition found
- *       404:
- *         description: Deduction definition not found
- */
-
-/**
- * @swagger
- * /api/v1/additional-deduction-definitions/{id}:
+ *         description: Additional deduction found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Additional Deduction'
+ *
  *   post:
- *     summary: Update a deduction definition
- *     tags: [Additional Deduction Definitions]
- *     security:
- *       - bearerAuth: []
+ *     summary: Update additional deduction
+ *     tags: [Additional Deduction]
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               type:
- *                 type: string
- *                 enum: [AMOUNT, PERCENT]
+ *             $ref: '#/components/schemas/UpdateAdditionalDeductionDto'
  *     responses:
  *       200:
- *         description: Deduction definition updated
- *       404:
- *         description: Deduction definition not found
- */
-
-/**
- * @swagger
- * /api/v1/additional-deduction-definitions/delete/{id}:
+ *         description: Updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Additional Deduction'
+ *
+ * /api/v1/additional-deduction/remove/{id}:
  *   post:
- *     summary: Soft delete a deduction definition
- *     tags: [Additional Deduction Definitions]
- *     security:
- *       - bearerAuth: []
+ *     summary: Delete additional deduction
+ *     tags: [Additional Deduction]
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *     responses:
  *       200:
- *         description: Deduction definition deleted
- *       404:
- *         description: Deduction definition not found
+ *         description: Deleted
  */

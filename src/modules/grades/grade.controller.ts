@@ -1,74 +1,80 @@
 import { Request, Response } from "express";
 import gradeService from "./grade.service";
-import { createGradeSchema, updateGradeSchema } from "../../dto/grade.dto";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import { AuthEmployee } from "../auth/auth.type";
+import { CustomRequest } from "../../middlewares/validate";
+import {
+  getGradeParams,
+  gradeInput,
+  updateGradeBody,
+  updateGradeParams,
+} from "./grade.type";
 
-// const createGrade = catchAsync(async (req: Request, res: Response) => {
-//   const user = req.user as AuthEmployee;
+const createGrade = catchAsync<CustomRequest<never, never, gradeInput>>(
+  async (req: CustomRequest<never, never, gradeInput>, res: Response) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const inputData: gradeInput & { companyId: string } = {
+      ...req.body,
+      companyId: authEmployee.companyId,
+    };
 
-//   console.log("objedddddct");
-//   console.log(user.companyId);
-//   // const validatedData = createGradeSchema.parse({req.body, user.companyId});
-//   const grade = await gradeService.createGrade({
-//     ...req.body,
-//     companyId: user.companyId,
-//   });
-//   res
-//     .status(httpStatus.CREATED)
-//     .send({ message: "Grade created successfully", data: grade });
-// });
-const createGrade = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+    const grade = await gradeService.createGrade(inputData);
 
-  const validatedData = createGradeSchema.parse({
-    ...req.body,
-    companyId: user.companyId, // append companyId for validation
-  });
+    res
+      .status(httpStatus.CREATED)
+      .send({ message: "Grade created successfully", data: grade });
+  }
+);
 
-  const grade = await gradeService.createGrade(validatedData);
-
-  res
-    .status(httpStatus.CREATED)
-    .send({ message: "Grade created successfully", data: grade });
-});
 const getGrades = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const grades = await gradeService.getAllGrades(user.companyId);
   res.status(httpStatus.OK).send({ data: grades });
 });
 
-const getGrade = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const grade = await gradeService.getGradeById(id);
-  if (!grade) {
-    res.status(httpStatus.NOT_FOUND).send({ message: "Grade not found" });
-    return;
+const getGrade = catchAsync<CustomRequest<getGradeParams, never, never>>(
+  async (req: CustomRequest<getGradeParams, never, never>, res: Response) => {
+    const { id } = req.params;
+    const grade = await gradeService.getGradeById(id);
+
+    res
+      .status(httpStatus.OK)
+      .send({ data: grade, message: "Grade retrieved successfully" });
   }
-  res.status(httpStatus.OK).send({ data: grade });
-});
+);
 
-const updateGrade = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const { id } = req.params;
+const updateGrade = catchAsync<
+  CustomRequest<updateGradeParams, never, updateGradeBody>
+>(
+  async (
+    req: CustomRequest<updateGradeParams, never, updateGradeBody>,
+    res: Response
+  ) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const { id } = req.params;
 
-  const grade = await gradeService.updateGrade(id, {
-    ...req.body,
-    companyId: user.companyId,
-  });
+    const updateData: updateGradeBody & { companyId: string } = {
+      ...req.body,
+      companyId: authEmployee.companyId,
+    };
 
-  res.status(httpStatus.OK).send({
-    message: "Grade updated successfully",
-    data: grade,
-  });
-});
+    const grade = await gradeService.updateGrade(id, updateData);
 
-const deleteGrade = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  await gradeService.deleteGrade(id);
-  res.status(httpStatus.OK).send({ message: "Grade deleted successfully" });
-});
+    res.status(httpStatus.OK).send({
+      message: "Grade updated successfully",
+      data: grade,
+    });
+  }
+);
+
+const deleteGrade = catchAsync<CustomRequest<getGradeParams, never, never>>(
+  async (req: CustomRequest<getGradeParams, never, never>, res: Response) => {
+    const { id } = req.params;
+    await gradeService.deleteGrade(id);
+    res.status(httpStatus.OK).send({ message: "Grade deleted successfully" });
+  }
+);
 
 export default {
   getGrade,

@@ -6,7 +6,7 @@ import ApiError from "../../utils/api-error";
 import { AuthEmployee } from "../auth/auth.type";
 
 const createShift = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
 
   if (!user.companyId) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
@@ -17,11 +17,13 @@ const createShift = catchAsync(async (req: Request, res: Response) => {
     companyId: user.companyId,
   });
 
-  res.status(httpStatus.CREATED).send({ message: "Shift created", data: shift });
+  res
+    .status(httpStatus.CREATED)
+    .send({ message: "Shift created", data: shift });
 });
 
 const getAllShifts = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
+  const user = req.employee as AuthEmployee;
   const shifts = await shiftService.getAllShifts(user.companyId);
   res.send({ data: shifts, count: shifts.length });
 });

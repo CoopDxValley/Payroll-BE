@@ -10,17 +10,13 @@ const verifyCallback =
     resolve: (value?: unknown) => void,
     reject: (reason?: unknown) => void
   ) =>
-  async (err: unknown, user: AuthEmployee, info: unknown) => {
-    if (err || info || !user) {
-      console.log("err--", err);
-      console.log("user--", user);
-      console.log("info--", info);
+  async (err: unknown, employee: AuthEmployee, info: unknown) => {
+    if (err || info || !employee) {
       return reject(
         new ApiError(httpStatus.UNAUTHORIZED, "Please authenticate")
       );
     }
-    req.user = user;
-    console.log("kdjfdfidhfidhufhudhfduhfduddu");
+    req.employee = employee;
     resolve();
   };
 

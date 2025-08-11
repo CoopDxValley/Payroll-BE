@@ -1,5 +1,5 @@
 import path from "path";
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import passport from "passport";
 import cors from "cors";
 import helmet from "helmet";

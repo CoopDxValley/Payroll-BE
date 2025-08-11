@@ -8,7 +8,7 @@ import { AuthEmployee } from "../auth/auth.type";
 // Create a single working calendar entry
 const createWorkingCalendar = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
 
     if (!user.companyId) {
       throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
@@ -29,7 +29,7 @@ const createWorkingCalendar = catchAsync(
 // Get all working calendar entries (with filters)
 const getAllWorkingCalendar = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
     const { year, dayType, date, isActive } = req.query;
 
     if (!user.companyId) {
@@ -105,7 +105,7 @@ const deleteWorkingCalendar = catchAsync(
 // Bulk upload working calendar entries
 const bulkUploadWorkingCalendar = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
 
     if (!user.companyId) {
       throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
@@ -140,7 +140,7 @@ const bulkUploadWorkingCalendar = catchAsync(
 // Get working calendar by year
 const getWorkingCalendarByYear = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
     const { year } = req.params;
 
     if (!user.companyId) {
@@ -163,7 +163,7 @@ const getWorkingCalendarByYear = catchAsync(
 // Get working calendar by date range
 const getWorkingCalendarByDateRange = catchAsync(
   async (req: Request, res: Response) => {
-    const user = req.user as AuthEmployee;
+    const user = req.employee as AuthEmployee;
     const { startDate, endDate } = req.query;
 
     if (!user.companyId) {

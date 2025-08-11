@@ -1,7 +1,7 @@
 import express from "express";
 import shiftDayController from "./shiftDay.controller";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+// import { checkPermission } from "../../middlewares/checkPermissions";
 // import validate from "../../middlewares/validate";
 // import shiftDayValidation from "./shiftDay.validation";
 

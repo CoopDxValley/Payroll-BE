@@ -1,32 +1,32 @@
 import { Router } from "express";
-// import {GradeController}  from "../../controllers/grade.controller";
 import gradeController from "./grade.controller";
 import auth from "../../middlewares/auth";
 import gradeValidation from "./grade.validation";
-// import validate from "../../middlewares/validate";
+import { validate } from "../../middlewares/validate";
+import {
+  gradeInput,
+  getGradeParams,
+  updateGradeParams,
+  updateGradeBody,
+} from "./grade.type";
 const router = Router();
 
 // Create a new grade
 router.post(
   "/",
   auth(),
-  // validate(gradeValidation.createGrade),
+  validate<never, never, gradeInput>(gradeValidation.createGrade),
   gradeController.createGrade
 );
 
 // Get all grades for a company
-router.get(
-  "/",
-  auth(),
-  //   validate(gradeValidation.getGrade),
-  gradeController.getGrades
-);
+router.get("/", auth(), gradeController.getGrades);
 
 // Get a specific grade
 router.get(
   "/:id",
   auth(),
-  // validate(gradeValidation.getGrade),
+  validate<getGradeParams, never, never>(gradeValidation.getGrade),
   gradeController.getGrade
 );
 
@@ -34,7 +34,9 @@ router.get(
 router.post(
   "/:id",
   auth(),
-  // validate(gradeValidation.getGrade),
+  validate<updateGradeParams, never, updateGradeBody>(
+    gradeValidation.updateGrade
+  ),
   gradeController.updateGrade
 );
 
@@ -42,7 +44,7 @@ router.post(
 router.post(
   "/delete/:id",
   auth(),
-  // validate(gradeValidation.getGrade),
+  validate<getGradeParams, never, never>(gradeValidation.getGrade),
   gradeController.deleteGrade
 );
 

@@ -1,8 +1,10 @@
 import express from "express";
 import positionController from "./position.controller";
 // import validate from "../../middlewares/validate";
-// import positionValidation from "../../validations/position.validation";
+import positionValidation from "./position.validation";
 import auth from "../../middlewares/auth";
+import { CreatePositionInput } from "./position.type";
+import { validate } from "../../middlewares/validate";
 
 const router = express.Router();
 
@@ -11,7 +13,9 @@ router
 
   .post(
     auth(),
-    // validate(positionValidation.createPosition),
+    validate<never, never, CreatePositionInput>(
+      positionValidation.createPosition
+    ),
     positionController.createPosition
   )
   .get(auth(), positionController.getAllPositions);
@@ -24,7 +28,8 @@ router
     auth(),
     // validate(positionValidation.updatePosition),
     positionController.updatePosition
-  )
-  .delete(auth(), positionController.deletePosition);
+  );
+
+router.route("/delete/:id").post(auth(), positionController.deletePosition);
 
 export default router;

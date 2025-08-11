@@ -1,4 +1,23 @@
 import { z } from "zod";
-import { createEmployeeSchema } from "./employee.validation";
+import {
+  assignEmployeeToDepartmentSchema,
+  assignEmployeeToPositionSchema,
+  createEmployeeSchema,
+  getEmployeeSchema,
+  getEmployeesSchema,
+} from "./employee.validation";
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
+export type CreateEmployeeServiceInput = CreateEmployeeInput & {
+  companyId: string;
+};
+export type getEmployeesQuery = z.infer<typeof getEmployeesSchema.query>;
+export type GetEmployeeInfoByIdParams = z.infer<
+  typeof getEmployeeSchema.params
+>;
+export type AssignEmployeeToDepartmentBody = z.infer<
+  typeof assignEmployeeToDepartmentSchema.body
+>;
+export type AssignEmployeeToPositionBody = z.infer<
+  typeof assignEmployeeToPositionSchema.body
+>;

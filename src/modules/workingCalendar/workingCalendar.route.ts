@@ -1,7 +1,7 @@
 import express from "express";
 import workingCalendarController from "./workingCalendar.controller";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+import { checkPermission } from "../../middlewares/check-permissions";
 import { validate } from "../../middlewares/validate";
 import workingCalendarValidation from "./workingCalendar.validation";
 
@@ -19,7 +19,7 @@ router.route("/").post(
 router.route("/").get(
   auth(),
   // checkPermission("view_working_calendar"),
-  validate(workingCalendarValidation.getAllWorkingCalendar),
+  // validate(workingCalendarValidation.getAllWorkingCalendar),
   workingCalendarController.getAllWorkingCalendar
 );
 //GET BY DATE RANGE
@@ -64,7 +64,7 @@ router.route("/delete/:id").post(
 router.route("/year/:year").get(
   auth(),
   // checkPermission("view_working_calendar"),
-  validate(workingCalendarValidation.getWorkingCalendarByYear),
+  // validate(workingCalendarValidation.getWorkingCalendarByYear),
   workingCalendarController.getWorkingCalendarByYear
 );
 

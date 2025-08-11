@@ -2,12 +2,14 @@ import httpStatus from "http-status";
 import { Permission, Role } from "@prisma/client";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
-import * as employeeService from "../employee/employee.services";
+import employeeService from "../employee/employee.services";
 import { invalidateUserPermissionCache } from "../../middlewares/check-permissions";
 import { validatePermission } from "../../utils/validate-permissions";
 import {
   assignPermissionsToRoleInput,
   createAssignPermissionToRolesInput,
+  createRoleInput,
+  updateRoleInput,
 } from "./role.type";
 
 /**
@@ -16,16 +18,16 @@ import {
  * @returns {Promise<Role>}
  */
 export const createRole = async (
-  name: string,
+  data: createRoleInput,
   companyId: string
 ): Promise<Role> => {
-  if (await getRoleByName(name)) {
+  if (await getRoleByName(data.name)) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Role already defined");
   }
 
   return prisma.role.create({
     data: {
-      name,
+      name: data.name,
       companyId,
     },
   });
@@ -35,8 +37,9 @@ export const createRole = async (
  * Get all roles
  * @returns {Promise<Role[] | null>}
  */
-export const getRoles = async (): Promise<Role[] | null> => {
+export const getRoles = async (companyId: string): Promise<Role[] | null> => {
   const roles = await prisma.role.findMany({
+    where: { companyId, isActive: true },
     include: {
       permissions: {
         include: { permission: true },
@@ -83,7 +86,7 @@ export const getRoleById = async <Key extends keyof Role>(
   keys: Key[] = ["id", "name", "createdAt", "updatedAt"] as Key[]
 ): Promise<Pick<Role, Key> | null> => {
   return prisma.role.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     select: keys.reduce((obj, k) => ({ ...obj, [k]: true }), {}),
   }) as Promise<Pick<Role, Key> | null>;
 };
@@ -104,7 +107,7 @@ export const assignRoleToEmployee = async (
   if (!user || !role) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Role or Employee not found");
   }
-  const existing = await prisma.employeeRole.findUnique({
+  const existing = await prisma.employeeRoleHistory.findUnique({
     where: {
       employeeId_roleId: { employeeId, roleId },
     },
@@ -117,8 +120,8 @@ export const assignRoleToEmployee = async (
     );
   }
 
-  await prisma.employeeRole.create({
-    data: { employeeId, roleId },
+  await prisma.employeeRoleHistory.create({
+    data: { employeeId, roleId, fromDate: new Date() },
   });
 
   invalidateUserPermissionCache(employeeId);
@@ -139,6 +142,22 @@ export const assignPermissionToRoles = async (
   if (!(await getRoleById(roleId))) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
   }
+  // 2. Validate all permissionIds exist
+  const existingPermissions = await prisma.permission.findMany({
+    where: { id: { in: permissions } },
+    select: { id: true },
+  });
+
+  const existingIds = new Set(existingPermissions.map((p) => p.id));
+  const invalidIds = permissions.filter((id) => !existingIds.has(id));
+
+  if (invalidIds.length > 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Some permissionIds do not exist"
+    );
+  }
+
   await validatePermission(permissions);
   // Create new permission assignments
   const rolePermissions = permissions.map((permissionId: string) => ({
@@ -217,7 +236,7 @@ export const createAssignPermissionToRoles = async (
 ): Promise<string> => {
   await validatePermission(permissions);
 
-  const role = await createRole(name, companyId);
+  const role = await createRole({ name }, companyId);
 
   const rolePermissions = permissions.map((permissionId) => ({
     roleId: role.id,
@@ -249,9 +268,25 @@ export const revokeRoleFromEmployee = async (
     throw new ApiError(httpStatus.BAD_REQUEST, "Role or Employee not found");
   }
 
-  await prisma.employeeRole.delete({
+  const existing = await prisma.employeeRoleHistory.findUnique({
     where: {
       employeeId_roleId: { employeeId, roleId },
+    },
+  });
+
+  if (!existing) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Employee does not have this role."
+    );
+  }
+
+  await prisma.employeeRoleHistory.update({
+    where: {
+      employeeId_roleId: { employeeId, roleId },
+    },
+    data: {
+      toDate: new Date(),
     },
   });
 
@@ -262,7 +297,7 @@ export const revokeRoleFromEmployee = async (
 
 export const getRoleWithOutPermission = async (companyId: string) => {
   const result = await prisma.role.findMany({
-    where: { companyId },
+    where: { companyId, isActive: true },
     select: {
       id: true,
       name: true,
@@ -270,4 +305,36 @@ export const getRoleWithOutPermission = async (companyId: string) => {
   });
 
   return result;
+};
+
+export const updateRole = async (
+  roleId: string,
+  data: updateRoleInput
+): Promise<Role> => {
+  if (!(await getRoleById(roleId))) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
+  }
+
+  return prisma.role.update({
+    where: { id: roleId },
+    data,
+  });
+};
+
+export const removeRole = async (roleId: string): Promise<void> => {
+  if (!(await getRoleById(roleId))) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
+  }
+
+  await prisma.role.update({
+    where: { id: roleId },
+    data: { isActive: false },
+  });
+
+  await prisma.employeeRoleHistory.updateMany({
+    where: { roleId },
+    data: {
+      toDate: new Date(),
+    },
+  });
 };

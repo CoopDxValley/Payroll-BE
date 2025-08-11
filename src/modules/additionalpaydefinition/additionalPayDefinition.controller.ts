@@ -1,55 +1,110 @@
 import { Request, Response } from "express";
 import catchAsync from "../../utils/catch-async";
-import service from "./additionalPayDefinition.service";
 import httpStatus from "http-status";
 import { AuthEmployee } from "../auth/auth.type";
 import additionalPayDefinitionService from "./additionalPayDefinition.service";
+import { CustomRequest } from "../../middlewares/validate";
+import {
+  createAdditionalDeductionDefination,
+  getAdditionalDeductionDefinationParams,
+  updateAdditionalDeductionDefinationBody,
+  updateAdditionalDeductionDefinationParams,
+} from "../additionaldeductiondefinition/additional-deduction-defination.type";
 
-export const create = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const companyId = user.companyId;
-  const data = await service.create({ ...req.body, companyId });
+export const create = catchAsync<
+  CustomRequest<never, never, createAdditionalDeductionDefination>
+>(
+  async (
+    req: CustomRequest<never, never, createAdditionalDeductionDefination>,
+    res: Response
+  ) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const inputData: createAdditionalDeductionDefination & {
+      companyId: string;
+    } = {
+      ...req.body,
+      companyId: authEmployee.companyId,
+    };
 
-  res.status(httpStatus.CREATED).json({ message: "Created", data: data });
-});
+    const data = await additionalPayDefinitionService.create(inputData);
 
-// export const getAll = catchAsync(async (req: Request, res: Response) => {
-//   const user = req.user as AuthEmployee;
-//   const companyId = user.companyId;
-//   const data = await service.getAll(companyId);
-//   res.json({ success: true, data });
-// });
+    res.status(httpStatus.CREATED).json({ message: "Created", data: data });
+  }
+);
 
 const getAll = catchAsync(async (req: Request, res: Response) => {
-  console.log("dkfdkfkdfdkfjkdkkdkdkkdfkd");
-  const user = req.user as AuthEmployee;
-  const data = await additionalPayDefinitionService.getAll(user.companyId);
+  const authEmployee = req.employee as AuthEmployee;
+  const data = await additionalPayDefinitionService.getAll(
+    authEmployee.companyId
+  );
   res
     .status(httpStatus.OK)
     .send({ message: "Fetched successfully", data, count: data.length });
 });
-const getById = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const companyId = user.companyId;
-  const data = await service.getById(req.params.id, companyId);
-  res.status(httpStatus.OK).send({ data: [data] });
-});
 
-const update = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const companyId = user.companyId;
-  const data = await service.update(req.params.id, req.body, companyId);
-  res.status(httpStatus.OK).send({ message: "Updated", data: data });
-});
+const getById = catchAsync<
+  CustomRequest<getAdditionalDeductionDefinationParams, never, never>
+>(
+  async (
+    req: CustomRequest<getAdditionalDeductionDefinationParams, never, never>,
+    res: Response
+  ) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const companyId = authEmployee.companyId;
+    const data = await additionalPayDefinitionService.getById(
+      req.params.id,
+      companyId
+    );
+    res.status(httpStatus.OK).send({
+      data,
+      message: "additional pay defination retrieved successfully",
+    });
+  }
+);
 
-const remove = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as AuthEmployee;
-  const companyId = user.companyId;
-  const deleted = await service.remove(req.params.id, companyId);
+const update = catchAsync<
+  CustomRequest<
+    updateAdditionalDeductionDefinationParams,
+    never,
+    updateAdditionalDeductionDefinationBody
+  >
+>(
+  async (
+    req: CustomRequest<
+      updateAdditionalDeductionDefinationParams,
+      never,
+      updateAdditionalDeductionDefinationBody
+    >,
+    res: Response
+  ) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const { id } = req.params;
+    const updateData = { ...req.body, companyId: authEmployee.companyId };
 
-  res.status(httpStatus.OK).send({ message: "Deactivated", data: deleted });
-  // res.status(204).send();
-});
+    const data = await additionalPayDefinitionService.update(id, updateData);
+
+    res.status(httpStatus.OK).send({ message: "Updated", data: data });
+  }
+);
+
+const remove = catchAsync<
+  CustomRequest<getAdditionalDeductionDefinationParams, never, never>
+>(
+  async (
+    req: CustomRequest<getAdditionalDeductionDefinationParams, never, never>,
+    res: Response
+  ) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const { id } = req.params;
+    const companyId = authEmployee.companyId;
+    const deleted = await additionalPayDefinitionService.remove(
+      req.params.id,
+      companyId
+    );
+
+    res.status(httpStatus.OK).send({ message: "Deactivated", data: deleted });
+  }
+);
 export default {
   create,
   getAll,

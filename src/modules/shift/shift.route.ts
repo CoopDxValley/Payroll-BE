@@ -1,7 +1,7 @@
 import express from "express";
 import shiftController from "./shift.controller";
 import auth from "../../middlewares/auth";
-import { checkPermission } from "../../middlewares/checkPermissions";
+// import { checkPermission } from "../../middlewares/checkPermissions";
 // import validate from "../../middlewares/validate";
 // import shiftValidation from "../../validations/shift.validation";
 
