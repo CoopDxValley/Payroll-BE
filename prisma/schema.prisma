@@ -340,7 +340,62 @@ enum AttendanceRequirement {
   NOT_REQUIRED // No attendance tracking needed
 }
 
+model Employee {
+  id               String  @id @default(uuid())
+  name             String
+  username         String  @unique
+  phoneNumber      String
+  password         String
+  employeeIdNumber String? @unique // Device user ID from attendance device
 
+  attendanceRequirement AttendanceRequirement @default(REQUIRED)
+
+  isSuperAdmin        Boolean          @default(false)
+  email               String?          @unique
+  optionalPhoneNumber String?
+  gender              Gender
+  dateOfBirth         DateTime?
+  nationality         String?          @default("Ethiopia")
+  imageUrl            String?
+  status              EmploymentStatus @default(ACTIVE)
+  idNumber            String?
+  idImageUrl          String?
+  idType              IdType           @default(KEBELE)
+
+  companyId           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  isFirstTimeLoggedIn Boolean  @default(true)
+  Token               Token[]
+  company             Company  @relation(fields: [companyId], references: [id])
+
+  gradeHistory      EmployeeGradeHistory[]
+  payrollInfo       PayrollInfo?
+  terminations      TerminationRecord[]
+  departmentHistory EmployeeDepartmentHistory[]
+  roleHistory       EmployeeRoleHistory[]
+  positionHistory   EmployeePositionHistory[]
+  emergencyContacts EmergencyContact[]
+
+  stageEmployees StageEmployee[]
+  requests       Request[]
+  stageStatuses  StageStatus[]
+
+  delegatedFrom Delegation[] @relation("FromEmployee")
+  delegatedTo   Delegation[] @relation("ToEmployee")
+
+  delegatedRuleFrom    DelegationRule[]       @relation("FromEmployeeDelegationRule")
+  delegatedRuleTo      DelegationRule[]       @relation("ToEmployeeDelegationRule")
+  ApprovalComment      ApprovalComment[]
+  ApprovalNotification ApprovalNotification[]
+  ApprovalAuditLog     ApprovalAuditLog[]
+
+  additionalDeductions AdditionalDeduction[]
+  additionalPays       AdditionalPay[]
+
+  @@index([name])
+  @@index([phoneNumber])
+}
 
 model AdditionalDeduction {
   id                              String  @id @default(uuid())

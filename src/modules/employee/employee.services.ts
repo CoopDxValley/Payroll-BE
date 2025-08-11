@@ -8,8 +8,9 @@ import {
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import {
-  CreateEmployeeInput,
   CreateEmployeeServiceInput,
+  EmployeeSearchQuery,
+  GeneratePasswordInput,
   getEmployeesQuery,
 } from "./employee.type";
 import { generateRandomPassword, generateUsername } from "../../utils/helper";
@@ -364,6 +365,59 @@ const assignEmployeeToPosition = async (
   });
 };
 
+const generatePassword = async (data: GeneratePasswordInput): Promise<void> => {
+  const { email, employeeId } = data;
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+  });
+
+  if (!employee) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Employee not found");
+  }
+
+  const rawPassword =
+    config.env === "development"
+      ? "SuperSecurePassword@123"
+      : generateRandomPassword();
+  const hashedPassword = await encryptPassword(rawPassword);
+
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { password: hashedPassword, email },
+  });
+};
+
+async function searchEmployees({ keyword, page, limit }: EmployeeSearchQuery) {
+  const normalizedKeyword = keyword.trim();
+  const checkPage = page ?? 1;
+  const checkLimit = limit ?? 10;
+  const skip = (checkPage - 1) * checkLimit;
+
+  const [data, total] = await Promise.all([
+    prisma.employee.findMany({
+      where: {
+        OR: [
+          { phoneNumber: { contains: normalizedKeyword, mode: "insensitive" } },
+          { name: { contains: normalizedKeyword, mode: "insensitive" } },
+        ],
+      },
+      skip,
+      take: checkLimit,
+      orderBy: { name: "asc" },
+    }),
+    prisma.employee.count({
+      where: {
+        OR: [
+          { phoneNumber: { contains: normalizedKeyword, mode: "insensitive" } },
+          { name: { contains: normalizedKeyword, mode: "insensitive" } },
+        ],
+      },
+    }),
+  ]);
+
+  return { data, total, page, limit };
+}
+
 export default {
   createEmployee,
   getEmployeeById,
@@ -373,4 +427,6 @@ export default {
   getEmployeeInfoById,
   assignEmployeeToDepartment,
   assignEmployeeToPosition,
+  generatePassword,
+  searchEmployees,
 };
