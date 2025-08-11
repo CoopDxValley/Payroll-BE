@@ -5,6 +5,7 @@ import {
   assignEmployeeToDepartmentSchema,
   assignEmployeeToPositionSchema,
   createEmployeeValidation,
+  employeeSearchSchema,
   generatePasswordSchema,
   getEmployeeSchema,
   getEmployeesSchema,
@@ -13,6 +14,7 @@ import * as employeeController from "./employee.controller";
 import {
   AssignEmployeeToDepartmentBody,
   AssignEmployeeToPositionBody,
+  EmployeeSearchQuery,
   GeneratePasswordInput,
   GetEmployeeInfoByIdParams,
   getEmployeesQuery,
@@ -67,6 +69,14 @@ router.route("/generate-password").post(
     body: generatePasswordSchema,
   }),
   employeeController.generatePassword
+);
+
+router.route("/seach/keyword/employee").get(
+  auth(),
+  validate<never, EmployeeSearchQuery, never>({
+    query: employeeSearchSchema.query,
+  }),
+  employeeController.searchEmployees
 );
 
 export default router;

@@ -8,8 +8,8 @@ import {
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import {
-  CreateEmployeeInput,
   CreateEmployeeServiceInput,
+  EmployeeSearchQuery,
   GeneratePasswordInput,
   getEmployeesQuery,
 } from "./employee.type";
@@ -387,6 +387,37 @@ const generatePassword = async (data: GeneratePasswordInput): Promise<void> => {
   });
 };
 
+async function searchEmployees({ keyword, page, limit }: EmployeeSearchQuery) {
+  const normalizedKeyword = keyword.trim();
+  const checkPage = page ?? 1;
+  const checkLimit = limit ?? 10;
+  const skip = (checkPage - 1) * checkLimit;
+
+  const [data, total] = await Promise.all([
+    prisma.employee.findMany({
+      where: {
+        OR: [
+          { phoneNumber: { contains: normalizedKeyword, mode: "insensitive" } },
+          { name: { contains: normalizedKeyword, mode: "insensitive" } },
+        ],
+      },
+      skip,
+      take: checkLimit,
+      orderBy: { name: "asc" },
+    }),
+    prisma.employee.count({
+      where: {
+        OR: [
+          { phoneNumber: { contains: normalizedKeyword, mode: "insensitive" } },
+          { name: { contains: normalizedKeyword, mode: "insensitive" } },
+        ],
+      },
+    }),
+  ]);
+
+  return { data, total, page, limit };
+}
+
 export default {
   createEmployee,
   getEmployeeById,
@@ -397,4 +428,5 @@ export default {
   assignEmployeeToDepartment,
   assignEmployeeToPosition,
   generatePassword,
+  searchEmployees,
 };

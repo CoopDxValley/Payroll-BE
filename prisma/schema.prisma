@@ -388,6 +388,9 @@ model Employee {
 
   additionalDeductions AdditionalDeduction[]
   additionalPays       AdditionalPay[]
+
+  @@index([name])
+  @@index([phoneNumber])
 }
 
 model AdditionalDeduction {
