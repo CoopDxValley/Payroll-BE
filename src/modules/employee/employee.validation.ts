@@ -129,4 +129,11 @@ export const assignEmployeeToPositionSchema = {
     .strict(),
 };
 
+export const generatePasswordSchema = z
+  .object({
+    email,
+    employeeId: UUID,
+  })
+  .strict();
+
 export const createEmployeeValidation = { body: createEmployeeSchema };

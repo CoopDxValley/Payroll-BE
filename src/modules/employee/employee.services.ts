@@ -10,6 +10,7 @@ import ApiError from "../../utils/api-error";
 import {
   CreateEmployeeInput,
   CreateEmployeeServiceInput,
+  GeneratePasswordInput,
   getEmployeesQuery,
 } from "./employee.type";
 import { generateRandomPassword, generateUsername } from "../../utils/helper";
@@ -364,6 +365,28 @@ const assignEmployeeToPosition = async (
   });
 };
 
+const generatePassword = async (data: GeneratePasswordInput): Promise<void> => {
+  const { email, employeeId } = data;
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+  });
+
+  if (!employee) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Employee not found");
+  }
+
+  const rawPassword =
+    config.env === "development"
+      ? "SuperSecurePassword@123"
+      : generateRandomPassword();
+  const hashedPassword = await encryptPassword(rawPassword);
+
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { password: hashedPassword, email },
+  });
+};
+
 export default {
   createEmployee,
   getEmployeeById,
@@ -373,4 +396,5 @@ export default {
   getEmployeeInfoById,
   assignEmployeeToDepartment,
   assignEmployeeToPosition,
+  generatePassword,
 };

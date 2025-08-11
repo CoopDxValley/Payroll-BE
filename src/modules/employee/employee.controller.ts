@@ -6,6 +6,7 @@ import {
   AssignEmployeeToDepartmentBody,
   AssignEmployeeToPositionBody,
   CreateEmployeeInput,
+  GeneratePasswordInput,
   GetEmployeeInfoByIdParams,
   getEmployeesQuery,
 } from "./employee.type";
@@ -114,6 +115,27 @@ export const assignEmployeeToPosition = catchAsync<
     res.status(httpStatus.OK).send({
       data: result,
       message: "Employee assigned to position successfully",
+    });
+  }
+);
+
+export const generatePassword = catchAsync<
+  CustomRequest<never, never, GeneratePasswordInput>
+>(
+  async (
+    req: CustomRequest<never, never, GeneratePasswordInput>,
+    res: Response
+  ) => {
+    const { email, employeeId } = req.body;
+
+    await employeeService.generatePassword({
+      email,
+      employeeId,
+    });
+
+    res.status(httpStatus.OK).send({
+      data: [],
+      message: "Password generated successfully",
     });
   }
 );

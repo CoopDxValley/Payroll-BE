@@ -418,3 +418,44 @@
  *       400:
  *         description: Invalid input or assignment failed
  */
+
+/**
+ * @swagger
+ * /api/v1/employees/generate-password:
+ *   post:
+ *     summary: Generate a new password for an employee
+ *     tags: [Employees]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - employeeId
+ *             properties:
+ *               employeeId:
+ *                 type: string
+ *                 format: uuid
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid input or assignment failed
+ */
