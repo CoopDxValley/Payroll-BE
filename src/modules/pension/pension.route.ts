@@ -37,17 +37,17 @@ router
   );
 
 router
-  .route("/update/:ruleId")
+  .route("/rules/update/:ruleId")
   .post(
     auth(),
-    validate<PensionParams, never, UpdatePensionInput>(
-      pensionValidation.updatePension
+    validate<PensionParams, never, CreatePensionInput>(
+      pensionValidation.createPension
     ),
     pensionController.update
   );
 
 router
-  .route("/tax/reset")
+  .route("/rules/reset")
   .post(auth(), pensionController.resetCompanyPensionRules);
 
 router

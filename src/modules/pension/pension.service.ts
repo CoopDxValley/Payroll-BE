@@ -11,9 +11,9 @@ const getCompanyPension = async (companyId: string) => {
   const companyTaxRules = await prisma.companyPensionRule.findMany({
     where: { companyId, isActive: true },
     select: {
+      id: true,
       pension: {
         select: {
-          id: true,
           employeeContribution: true,
           employerContribution: true,
         },
@@ -21,7 +21,11 @@ const getCompanyPension = async (companyId: string) => {
     },
   });
 
-  const pensions = companyTaxRules.map((rule) => rule.pension);
+  const pensions = companyTaxRules.map((rule) => ({
+    id: rule.id,
+    employeeContribution: rule.pension.employeeContribution,
+    employerContribution: rule.pension.employerContribution,
+  }));
 
   return pensions;
 };
@@ -62,9 +66,9 @@ const addCompanyPension = async (
   return companyPensionRule;
 };
 
-const removeCompanyPensionRule = async (companyId: string, ruleId: string) => {
+const removeCompanyPensionRule = async (ruleId: string) => {
   const existingRule = await prisma.companyPensionRule.findUnique({
-    where: { id: ruleId, companyId },
+    where: { id: ruleId, isActive: true },
   });
 
   if (!existingRule) {
@@ -72,7 +76,7 @@ const removeCompanyPensionRule = async (companyId: string, ruleId: string) => {
   }
 
   const removedPensionRules = await prisma.companyPensionRule.update({
-    where: { id: ruleId, companyId },
+    where: { id: ruleId },
     data: { isActive: false },
   });
 
@@ -179,9 +183,15 @@ const getPensionFundById = async (pensionFundId: string) => {
   return pensionFund;
 };
 
-const update = async (ruleId: string, data: UpdatePensionInput) => {
+const update = async (
+  ruleId: string,
+  data: CreatePensionInput & { companyId: string }
+) => {
   const existingRule = await prisma.companyPensionRule.findUnique({
-    where: { id: ruleId },
+    where: {
+      id: ruleId,
+      isActive: true,
+    },
   });
 
   if (!existingRule) {
@@ -191,12 +201,16 @@ const update = async (ruleId: string, data: UpdatePensionInput) => {
   const updatedRule = await prisma.companyPensionRule.update({
     where: { id: ruleId },
     data: {
-      ...data,
-      companyId: existingRule.companyId,
+      isActive: false,
     },
   });
 
-  return updatedRule;
+  const createdRule = await addCompanyPension({
+    ...data,
+    companyId: existingRule.companyId,
+  });
+
+  return createdRule;
 };
 
 export default {

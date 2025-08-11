@@ -129,6 +129,18 @@ const fetchProvidentFundById = catchAsync<
   }
 );
 
+const update = catchAsync<
+  CustomRequest<ProvidentFundParams, never, CreateProvidentFundInput>
+>(async (req, res) => {
+  const authEmployee = req.employee as AuthEmployee;
+  const input: CreateProvidentFundInput & { companyId: string } = {
+    ...req.body,
+    companyId: authEmployee.companyId,
+  };
+  const data = await providentFundService.update(req.params.ruleId, input);
+  res.status(httpStatus.OK).json({ message: "Updated", data });
+});
+
 export default {
   createProvidentFund,
   getDefaultProvidentFund,
@@ -137,4 +149,5 @@ export default {
   resetCompanyProvidentFundRules,
   assignDefaultProvidentFundsToCompany,
   fetchProvidentFundById,
+  update,
 };

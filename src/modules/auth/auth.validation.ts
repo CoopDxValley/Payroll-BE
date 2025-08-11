@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { safeName } from "../../validations/security";
+import { password, safeName } from "../../validations/security";
 
 export const loginSchema = z
   .object({
     username: safeName,
-    password: safeName,
+    password,
   })
   .strict();
 
