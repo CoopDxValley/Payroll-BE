@@ -120,6 +120,13 @@ const defaultRoutes = [
     route: approvalRoute,
   },
 
+
+
+  {
+    path: "/overtime-boundary-grace",
+    route: overtimeGradePeriod,
+  },
+
   {
     path: "/test",
     route: (req: any, res: any) => {
