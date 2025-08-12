@@ -59,7 +59,10 @@ const defaultRoutes = [
     path: "/positions",
     route: positionRoute,
   },
-
+  {
+    path: "/overtime-boundary-grace",
+    route: overtimeGradePeriod,
+  },
   {
     path: "/shifts",
     route: shiftRoute,
@@ -116,10 +119,14 @@ const defaultRoutes = [
     path: "/approvals",
     route: approvalRoute,
   },
+
+
+
   {
     path: "/overtime-boundary-grace",
     route: overtimeGradePeriod,
   },
+
   {
     path: "/test",
     route: (req: any, res: any) => {
