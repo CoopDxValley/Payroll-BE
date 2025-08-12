@@ -1,7 +1,7 @@
 /**
  * @swagger
  * tags:
- *   name: Overtime Grace Period
+ *   name: Overtime-boundary-grace
  *   description: Manage overtime grace periods for companies
  */
 
@@ -54,7 +54,7 @@
 
 /**
  * @swagger
- * /api/v1/overtime-grace-period:
+ * /api/v1/overtime-boundary-grace:
  *   post:
  *     summary: Create a new overtime grace period for a company
  *     tags: [Overtime Grace Period]
@@ -78,7 +78,7 @@
  *       404:
  *         description: Company not found
  *
- * /api/v1/overtime-grace-period/active:
+ * /api/v1/overtime-boundary-grace/active:
  *   get:
  *     summary: Get all active overtime grace periods
  *     tags: [Overtime Grace Period]
@@ -94,7 +94,7 @@
  *               items:
  *                 $ref: '#/components/schemas/OvertimeGracePeriod'
  *
- * /api/v1/overtime-grace-period/all:
+ * /api/v1/overtime-boundary-grace/all:
  *   get:
  *     summary: Get all overtime grace periods
  *     tags: [Overtime Grace Period]
@@ -110,7 +110,7 @@
  *               items:
  *                 $ref: '#/components/schemas/OvertimeGracePeriod'
  *
- * /api/v1/overtime-grace-period/{id}:
+ * /api/v1/overtime-boundary-grace/{id}:
  *   get:
  *     summary: Get a specific overtime grace period by ID
  *     tags: [Overtime Grace Period]
@@ -158,7 +158,7 @@
  *       404:
  *         description: Not found
  *
- * /api/v1/overtime-grace-period/delete/{id}:
+ * /api/v1/overtime-boundary-grace/delete/{id}:
  *   post:
  *     summary: Delete an overtime grace period by ID
  *     tags: [Overtime Grace Period]

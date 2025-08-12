@@ -921,10 +921,10 @@ model Shift {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
-  @@index([companyId])
+ @@index([companyId])
 
 
-    shiftCoverages ShiftCoverage[]  // ← ADD THIS LINE
+  shiftCoverages ShiftCoverage[]  // ← ADD THIS LINE
 }
 
 model ShiftDay {

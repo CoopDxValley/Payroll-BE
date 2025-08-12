@@ -117,7 +117,7 @@ const defaultRoutes = [
     route: approvalRoute,
   },
   {
-    path: "/overtime-grace-period",
+    path: "/overtime-boundary-grace",
     route: overtimeGradePeriod,
   },
   {
