@@ -1,7 +1,7 @@
 /**
  * @swagger
  * tags:
- *   name: Overtime Grace Period
+ *   name: OvertimeGracePeriod
  *   description: Manage overtime grace periods for companies
  */
 
