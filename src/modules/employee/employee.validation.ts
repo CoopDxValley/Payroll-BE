@@ -129,4 +129,21 @@ export const assignEmployeeToPositionSchema = {
     .strict(),
 };
 
+export const generatePasswordSchema = z
+  .object({
+    email,
+    employeeId: UUID,
+  })
+  .strict();
+
 export const createEmployeeValidation = { body: createEmployeeSchema };
+
+export const employeeSearchSchema = {
+  query: z
+    .object({
+      keyword: z.string().min(1, "Keyword is required").trim(),
+      page: z.coerce.number().int().positive().default(1).optional(),
+      limit: z.coerce.number().int().positive().max(100).default(10).optional(),
+    })
+    .strict(),
+};

@@ -3,6 +3,8 @@ import {
   assignEmployeeToDepartmentSchema,
   assignEmployeeToPositionSchema,
   createEmployeeSchema,
+  employeeSearchSchema,
+  generatePasswordSchema,
   getEmployeeSchema,
   getEmployeesSchema,
 } from "./employee.validation";
@@ -21,3 +23,7 @@ export type AssignEmployeeToDepartmentBody = z.infer<
 export type AssignEmployeeToPositionBody = z.infer<
   typeof assignEmployeeToPositionSchema.body
 >;
+
+export type GeneratePasswordInput = z.infer<typeof generatePasswordSchema>;
+
+export type EmployeeSearchQuery = z.infer<typeof employeeSearchSchema.query>;

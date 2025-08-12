@@ -6,6 +6,8 @@ import {
   AssignEmployeeToDepartmentBody,
   AssignEmployeeToPositionBody,
   CreateEmployeeInput,
+  EmployeeSearchQuery,
+  GeneratePasswordInput,
   GetEmployeeInfoByIdParams,
   getEmployeesQuery,
 } from "./employee.type";
@@ -13,6 +15,7 @@ import { AuthEmployee } from "../auth/auth.type";
 import exclude from "../../utils/exclude";
 import pick from "../../utils/pick";
 import { CustomRequest } from "../../middlewares/validate";
+import ApiError from "../../utils/api-error";
 
 export const registerEmployee = catchAsync<
   CustomRequest<never, never, CreateEmployeeInput>
@@ -114,6 +117,52 @@ export const assignEmployeeToPosition = catchAsync<
     res.status(httpStatus.OK).send({
       data: result,
       message: "Employee assigned to position successfully",
+    });
+  }
+);
+
+export const generatePassword = catchAsync<
+  CustomRequest<never, never, GeneratePasswordInput>
+>(
+  async (
+    req: CustomRequest<never, never, GeneratePasswordInput>,
+    res: Response
+  ) => {
+    const { email, employeeId } = req.body;
+
+    await employeeService.generatePassword({
+      email,
+      employeeId,
+    });
+
+    res.status(httpStatus.OK).send({
+      data: [],
+      message: "Password generated successfully",
+    });
+  }
+);
+
+export const searchEmployees = catchAsync<
+  CustomRequest<never, EmployeeSearchQuery, never>
+>(
+  async (
+    req: CustomRequest<never, EmployeeSearchQuery, never>,
+    res: Response
+  ) => {
+    const input = req.validatedQuery;
+
+    if (!input)
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid query parameters");
+
+    const result = await employeeService.searchEmployees({
+      keyword: input.keyword,
+      page: input?.page,
+      limit: input?.limit,
+    });
+
+    res.status(httpStatus.OK).send({
+      data: result,
+      message: "Employees retrieved successfully",
     });
   }
 );

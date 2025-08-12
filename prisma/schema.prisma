@@ -340,7 +340,71 @@ enum AttendanceRequirement {
   NOT_REQUIRED // No attendance tracking needed
 }
 
+model Employee {
+  id               String  @id @default(uuid())
+  name             String
+  username         String  @unique
+  phoneNumber      String
+  password         String
+  employeeIdNumber String? @unique // Device user ID from attendance device
+  deviceUserId     String? @unique
 
+  attendanceRequirement AttendanceRequirement @default(REQUIRED)
+
+  isSuperAdmin        Boolean          @default(false)
+  email               String?          @unique
+  optionalPhoneNumber String?
+  gender              Gender
+  dateOfBirth         DateTime?
+  nationality         String?          @default("Ethiopia")
+  imageUrl            String?
+  status              EmploymentStatus @default(ACTIVE)
+  idNumber            String?
+  idImageUrl          String?
+  idType              IdType           @default(KEBELE)
+
+  companyId           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  isFirstTimeLoggedIn Boolean  @default(true)
+  Token               Token[]
+  company             Company  @relation(fields: [companyId], references: [id])
+
+  gradeHistory      EmployeeGradeHistory[]
+  payrollInfo       PayrollInfo?
+  terminations      TerminationRecord[]
+  departmentHistory EmployeeDepartmentHistory[]
+  roleHistory       EmployeeRoleHistory[]
+  positionHistory   EmployeePositionHistory[]
+  emergencyContacts EmergencyContact[]
+  overtimes         Overtime[] // From second model
+
+  stageEmployees StageEmployee[]
+  requests       Request[]
+  stageStatuses  StageStatus[]
+
+  delegatedFrom Delegation[] @relation("FromEmployee")
+  delegatedTo   Delegation[] @relation("ToEmployee")
+
+  delegatedRuleFrom    DelegationRule[]       @relation("FromEmployeeDelegationRule")
+  delegatedRuleTo      DelegationRule[]       @relation("ToEmployeeDelegationRule")
+  ApprovalComment      ApprovalComment[]
+  ApprovalNotification ApprovalNotification[]
+  ApprovalAuditLog     ApprovalAuditLog[]
+
+  additionalDeductions AdditionalDeduction[]
+  additionalPays       AdditionalPay[]
+
+    // Shift coverage relations from second model
+  employeeShifts         EmployeeShift[]
+  originalShiftCoverages ShiftCoverage[] @relation("OriginalShiftEmployee")
+  coveringShiftCoverages ShiftCoverage[] @relation("CoveringShiftEmployee")
+  requestedCoverages     ShiftCoverage[] @relation("ShiftCoverageRequester")
+  approvedCoverages      ShiftCoverage[] @relation("ShiftCoverageApprover")
+
+  @@index([name])
+  @@index([phoneNumber])
+}
 
 model AdditionalDeduction {
   id                              String  @id @default(uuid())
@@ -844,76 +908,6 @@ enum CalendarDayType {
 
 
 ///////////SHIFT MANAGEMENT  /////////////////////////////////////
-
-model Employee {
-  id               String  @id @default(uuid())
-  name             String
-  username         String  @unique
-  phoneNumber      String
-  optionalPhoneNumber String?
-  password         String
-  email            String? @unique
-
-  // IDs from both models (keeping both if they might differ in meaning)
-  employeeIdNumber String? @unique // From first model (Device user ID from attendance device)
-  deviceUserId     String? @unique // From second model
-
-  attendanceRequirement AttendanceRequirement @default(REQUIRED)
-
-  isSuperAdmin        Boolean          @default(false)
-  gender              Gender
-  dateOfBirth         DateTime?
-  nationality         String?          @default("Ethiopia")
-  imageUrl            String?
-  status              EmploymentStatus @default(ACTIVE)
-  idNumber            String?
-  idImageUrl          String?
-  idType              IdType           @default(KEBELE)
-
-  companyId           String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  isFirstTimeLoggedIn Boolean  @default(true)
-
-  // Relations
-  Token               Token[]
-  company             Company @relation(fields: [companyId], references: [id])
-
-  gradeHistory        EmployeeGradeHistory[]
-  payrollInfo         PayrollInfo?
-  terminations        TerminationRecord[]
-  departmentHistory   EmployeeDepartmentHistory[]
-  roleHistory         EmployeeRoleHistory[]
-  positionHistory     EmployeePositionHistory[]
-  emergencyContacts   EmergencyContact[]
-  overtimes           Overtime[] // From second model
-
-  stageEmployees StageEmployee[]
-  requests       Request[]
-  stageStatuses  StageStatus[]
-
-  delegatedFrom Delegation[] @relation("FromEmployee")
-  delegatedTo   Delegation[] @relation("ToEmployee")
-
-  delegatedRuleFrom    DelegationRule[]       @relation("FromEmployeeDelegationRule")
-  delegatedRuleTo      DelegationRule[]       @relation("ToEmployeeDelegationRule")
-  ApprovalComment      ApprovalComment[]
-  ApprovalNotification ApprovalNotification[]
-  ApprovalAuditLog     ApprovalAuditLog[]
-
-  additionalDeductions AdditionalDeduction[]
-  additionalPays       AdditionalPay[]
-
-  // Shift coverage relations from second model
-  employeeShifts         EmployeeShift[]
-  originalShiftCoverages ShiftCoverage[] @relation("OriginalShiftEmployee")
-  coveringShiftCoverages ShiftCoverage[] @relation("CoveringShiftEmployee")
-  requestedCoverages     ShiftCoverage[] @relation("ShiftCoverageRequester")
-  approvedCoverages      ShiftCoverage[] @relation("ShiftCoverageApprover")
-}
-
-
-
 
 model Shift {
   id           String   @id @default(uuid())

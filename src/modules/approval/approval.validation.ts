@@ -343,3 +343,19 @@ export const resubmitApprovalValidation = {
     })
     .strict(),
 };
+
+export const getDepartmentApprovalWorkflowValidation = {
+  params: z
+    .object({
+      departmentId: UUID,
+    })
+    .strict(),
+};
+
+export const getApprovalWorkflowStageValidation = {
+  params: z
+    .object({
+      workflowId: UUID,
+    })
+    .strict(),
+};
