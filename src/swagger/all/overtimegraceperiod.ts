@@ -1,12 +1,8 @@
 /**
  * @swagger
  * tags:
-
- *   name: OvertimeGracePeriod
-
- *   name: Overtime-boundary-grace
-
- *   description: Manage overtime grace periods for companies
+ *   - name: Overtime Grace Period
+ *     description: Manage overtime grace periods for companies
  */
 
 /**
@@ -38,14 +34,11 @@
  *     CreateOvertimeGracePeriodDto:
  *       type: object
  *       required:
- *
  *         - gracePeriodMinutes
  *       properties:
- *
  *         gracePeriodMinutes:
  *           type: integer
  *           example: 10
- *
  *
  *     UpdateOvertimeGracePeriodDto:
  *       type: object
@@ -53,7 +46,6 @@
  *         gracePeriodMinutes:
  *           type: integer
  *           example: 15
-
  */
 
 /**
@@ -135,7 +127,7 @@
  *               $ref: '#/components/schemas/OvertimeGracePeriod'
  *       404:
  *         description: Not found
- *   post:
+ *   patch:
  *     summary: Update an overtime grace period by ID
  *     tags: [Overtime Grace Period]
  *     security:
@@ -162,8 +154,8 @@
  *       404:
  *         description: Not found
  *
- * /api/v1/overtime-boundary-grace/delete/{id}:
- *   post:
+ * /api/v1/overtime-boundary-grace/{id}:
+ *   delete:
  *     summary: Delete an overtime grace period by ID
  *     tags: [Overtime Grace Period]
  *     security:
