@@ -153,8 +153,6 @@
  *               $ref: '#/components/schemas/OvertimeGracePeriod'
  *       404:
  *         description: Not found
- *
- * /api/v1/overtime-boundary-grace/{id}:
  *   delete:
  *     summary: Delete an overtime grace period by ID
  *     tags: [Overtime Grace Period]
