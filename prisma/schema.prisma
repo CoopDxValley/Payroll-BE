@@ -355,8 +355,16 @@ model Employee {
   email               String?          @unique
   optionalPhoneNumber String?
   gender              Gender
+  country             String?          @default("Ethiopia")
+  zone                String?
+  woreda              String?
+  kebele              String?
+  region              String?
+  houseNo             String?
   dateOfBirth         DateTime?
   nationality         String?          @default("Ethiopia")
+  maritalStatus       MaritalStatus    @default(SINGLE)
+  title               String?
   imageUrl            String?
   status              EmploymentStatus @default(ACTIVE)
   idNumber            String?
@@ -611,10 +619,18 @@ enum IdType {
   NATIONALID
 }
 
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
 model PayrollInfo {
   id             String         @id @default(uuid())
   employeeId     String         @unique
   tinNumber      String         @unique
+  hireDate       DateTime
   basicSalary    Float
   currency       String         @default("ETB")
   employmentType EmploymentType
