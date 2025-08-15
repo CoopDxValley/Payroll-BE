@@ -365,14 +365,13 @@ model Employee {
   houseNo             String?
   dateOfBirth         DateTime?
   nationality         String?          @default("Ethiopia")
-  maritalStatus       MaritalStatus    @default(SINGLE)
   title               String?
   imageUrl            String?
   status              EmploymentStatus @default(ACTIVE)
   idNumber            String?
   idImageUrl          String?
   idType              IdType           @default(KEBELE)
-
+ maritalStatus       MaritalStatus    @default(SINGLE)
   companyId           String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -417,6 +416,12 @@ model Employee {
 
   @@index([name])
   @@index([phoneNumber])
+}
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
 }
 
 model AdditionalDeduction {
@@ -624,12 +629,6 @@ enum IdType {
   NATIONALID
 }
 
-enum MaritalStatus {
-  SINGLE
-  MARRIED
-  DIVORCED
-  WIDOWED
-}
 
 model PayrollInfo {
   id             String         @id @default(uuid())
