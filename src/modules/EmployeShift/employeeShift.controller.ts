@@ -21,6 +21,7 @@ const assignShiftToEmployee = catchAsync(async (req: Request, res: Response) => 
     data: employeeShift 
   });
 });
+
 const unassignShiftFromEmployee = catchAsync(async (req: Request, res: Response) => {
   const user = req.employee as AuthEmployee;
 
@@ -45,25 +46,6 @@ const unassignShiftFromEmployee = catchAsync(async (req: Request, res: Response)
     data: result 
   });
 });
-
-// const unassignShiftFromEmployee = catchAsync(async (req: Request, res: Response) => {
-//   const { employeeId, shiftId } = req.params;
-
-//   if (!user.companyId) {
-//     throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
-//   }
-
-//   const result = await employeeShiftService.unassignShiftFromEmployee(
-//     employeeId,
-//     shiftId,
-//     user.companyId
-//   );
-
-//   res.send({ 
-//     message: "Shift unassigned from employee successfully", 
-//     data: result 
-//   });
-// });
 
 const getEmployeeShifts = catchAsync(async (req: Request, res: Response) => {
   const user = req.employee as AuthEmployee;
@@ -112,6 +94,37 @@ const getEmployeeShiftHistory = catchAsync(async (req: Request, res: Response) =
   });
 });
 
+// New controller method to get shift details
+const getShiftDetails = catchAsync(async (req: Request, res: Response) => {
+  const user = req.employee as AuthEmployee;
+  const { shiftId } = req.params;
+
+  if (!user.companyId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
+  }
+
+  const shiftDetails = await employeeShiftService.getShiftDetails(shiftId, user.companyId);
+  res.send({ data: shiftDetails });
+});
+
+// New controller method to calculate working hours
+const calculateWorkingHours = catchAsync(async (req: Request, res: Response) => {
+  const { employeeId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "startDate and endDate are required.");
+  }
+
+  const workingHours = await employeeShiftService.calculateWorkingHours(
+    employeeId,
+    new Date(startDate as string),
+    new Date(endDate as string)
+  );
+
+  res.send({ data: workingHours });
+});
+
 export default {
   assignShiftToEmployee,
   unassignShiftFromEmployee,
@@ -119,4 +132,6 @@ export default {
   getEmployeeShiftById,
   getActiveEmployeeShift,
   getEmployeeShiftHistory,
+  getShiftDetails,
+  calculateWorkingHours,
 }; 
