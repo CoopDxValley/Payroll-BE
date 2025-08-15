@@ -1,8 +1,8 @@
 export interface ShiftDayData {
   dayNumber: number;
   dayType: "FULL_DAY" | "HALF_DAY" | "REST_DAY";
-  startTime: Date;
-  endTime: Date;
+  startTime: string; // Format: "HH:MM:SS" (e.g., "09:00:00")
+  endTime: string;   // Format: "HH:MM:SS" (e.g., "17:00:00")
   breakTime: number;
   gracePeriod: number;
 }
