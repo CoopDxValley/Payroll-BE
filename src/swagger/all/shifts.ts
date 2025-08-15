@@ -32,14 +32,14 @@
  *           example: "FULL_DAY"
  *         startTime:
  *           type: string
- *           format: date-time
- *           description: Start time for the day
- *           example: "2024-01-01T08:00:00Z"
+ *           pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$"
+ *           description: Start time for the day in HH:MM:SS format (24-hour)
+ *           example: "09:00:00"
  *         endTime:
  *           type: string
- *           format: date-time
- *           description: End time for the day
- *           example: "2024-01-01T17:00:00Z"
+ *           pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$"
+ *           description: End time for the day in HH:MM:SS format (24-hour)
+ *           example: "17:00:00"
  *         breakTime:
  *           type: integer
  *           minimum: 0
@@ -81,8 +81,8 @@
  *             {
  *               "dayNumber": 1,
  *               "dayType": "FULL_DAY",
- *               "startTime": "2024-01-01T08:00:00Z",
- *               "endTime": "2024-01-01T17:00:00Z",
+ *               "startTime": "09:00:00",
+ *               "endTime": "17:00:00",
  *               "breakTime": 60,
  *               "gracePeriod": 15
  *             }
