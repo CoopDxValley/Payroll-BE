@@ -158,19 +158,19 @@ const checkOvertimeWithCompanyGracePeriod = async (
 const getShiftDayForDate = async (
   shiftId: string,
   date: Date,
-  cycleDays: number
+  // cycleDays: number
 ) => {
   // Calculate which day in the cycle this date represents
   const startOfYear = new Date(date.getFullYear(), 0, 1);
   const dayOfYear = Math.floor(
     (date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)
   );
-  const cycleDay = (dayOfYear % cycleDays) + 1;
+  // const cycleDay = (dayOfYear % cycleDays) + 1;
 
   return await prisma.shiftDay.findFirst({
     where: {
       shiftId,
-      dayNumber: cycleDay,
+      // dayNumber: cycleDay,
     },
   });
 };
@@ -281,7 +281,7 @@ const processOvertimeLogic = async (
     const shiftDay = await getShiftDayForDate(
       activeShift.shiftId,
       dateOnly,
-      activeShift.shift.cycleDays
+      // activeShift.shift.cycleDays
     );
 
     if (shiftDay) {
@@ -407,10 +407,13 @@ const createAttendance = async (data: CreateAttendanceData) => {
   }
 
   // Helper to get shift cycle day number (1 to cycleDays)
-  function getShiftCycleDayNumber(shiftStartDate: Date, targetDate: Date, cycleDays: number): number {
+  function getShiftCycleDayNumber(shiftStartDate: Date, targetDate: Date, 
+  //  cycleDays: number
+  
+  ): number {
     const diffTime = targetDate.getTime() - shiftStartDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return (diffDays % cycleDays) + 1;
+    return  1;
   }
 
   const checkTimeDate = parseCheckTime(checkTime);
@@ -480,7 +483,7 @@ const createAttendance = async (data: CreateAttendanceData) => {
       const cycleDayNumberAdj = getShiftCycleDayNumber(
         activeShift.startDate,
         dateOnly,
-        activeShift.shift.cycleDays
+        // activeShift.shift.cycleDays
       );
       const shiftDayAdj = await tx.shiftDay.findUnique({
         where: {
@@ -568,7 +571,7 @@ const createAttendance = async (data: CreateAttendanceData) => {
       const cycleDayNumber = getShiftCycleDayNumber(
         activeShift.startDate,
         dateOnly,
-        activeShift.shift.cycleDays
+        // activeShift.shift.cycleDays
       );
 
       const shiftDay = await tx.shiftDay.findUnique({
@@ -892,7 +895,7 @@ const bulkDeviceRegistration = async (dataArray: CreateAttendanceData[]) => {
           const shiftDay = await getShiftDayForDate(
             activeShift.shiftId,
             dateOnly,
-            activeShift.shift.cycleDays
+            // activeShift.shift.cycleDays
           );
 
           if (shiftDay) {
@@ -1792,29 +1795,7 @@ const updateAttendanceTimestamp = async (id: string, checkTime: string) => {
   return updated;
 };
 
-// const updateAttendanceTimestamp = async (id: string, checkTime: string) => {
-//   const attendance = await prisma.attendance.findUnique({ where: { id } });
 
-//   if (!attendance) {
-//     throw new ApiError(httpStatus.NOT_FOUND, "Attendance record not found");
-//   }
-
-//   const newCheckTime = new Date(checkTime);
-//   if (isNaN(newCheckTime.getTime())) {
-//     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid checkTime format");
-//   }
-
-//   // Update checkTime (and optionally date to match checkTime's date)
-//   const updated = await prisma.attendance.update({
-//     where: { id },
-//     data: {
-//       checkTime: newCheckTime,
-//       date: new Date(newCheckTime.toDateString()), // keep date synced with checkTime's date
-//     },
-//   });
-
-//   return updated;
-// };
 
 export default {
   createAttendance,

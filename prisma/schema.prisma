@@ -43,6 +43,8 @@ model Company {
   shift                         Shift[]
   OvertimeGracePeriod OvertimeGracePeriod[]
   payrollDefinitions            PayrollDefinition[]
+
+  shiftSchedules  ShiftSchedule[]
 }
 
 model Account {
@@ -409,6 +411,9 @@ model Employee {
   coveringShiftCoverages ShiftCoverage[] @relation("CoveringShiftEmployee")
   requestedCoverages     ShiftCoverage[] @relation("ShiftCoverageRequester")
   approvedCoverages      ShiftCoverage[] @relation("ShiftCoverageApprover")
+
+
+  shiftAssignments EmployeeShiftAssignment[]
 
   @@index([name])
   @@index([phoneNumber])
@@ -930,19 +935,24 @@ model Shift {
   name         String   // "Regular"
   companyId    String
   isActive     Boolean  @default(true)
-  cycleDays    Int      // Replaces the need for ShiftPattern
+ // cycleDays    Int      // Replaces the need for ShiftPattern
   patternDays  ShiftDay[] // Formerly ShiftPatternDay
   employeeShifts EmployeeShift[]
   company      Company @relation(fields: [companyId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  shiftType    ShiftType 
   
  @@index([companyId])
+   // New relation for calendar-based assignments
+  shiftSchedules ShiftSchedule[]      @relation("ShiftSchedulesForShift")
 
-
-  shiftCoverages ShiftCoverage[]  // ← ADD THIS LINE
+ shiftCoverages ShiftCoverage[]  // ← SHIFT COVERAGE
 }
-
+enum ShiftType {
+  FIXED_WEEKLY    // Always 7 days (Monday-Sunday)
+  ROTATING        // Variable pattern with DAY/NIGHT/OFF
+}
 model ShiftDay {
   id           String   @id @default(uuid())
   shiftId      String
@@ -952,11 +962,13 @@ model ShiftDay {
   endTime      DateTime
   breakTime    Int
   gracePeriod  Int
-
   shift        Shift @relation(fields: [shiftId], references: [id])
 
   @@unique([shiftId, dayNumber]) // Prevent duplicate day numbers
   @@index([shiftId])
+
+
+ 
 }
 
 model EmployeeShift {
@@ -1018,7 +1030,7 @@ enum ShiftDayType {
   FULL_DAY
   HALF_DAY
   REST_DAY
-  NIGHT
+ // NIGHT
 }
 
 
@@ -1101,4 +1113,55 @@ model PayrollDefinition {
   company                    Company       @relation(fields: [companyId], references: [id])
 
 
+}
+
+
+
+////////////// ROTATING SHIFT ASSIGNMENTS AND SCHEDULES //////////////////
+
+// New model to group shifts over a date range (week, month, etc.)
+model ShiftSchedule {
+  id          String          @id @default(uuid())
+  companyId   String
+  shiftId     String?         // optional link to a Shift if needed
+  name        String          // e.g. "Security August 2025 Week 1"
+  startDate   DateTime        @db.Date
+  endDate     DateTime        @db.Date
+  isActive    Boolean         @default(true)
+  isApproved  Boolean         @default(false) // lock schedule once approved
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id])
+  shift       Shift?          @relation("ShiftSchedulesForShift", fields: [shiftId], references: [id])
+  assignments EmployeeShiftAssignment[]
+
+  @@index([companyId])
+  @@index([startDate, endDate])
+}
+
+// Assign explicit shift type per employee per calendar date
+model EmployeeShiftAssignment {
+  id          String          @id @default(uuid())
+  employeeId  String
+  scheduleId  String?         // Link to ShiftSchedule for grouping
+  date        DateTime        @db.Date
+  RotatingShiftType   RotatingShiftType 
+  hours       Int             // 12 for DAY/NIGHT, 0 for OFF
+  isApproved  Boolean         @default(false)  // Once approved, immutable
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  employee    Employee        @relation(fields: [employeeId], references: [id])
+  schedule    ShiftSchedule?  @relation(fields: [scheduleId], references: [id])
+
+  @@unique([employeeId, date]) // one assignment per employee per day
+  @@index([employeeId])
+  @@index([date])
+}
+
+enum RotatingShiftType  {
+  DAY
+  NIGHT
+  OFF
 }
