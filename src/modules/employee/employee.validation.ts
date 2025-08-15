@@ -3,6 +3,7 @@ import {
   EmploymentType,
   Gender,
   IdType,
+  MaritalStatus,
   PayFrequency,
 } from "@prisma/client";
 import { z } from "zod";
@@ -18,52 +19,48 @@ import {
 const personalInfoSchema = z
   .object({
     name: safeName,
-    gender: z.enum([Gender.MALE, Gender.FEMALE]),
-    dateOfBirth: z.coerce.date(),
     username: safeUsername,
-    email: email.optional(),
     phoneNumber,
-    optionalPhoneNumber: phoneNumber.optional(),
     employeeIdNumber: safeName.optional(),
+    deviceUserId: safeName.optional(),
+
+    isSuperAdmin: z.boolean().default(false),
+    email: email.optional(),
+    optionalPhoneNumber: phoneNumber.optional(),
+
+    gender: z.nativeEnum(Gender),
+
+    country: safeName.optional().default("Ethiopia"),
+    zone: safeName.optional(),
+    woreda: safeName.optional(),
+    kebele: safeName.optional(),
+    region: safeName.optional(),
+    houseNo: safeName.optional(),
+
+    dateOfBirth: z.coerce.date().optional(),
     nationality: safeName.optional().default("Ethiopia"),
+    maritalStatus: z.nativeEnum(MaritalStatus).default(MaritalStatus.SINGLE),
+    title: safeName.optional(),
     imageUrl: safeName.url().optional(),
-    status: z
-      .enum([
-        EmploymentStatus.ACTIVE,
-        EmploymentStatus.INACTIVE,
-        EmploymentStatus.TERMINATED,
-        EmploymentStatus.ON_LEAVE,
-        EmploymentStatus.RETIRED,
-      ])
-      .optional(),
+
+    status: z.nativeEnum(EmploymentStatus).default(EmploymentStatus.ACTIVE),
     idNumber: safeName.optional(),
     idImageUrl: safeName.url().optional(),
-    idType: z
-      .enum([IdType.NATIONALID, IdType.PASSPORT, IdType.LICENSE, IdType.KEBELE])
-      .optional()
-      .default(IdType.KEBELE),
+    idType: z.nativeEnum(IdType).default(IdType.KEBELE),
   })
   .strict();
 
 export const payrollInfoSchema = z
   .object({
     tinNumber: safeName.min(5),
+    hireDate: z.coerce.date(),
     basicSalary: z.coerce.number().positive(),
     currency: safeName.min(2).default("ETB"),
 
-    employmentType: z.enum([
-      EmploymentType.CONTRACT,
-      EmploymentType.HOURLY,
-      EmploymentType.PERMANENT,
-    ]),
-    payFrequency: z
-      .enum([
-        PayFrequency.MONTHLY,
-        PayFrequency.BIWEEKLY,
-        PayFrequency.WEEKLY,
-        PayFrequency.DAILY,
-      ])
-      .default(PayFrequency.MONTHLY),
+    employmentType: z.nativeEnum(EmploymentType),
+    payFrequency: z.nativeEnum(PayFrequency).default(PayFrequency.MONTHLY),
+
+    accountNumber: safeName.min(5),
 
     positionId: UUID,
     roleId: UUID,

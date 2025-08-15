@@ -28,33 +28,59 @@
  *                 type: object
  *                 required:
  *                   - name
- *                   - gender
- *                   - dateOfBirth
  *                   - username
  *                   - phoneNumber
+ *                   - password
+ *                   - gender
  *                 properties:
  *                   name:
  *                     type: string
- *                   gender:
- *                     type: string
- *                     enum: [MALE, FEMALE]
- *                   dateOfBirth:
- *                     type: string
- *                     format: date
  *                   username:
  *                     type: string
- *                   email:
+ *                   password:
  *                     type: string
- *                     format: email
+ *                     minLength: 6
  *                   phoneNumber:
  *                     type: string
  *                   optionalPhoneNumber:
  *                     type: string
+ *                   email:
+ *                     type: string
+ *                     format: email
  *                   employeeIdNumber:
  *                     type: string
+ *                   deviceUserId:
+ *                     type: string
+ *                   isSuperAdmin:
+ *                     type: boolean
+ *                     default: false
+ *                   gender:
+ *                     type: string
+ *                     enum: [MALE, FEMALE]
+ *                   country:
+ *                     type: string
+ *                     default: Ethiopia
+ *                   zone:
+ *                     type: string
+ *                   woreda:
+ *                     type: string
+ *                   kebele:
+ *                     type: string
+ *                   region:
+ *                     type: string
+ *                   houseNo:
+ *                     type: string
+ *                   dateOfBirth:
+ *                     type: string
+ *                     format: date
  *                   nationality:
  *                     type: string
  *                     default: Ethiopia
+ *                   maritalStatus:
+ *                     type: string
+ *                     enum: [SINGLE, MARRIED, DIVORCED, WIDOWED]
+ *                   title:
+ *                     type: string
  *                   imageUrl:
  *                     type: string
  *                     format: uri
@@ -73,8 +99,10 @@
  *                 type: object
  *                 required:
  *                   - tinNumber
+ *                   - hireDate
  *                   - basicSalary
  *                   - employmentType
+ *                   - accountNumber
  *                   - positionId
  *                   - roleId
  *                   - departmentId
@@ -82,6 +110,9 @@
  *                 properties:
  *                   tinNumber:
  *                     type: string
+ *                   hireDate:
+ *                     type: string
+ *                     format: date
  *                   basicSalary:
  *                     type: number
  *                     format: float
@@ -95,6 +126,8 @@
  *                     type: string
  *                     enum: [MONTHLY, BIWEEKLY, WEEKLY, DAILY]
  *                     default: MONTHLY
+ *                   accountNumber:
+ *                     type: string
  *                   positionId:
  *                     type: string
  *                     format: uuid
