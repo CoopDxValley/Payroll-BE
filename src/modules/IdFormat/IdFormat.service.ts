@@ -1,6 +1,6 @@
 import { PrismaClient, Separator } from "@prisma/client";
 import httpStatus from "http-status";
-import { CreateIdFormatInput } from "./Idformat.type";
+import { CreateIdFormatInput } from "./IdFormat.type";
 import ApiError from "../../utils/api-error";
 
 const prisma = new PrismaClient();

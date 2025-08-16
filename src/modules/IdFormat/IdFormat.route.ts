@@ -2,12 +2,12 @@ import express from "express";
 import * as controller from "./IdFormat.controller";
 import auth from "../../middlewares/auth";
 import { validate } from "../../middlewares/validate";
-import validations from "./Idformat.validation";
+import validations from "./IdFormat.validation";
 import {
   CreateIdFormatInput,
   UpdateIdFormatBody,
   UpdateIdFormatParams,
-} from "./Idformat.type";
+} from "./IdFormat.type";
 
 const router = express.Router();
 

@@ -21,9 +21,9 @@ import { accountCreatedMessage } from "../../templates/sms-template";
 import { formatPhoneNumberForSms } from "../../utils/format-phone-number";
 // import { smsQueue } from "../../queues";
 import logger from "../../config/logger";
-import { AuthEmployee } from "../auth/auth.type";
 import departmentService from "../department/department.service";
 import exclude from "../../utils/exclude";
+import { generateEmployeeIdNumber } from "../../utils/fetch-id-format";
 
 /**
  * Create a Employee
@@ -40,12 +40,15 @@ const createEmployee = async (
       ? "SuperSecurePassword@123"
       : generateRandomPassword();
 
-  const [role, company, department, position] = await Promise.all([
-    prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
-    prisma.company.findUnique({ where: { id: companyId } }),
-    prisma.department.findUnique({ where: { id: payrollInfo.departmentId } }),
-    prisma.position.findUnique({ where: { id: payrollInfo.positionId } }),
-  ]);
+  const [role, company, department, position, existinEmployee, grade] =
+    await Promise.all([
+      prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
+      prisma.company.findUnique({ where: { id: companyId } }),
+      prisma.department.findUnique({ where: { id: payrollInfo.departmentId } }),
+      prisma.position.findUnique({ where: { id: payrollInfo.positionId } }),
+      prisma.employee.findUnique({ where: { email: personalInfo.email } }),
+      prisma.grade.findUnique({ where: { id: payrollInfo.gradeId } }),
+    ]);
 
   if (!role) throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
   if (!company) throw new ApiError(httpStatus.BAD_REQUEST, "Company not found");
@@ -53,7 +56,23 @@ const createEmployee = async (
     throw new ApiError(httpStatus.BAD_REQUEST, "Department not found");
   if (!position)
     throw new ApiError(httpStatus.BAD_REQUEST, "Position not found");
+  if (existinEmployee)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "employee with this email already exist"
+    );
 
+  if (!grade) throw new ApiError(httpStatus.BAD_REQUEST, "Grade not found");
+
+  if (
+    payrollInfo.basicSalary < grade.minSalary ||
+    payrollInfo.basicSalary > grade.maxSalary
+  ) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Basic salary must be between ${grade.minSalary} and ${grade.maxSalary}`
+    );
+  }
   const hashedPassword = await encryptPassword(rawPassword);
 
   const employee = await prisma.employee.create({
@@ -62,6 +81,10 @@ const createEmployee = async (
       password: hashedPassword,
       username,
       companyId,
+      employeeIdNumber: await generateEmployeeIdNumber({
+        companyId,
+        departmentCode: department.shorthandRepresentation,
+      }),
     },
   });
 

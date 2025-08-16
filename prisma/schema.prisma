@@ -53,7 +53,7 @@ enum Separator {
 
 model IdFormat {
   id          String     @id @default(uuid())
-  companyCode String?
+  companyCode Boolean?
   year        Boolean?
   department  Boolean?
   separator   Separator  @default(SLASH)
@@ -582,7 +582,7 @@ model Department {
   deptName                String
   parentId                String? // optional for tree structure
   location                String?
-  shorthandRepresentation String?
+  shorthandRepresentation String
   companyId               String
   //departmentEmployees     Employee[]
   isActive                Boolean  @default(true)

@@ -26,7 +26,7 @@ const orderValidator = z
 const createIdFormat = {
   body: z
     .object({
-      companyCode: z.string().min(1).optional(),
+      companyCode: z.boolean().optional(),
       year: z.boolean().optional(),
       department: z.boolean().optional(),
       separator: SeparatorInput.optional(),
@@ -45,7 +45,7 @@ const updateIdFormat = {
     .strict(),
   body: z
     .object({
-      companyCode: z.string().min(1).optional(),
+      companyCode: z.boolean().optional(),
       year: z.boolean().optional(),
       department: z.boolean().optional(),
       separator: SeparatorInput.optional(),

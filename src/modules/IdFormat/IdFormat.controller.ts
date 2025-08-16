@@ -5,7 +5,7 @@ import {
   UpdateIdFormatBody,
   UpdateIdFormatParams,
   GetOrDeleteIdFormatParams,
-} from "./Idformat.type";
+} from "./IdFormat.type";
 import * as idFormatService from "./IdFormat.service";
 import { AuthEmployee } from "../auth/auth.type";
 import { CustomRequest } from "../../middlewares/validate";

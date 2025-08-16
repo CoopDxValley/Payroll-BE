@@ -23,7 +23,7 @@
  *               - order
  *             properties:
  *               companyCode:
- *                 type: string
+ *                 type: boolean
  *               year:
  *                 type: boolean
  *               department:
@@ -116,7 +116,7 @@
  *             type: object
  *             properties:
  *               companyCode:
- *                 type: string
+ *                 type: boolean
  *               year:
  *                 type: boolean
  *               department:
@@ -175,7 +175,7 @@
  *           type: string
  *           format: uuid
  *         companyCode:
- *           type: string
+ *           type: boolean
  *         year:
  *           type: boolean
  *         department:

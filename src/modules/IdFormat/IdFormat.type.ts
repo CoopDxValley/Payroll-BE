@@ -1,5 +1,5 @@
 import { z } from "zod";
-import idFormatValidation from "./Idformat.validation";
+import idFormatValidation from "./IdFormat.validation";
 
 export type CreateIdFormatInput = z.infer<
   typeof idFormatValidation.createIdFormat.body

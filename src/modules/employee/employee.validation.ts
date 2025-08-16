@@ -19,7 +19,7 @@ import {
 const personalInfoSchema = z
   .object({
     name: safeName,
-    username: safeUsername,
+    username: safeUsername.optional(),
     phoneNumber,
     employeeIdNumber: safeName.optional(),
     deviceUserId: safeName.optional(),
