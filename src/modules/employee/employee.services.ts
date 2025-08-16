@@ -383,6 +383,18 @@ async function searchEmployees({ keyword, page, limit }: EmployeeSearchQuery) {
   return { data, total, page, limit };
 }
 
+async function getEmployeeHistory(employeeId: string) {
+  return prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: {
+      gradeHistory: true,
+      positionHistory: true,
+      roleHistory: true,
+      departmentHistory: true,
+    },
+  });
+}
+
 export default {
   createEmployee,
   getEmployeeById,
@@ -394,4 +406,5 @@ export default {
   assignEmployeeToPosition,
   generatePassword,
   searchEmployees,
+  getEmployeeHistory,
 };
