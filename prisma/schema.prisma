@@ -18,6 +18,7 @@ model Company {
   updatedAt        DateTime      @updatedAt
   notes            String?
 
+  idFormat         IdFormat?
   accounts                      Account[]
   positions                     Position[]
   Role                          Role[]
@@ -43,6 +44,27 @@ model Company {
   shift                         Shift[]
   OvertimeGracePeriod OvertimeGracePeriod[]
   payrollDefinitions            PayrollDefinition[]
+}
+
+enum Separator {
+  SLASH  // "/"
+  DASH   // "-"
+}
+
+model IdFormat {
+  id          String     @id @default(uuid())
+  companyCode String?
+  year        Boolean?
+  department  Boolean?
+  separator   Separator  @default(SLASH)
+  isActive    Boolean    @default(true)
+  digitLength Int        @default(5)
+  order       String     
+
+  companyId   String     @unique
+  company     Company    @relation(fields: [companyId], references: [id])
+
+  @@map("IdFormat")
 }
 
 model Account {
