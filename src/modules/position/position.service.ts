@@ -2,6 +2,7 @@ import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
 import { CreatePositionInput, UpdatePositionInput } from "./position.type";
+import employeeServices from "../employee/employee.services";
 
 const createPosition = async (
   data: CreatePositionInput & { companyId: string }
@@ -86,10 +87,51 @@ const deletePosition = async (id: string, companyId: string) => {
     data: { isActive: false },
   });
 };
+
+/**
+ * Assign position to employee
+ * @param {string} employeeId
+ * @param {string} positionId
+ * @returns {Promise<string | null>}
+ */
+const assignPositionToEmployee = async (
+  employeeId: string,
+  positionId: string
+): Promise<string> => {
+  const user = await employeeServices.getEmployeeById(employeeId);
+  const position = await getPositionById(positionId);
+
+  if (!user || !position) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Position or Employee not found"
+    );
+  }
+  const existing = await prisma.employeePositionHistory.findUnique({
+    where: {
+      employeeId_positionId: { employeeId, positionId },
+    },
+  });
+
+  if (existing) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Employee already has this position."
+    );
+  }
+
+  await prisma.employeePositionHistory.create({
+    data: { employeeId, positionId, fromDate: new Date() },
+  });
+
+  return "Position assigned to employee successfully";
+};
+
 export default {
   createPosition,
   getAllPositions,
   getPositionById,
   updatePosition,
   deletePosition,
+  assignPositionToEmployee,
 };

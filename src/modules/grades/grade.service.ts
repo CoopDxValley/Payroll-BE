@@ -2,6 +2,7 @@ import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
 import { getGradeParams, gradeInput, updateGradeBody } from "./grade.type";
+import employeeServices from "../employee/employee.services";
 
 const createGrade = async (data: gradeInput & { companyId: string }) => {
   const { name, minSalary, maxSalary, companyId } = data;
@@ -204,10 +205,47 @@ export const deleteGrade = async (id: string) => {
   });
 };
 
+/**
+ * Assign grade to employee
+ * @param {string} employeeId
+ * @param {string} gradeId
+ * @returns {Promise<string | null>}
+ */
+const assignGradeToEmployee = async (
+  employeeId: string,
+  gradeId: string
+): Promise<string> => {
+  const user = await employeeServices.getEmployeeById(employeeId);
+  const grade = await getGradeById(gradeId);
+
+  if (!user || !grade) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Grade or Employee not found");
+  }
+  const existing = await prisma.employeeGradeHistory.findUnique({
+    where: {
+      employeeId_gradeId: { employeeId, gradeId },
+    },
+  });
+
+  if (existing) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Employee already has this grade."
+    );
+  }
+
+  await prisma.employeeGradeHistory.create({
+    data: { employeeId, gradeId, fromDate: new Date() },
+  });
+
+  return "Grade assigned to employee successfully";
+};
+
 export default {
   createGrade,
   getAllGrades,
   getGradeById,
   updateGrade,
   deleteGrade,
+  assignGradeToEmployee,
 };
