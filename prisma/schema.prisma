@@ -18,6 +18,7 @@ model Company {
   updatedAt        DateTime      @updatedAt
   notes            String?
 
+  idFormat         IdFormat?
   accounts                      Account[]
   positions                     Position[]
   Role                          Role[]
@@ -45,6 +46,27 @@ model Company {
   payrollDefinitions            PayrollDefinition[]
 
   shiftSchedules  ShiftSchedule[]
+}
+
+enum Separator {
+  SLASH  // "/"
+  DASH   // "-"
+}
+
+model IdFormat {
+  id          String     @id @default(uuid())
+  companyCode Boolean?
+  year        Boolean?
+  department  Boolean?
+  separator   Separator  @default(SLASH)
+  isActive    Boolean    @default(true)
+  digitLength Int        @default(5)
+  order       String     
+
+  companyId   String     @unique
+  company     Company    @relation(fields: [companyId], references: [id])
+
+  @@map("IdFormat")
 }
 
 model Account {
@@ -570,7 +592,7 @@ model Department {
   deptName                String
   parentId                String? // optional for tree structure
   location                String?
-  shorthandRepresentation String?
+  shorthandRepresentation String
   companyId               String
   //departmentEmployees     Employee[]
   isActive                Boolean  @default(true)

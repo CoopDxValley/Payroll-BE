@@ -37,6 +37,7 @@ import providentFundRoute from "../../modules/providentFund/providentFund.route"
 import pensionRoute from "../../modules/pension/pension.route";
 import overtimeGradePeriod from "../../modules/OvertimeGracePeriod/overtimeGracePeriod.route";
 import payrollDefinitionRoute from "../../modules/payrolldefinition/payrolldefinition.route";
+import idFormatRoute from "../../modules/IdFormat/IdFormat.route";
 
 const router = express.Router();
 
@@ -189,6 +190,10 @@ const defaultRoutes = [
   {
     path: "/payroll-definitions",
     route: payrollDefinitionRoute,
+  },
+  {
+    path: "/idformats",
+    route: idFormatRoute,
   },
 ];
 

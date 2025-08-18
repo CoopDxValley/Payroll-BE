@@ -1,5 +1,4 @@
 import httpStatus from "http-status";
-import { v4 as uuidv4 } from "uuid";
 import {
   Employee,
   EmployeeDepartmentHistory,
@@ -17,13 +16,11 @@ import { generateRandomPassword, generateUsername } from "../../utils/helper";
 import config from "../../config/config";
 import { encryptPassword } from "../../utils/encryption";
 import * as roleService from "../role/role.services";
-import { accountCreatedMessage } from "../../templates/sms-template";
-import { formatPhoneNumberForSms } from "../../utils/format-phone-number";
-// import { smsQueue } from "../../queues";
-import logger from "../../config/logger";
-import { AuthEmployee } from "../auth/auth.type";
 import departmentService from "../department/department.service";
 import exclude from "../../utils/exclude";
+import { generateEmployeeIdNumber } from "../../utils/fetch-id-format";
+import positionService from "../position/position.service";
+import gradeService from "../grades/grade.service";
 
 /**
  * Create a Employee
@@ -40,12 +37,15 @@ const createEmployee = async (
       ? "SuperSecurePassword@123"
       : generateRandomPassword();
 
-  const [role, company, department, position] = await Promise.all([
-    prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
-    prisma.company.findUnique({ where: { id: companyId } }),
-    prisma.department.findUnique({ where: { id: payrollInfo.departmentId } }),
-    prisma.position.findUnique({ where: { id: payrollInfo.positionId } }),
-  ]);
+  const [role, company, department, position, existinEmployee, grade] =
+    await Promise.all([
+      prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
+      prisma.company.findUnique({ where: { id: companyId } }),
+      prisma.department.findUnique({ where: { id: payrollInfo.departmentId } }),
+      prisma.position.findUnique({ where: { id: payrollInfo.positionId } }),
+      prisma.employee.findUnique({ where: { email: personalInfo.email } }),
+      prisma.grade.findUnique({ where: { id: payrollInfo.gradeId } }),
+    ]);
 
   if (!role) throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
   if (!company) throw new ApiError(httpStatus.BAD_REQUEST, "Company not found");
@@ -53,7 +53,23 @@ const createEmployee = async (
     throw new ApiError(httpStatus.BAD_REQUEST, "Department not found");
   if (!position)
     throw new ApiError(httpStatus.BAD_REQUEST, "Position not found");
+  if (existinEmployee)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "employee with this email already exist"
+    );
 
+  if (!grade) throw new ApiError(httpStatus.BAD_REQUEST, "Grade not found");
+
+  if (
+    payrollInfo.basicSalary < grade.minSalary ||
+    payrollInfo.basicSalary > grade.maxSalary
+  ) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Basic salary must be between ${grade.minSalary} and ${grade.maxSalary}`
+    );
+  }
   const hashedPassword = await encryptPassword(rawPassword);
 
   const employee = await prisma.employee.create({
@@ -62,6 +78,10 @@ const createEmployee = async (
       password: hashedPassword,
       username,
       companyId,
+      employeeIdNumber: await generateEmployeeIdNumber({
+        companyId,
+        departmentCode: department.shorthandRepresentation,
+      }),
     },
   });
 
@@ -79,6 +99,13 @@ const createEmployee = async (
   await departmentService.assignDepartmentToEmployee(
     employee.id,
     payrollInfo.departmentId
+  );
+
+  await gradeService.assignGradeToEmployee(employee.id, payrollInfo.gradeId);
+
+  await positionService.assignPositionToEmployee(
+    employee.id,
+    payrollInfo.positionId
   );
 
   return employee;
@@ -166,68 +193,6 @@ const getEmployeePermissions = async (
 };
 
 /**
- * Get employee roles by id
- * @param {string} id
- * @returns {Promise<EmployeeRole[] | null>}
- */
-// export const getEmployeeRoleById = async (
-//   id: string
-// ): Promise<EmployeeRole[] | null> => {
-//   return prisma.employeeRole.findMany({
-//     where: { employeeId: id },
-//   });
-// };
-
-/**
- * query employees with id
- * @param {string} id
- * @returns {Promise<AuthEmployee>}
- */
-// export const getEmployeeWithRoles = async (
-//   id: string
-// ): Promise<AuthEmployee> => {
-//   const employee = await prisma.employee.findUnique({
-//     where: { id },
-//     include: {
-//       employeeRoles: {
-//         include: {
-//           role: {
-//             include: {
-//               permissions: {
-//                 include: {
-//                   permission: true,
-//                 },
-//               },
-//             },
-//           },
-//         },
-//       },
-//     },
-//   });
-
-//   if (!employee) throw new ApiError(httpStatus.BAD_REQUEST, "Unauthorized");
-
-//   const permissions = new Set<string>();
-//   employee.employeeRoles.forEach((employeeRole) => {
-//     employeeRole.role.permissions.forEach((rp) => {
-//       permissions.add(`${rp.permission.action}_${rp.permission.subject}`);
-//     });
-//   });
-
-//   const authEmployee = {
-//     id: employee.id,
-//     name: employee.name,
-//     isSuperAdmin: employee.isSuperAdmin,
-//     companyId: employee.companyId,
-//     departmentId: employee?.departmentId || "",
-//     roles: employee.employeeRoles.map((ur) => ur.role.name),
-//     permissions: Array.from(permissions),
-//   };
-
-//   return authEmployee;
-// };
-
-/**
  * Query for employees with pagination and sorting
  * @param {Object} filter - Prisma filter
  * @param {Object} options - Query options
@@ -257,7 +222,7 @@ export const queryEmployee = async (
         positionHistory: {
           where: { toDate: null },
           select: {
-            position: { select: { positionName: true } },
+            position: { select: { id: true, positionName: true } },
           },
         },
         gradeHistory: {
@@ -418,6 +383,18 @@ async function searchEmployees({ keyword, page, limit }: EmployeeSearchQuery) {
   return { data, total, page, limit };
 }
 
+async function getEmployeeHistory(employeeId: string) {
+  return prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: {
+      gradeHistory: true,
+      positionHistory: true,
+      roleHistory: true,
+      departmentHistory: true,
+    },
+  });
+}
+
 export default {
   createEmployee,
   getEmployeeById,
@@ -429,4 +406,5 @@ export default {
   assignEmployeeToPosition,
   generatePassword,
   searchEmployees,
+  getEmployeeHistory,
 };

@@ -6,7 +6,7 @@ const createDepartment = {
     .object({
       deptName: safeName,
       location: safeName.optional(),
-      shorthandRepresentation: safeName.optional(),
+      shorthandRepresentation: safeName,
     })
     .strict(),
 };

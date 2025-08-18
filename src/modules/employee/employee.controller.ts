@@ -166,3 +166,15 @@ export const searchEmployees = catchAsync<
     });
   }
 );
+
+export const employeeHistory = catchAsync<CustomRequest<never, never, never>>(
+  async (req, res) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const history = await employeeService.getEmployeeHistory(authEmployee.id);
+
+    res.status(httpStatus.OK).send({
+      message: "Employee History retrieved successfully",
+      data: history,
+    });
+  }
+);
