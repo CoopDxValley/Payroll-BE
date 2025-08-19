@@ -141,9 +141,10 @@ const defaultRoutes = [
   //   path: "/swagger",
   //   // route: setupSwaggerAlternative, // Try alternative setup that serves spec via URL
   //   route: setupSwagger, // Try this first, switch to setupSwaggerAlternative if needed
-  //   path: "/roles",
-  //   route: roleRoute,
-  // },
+  {
+    path: "/roles",
+    route: roleRoute,
+  },
   {
     path: "/taxslab",
     route: taxslabRoute,
