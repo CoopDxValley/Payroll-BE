@@ -4,6 +4,7 @@ import httpStatus from "http-status";
 import updatedAttendanceService from "./updatedAttendance.service";
 import prisma from "../../client";
 import { createLocalDateForStorage, createLocalDateTime, createStableDateTime } from "./timeUtils";
+import ApiError from "../../utils/api-error";
 
 // WorkSession Controllers
 const createWorkSession = catchAsync(async (req: Request, res: Response) => {
@@ -99,6 +100,12 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
   
   // Regular work day - convert to smart attendance format for proper overtime processing
   console.log("Regular work day - processing via smart attendance for proper overtime calculation");
+  console.log("Request body received:", JSON.stringify(req.body, null, 2));
+  
+  // Validate required fields
+  if (!req.body.date) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "date field is required");
+  }
   
   // Convert time-only strings to proper DateTime format if needed
   let processedBody = { ...req.body };
@@ -106,6 +113,9 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
   // Handle time-only strings for punchIn
   if (processedBody.punchIn && typeof processedBody.punchIn === 'string' && processedBody.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)) {
     console.log(`Converting punchIn time-only string: ${processedBody.punchIn}`);
+    if (!processedBody.date || typeof processedBody.date !== 'string') {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Valid date field is required when using time-only punchIn");
+    }
     const punchInDateTime = createStableDateTime(processedBody.date, processedBody.punchIn);
     processedBody.punchIn = punchInDateTime.toISOString();
     console.log(`Converted punchIn: ${processedBody.punchIn}`);
@@ -114,6 +124,9 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
   // Handle time-only strings for punchOut
   if (processedBody.punchOut && typeof processedBody.punchOut === 'string' && processedBody.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)) {
     console.log(`Converting punchOut time-only string: ${processedBody.punchOut}`);
+    if (!processedBody.date || typeof processedBody.date !== 'string') {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Valid date field is required when using time-only punchOut");
+    }
     const punchOutDateTime = createStableDateTime(processedBody.date, processedBody.punchOut);
     processedBody.punchOut = punchOutDateTime.toISOString();
     console.log(`Converted punchOut: ${processedBody.punchOut}`);
@@ -124,12 +137,21 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
   processedBody.punchOutSource = processedBody.punchOutSource || "manual";
   
   // Use smart attendance for proper overtime calculation with grace period
-  const result = await updatedAttendanceService.smartAttendance(processedBody);
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    message: "Work session created successfully",
-    data: result,
-  });
+  console.log("Processed body being sent to smartAttendance:", JSON.stringify(processedBody, null, 2));
+  
+  try {
+    const result = await updatedAttendanceService.smartAttendance(processedBody);
+    res.status(httpStatus.CREATED).json({
+      success: true,
+      message: "Work session created successfully",
+      data: result,
+    });
+  } catch (error: any) {
+    console.log("Error in work-sessions controller:", error);
+    console.log("Error message:", error.message);
+    console.log("Error stack:", error.stack);
+    throw error;
+  }
 });
 
 const getWorkSessions = catchAsync(async (req: Request, res: Response) => {

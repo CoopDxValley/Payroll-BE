@@ -74,14 +74,30 @@ export const parseTimeWithDate = (timeStr: string, date: Date): Date => {
 
 // Create a local datetime from date string and time string (avoiding timezone conversion)
 export const createLocalDateTime = (dateStr: string, timeStr: string): Date => {
+  // Validate inputs
+  if (!dateStr || typeof dateStr !== 'string') {
+    throw new Error(`Invalid dateStr provided to createLocalDateTime: ${dateStr}`);
+  }
+  if (!timeStr || typeof timeStr !== 'string') {
+    throw new Error(`Invalid timeStr provided to createLocalDateTime: ${timeStr}`);
+  }
+  
   // Parse date components
   const dateParts = dateStr.split('-');
+  if (dateParts.length !== 3) {
+    throw new Error(`Invalid date format in createLocalDateTime. Expected YYYY-MM-DD, got: ${dateStr}`);
+  }
+  
   const year = parseInt(dateParts[0], 10);
   const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
   const day = parseInt(dateParts[2], 10);
   
   // Parse time components
   const timeParts = timeStr.split(':');
+  if (timeParts.length < 2) {
+    throw new Error(`Invalid time format in createLocalDateTime. Expected HH:MM or HH:MM:SS, got: ${timeStr}`);
+  }
+  
   const hours = parseInt(timeParts[0], 10);
   const minutes = parseInt(timeParts[1], 10);
   const seconds = timeParts[2] ? parseInt(timeParts[2], 10) : 0;
@@ -98,14 +114,30 @@ export const createLocalDateTime = (dateStr: string, timeStr: string): Date => {
 export const createStableDateTime = (dateStr: string, timeStr: string): Date => {
   console.log(`Creating stable datetime for: ${dateStr} ${timeStr}`);
   
+  // Validate inputs
+  if (!dateStr || typeof dateStr !== 'string') {
+    throw new Error(`Invalid dateStr provided to createStableDateTime: ${dateStr}`);
+  }
+  if (!timeStr || typeof timeStr !== 'string') {
+    throw new Error(`Invalid timeStr provided to createStableDateTime: ${timeStr}`);
+  }
+  
   // Parse date components
   const dateParts = dateStr.split('-');
+  if (dateParts.length !== 3) {
+    throw new Error(`Invalid date format in createStableDateTime. Expected YYYY-MM-DD, got: ${dateStr}`);
+  }
+  
   const year = parseInt(dateParts[0], 10);
   const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
   const day = parseInt(dateParts[2], 10);
   
   // Parse time components
   const timeParts = timeStr.split(':');
+  if (timeParts.length < 2) {
+    throw new Error(`Invalid time format in createStableDateTime. Expected HH:MM or HH:MM:SS, got: ${timeStr}`);
+  }
+  
   const hours = parseInt(timeParts[0], 10);
   const minutes = parseInt(timeParts[1], 10);
   const seconds = timeParts[2] ? parseInt(timeParts[2], 10) : 0;
@@ -245,7 +277,18 @@ export const normalizePunchTimesToShift = async (
   }
   
   try {
-    // Get shift day information
+    // First check if this is a ROTATION shift - skip normalization for ROTATION shifts
+    const shift = await prisma.shift.findFirst({
+      where: { id: shiftId },
+      select: { shiftType: true },
+    });
+    
+    if (shift && shift.shiftType === "ROTATING") {
+      console.log("ROTATION shift detected - skipping normalization (handled separately by rotation logic)");
+      return { normalizedPunchIn: actualPunchIn, normalizedPunchOut: actualPunchOut };
+    }
+    
+    // Get shift day information (only for FIXED_WEEKLY shifts)
     const dayNumber = date.getDay() === 0 ? 7 : date.getDay(); // Convert Sunday (0) to 7
     const shiftDay = await prisma.shiftDay.findFirst({
       where: {
