@@ -50,7 +50,7 @@
  *           minimum: 0
  *           description: Grace period in minutes
  *           example: 15
- *     
+ *
  *     CreateShift:
  *       type: object
  *       required:
@@ -87,7 +87,7 @@
  *               "gracePeriod": 15
  *             }
  *           ]
- *     
+ *
  *     UpdateShift:
  *       type: object
  *       properties:
@@ -110,7 +110,7 @@
  *           type: boolean
  *           description: Whether the shift is active
  *           example: true
- *     
+ *
  *     Shift:
  *       type: object
  *       properties:

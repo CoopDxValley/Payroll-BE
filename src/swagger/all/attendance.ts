@@ -472,7 +472,7 @@
  *           type: boolean
  *           description: Marks the attendance as absent (optional, default false)
  *           example: false
- *     
+ *
  *     BulkDeviceRegistration:
  *       type: object
  *       required:
@@ -496,7 +496,7 @@
  *               "isAbsent": false
  *             }
  *           ]
- *     
+ *
  *     UpdateTimestamp:
  *       type: object
  *       required:
@@ -506,7 +506,7 @@
  *           type: string
  *           description: New check time in ISO format
  *           example: "2024-01-15T08:45:00.000Z"
- *     
+ *
  *     AttendanceRecord:
  *       type: object
  *       properties:
@@ -556,7 +556,7 @@
  *           type: string
  *           format: date-time
  *           example: "2024-01-15T08:30:00.000Z"
- *     
+ *
  *     AttendanceSummary:
  *       type: object
  *       properties:
