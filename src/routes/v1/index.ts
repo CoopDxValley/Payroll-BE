@@ -12,12 +12,15 @@ import shiftDayRoute from "../../modules/shiftDays/shiftDay.route";
 import employeeShiftRoute from "../../modules/EmployeShift/employeeShift.route";
 import shiftCoverageRoute from "../../modules/shiftCoverage/shiftCoverage.route";
 import workingCalendarRoute from "../../modules/workingCalendar/workingCalendar.route";
+import rotationShiftRoute from "../../modules/rotationShift/rotationShift.route";
+import rotatingShiftTypeRoute from "../../modules/RotatingShiftType/rotatingShiftType.route";
 import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionDefinitionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
 import attendance from "../../modules/attendance/attendance.route";
+import updatedattendance from "../../modules/updatedAttendance/updatedAttendance.route";
 // import swagger from "../../modules/swagger";
 // import { setupSwagger } from "../../swagger/setup";
 
@@ -84,12 +87,24 @@ const defaultRoutes = [
     route: workingCalendarRoute,
   },
   {
+    path: "/rotation-shifts",
+    route: rotationShiftRoute,
+  },
+  {
+    path: "/rotating-shift-types",
+    route: rotatingShiftTypeRoute,
+  },
+  {
     path: "/grades",
     route: gradeRoute,
   },
   {
     path: "/attendance",
     route: attendance,
+  },
+  {
+    path: "/attendances",
+    route: updatedattendance,
   },
   {
     path: "/leave-requests",
@@ -119,8 +134,6 @@ const defaultRoutes = [
     path: "/approvals",
     route: approvalRoute,
   },
-
-
 
   {
     path: "/overtime-boundary-grace",

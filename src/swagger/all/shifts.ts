@@ -358,3 +358,192 @@
  *                   type: string
  *                   example: "Shift not found"
  */
+
+/**
+ * @swagger
+ * /api/v1/employee-shifts/bulk/assign:
+ *   post:
+ *     summary: Bulk assign shift to multiple employees
+ *     tags: [Shifts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - shiftId
+ *               - employeeIds
+ *             properties:
+ *               shiftId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the shift to assign
+ *                 example: "123e4567-e89b-12d3-a456-426614174000"
+ *               employeeIds:
+ *                 type: array
+ *                 minItems: 1
+ *                 maxItems: 1000
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of employee IDs to assign the shift to
+ *                 example: ["emp1-uuid", "emp2-uuid", "emp3-uuid"]
+
+ *     responses:
+ *       201:
+ *         description: Bulk assignment completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "3 employees assigned to shift successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "3 employees assigned to shift successfully"
+ *                     count:
+ *                       type: integer
+ *                       example: 3
+ *                     shiftName:
+ *                       type: string
+ *                       example: "Morning Shift"
+ *                     employees:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "emp1-uuid"
+ *                           name:
+ *                             type: string
+ *                             example: "John Doe"
+ *       400:
+ *         description: Bad Request - Invalid input or business rule violation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "shiftId and employeeIds array are required"
+ *       404:
+ *         description: Shift or employees not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Some employees not found: emp1-uuid, emp2-uuid"
+ *       409:
+ *         description: Conflict - Some employees already have active assignments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Some employees already have active shift assignments: John Doe, Jane Smith"
+ */
+
+/**
+ * @swagger
+ * /api/v1/employee-shifts/bulk/unassign:
+ *   post:
+ *     summary: Bulk unassign shift from multiple employees
+ *     tags: [Shifts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - shiftId
+ *               - employeeIds
+ *             properties:
+ *               shiftId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the shift to unassign
+ *                 example: "123e4567-e89b-12d3-a456-426614174000"
+ *               employeeIds:
+ *                 type: array
+ *                 minItems: 1
+ *                 maxItems: 100
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of employee IDs to unassign the shift from
+ *                 example: ["emp1-uuid", "emp2-uuid", "emp3-uuid"]
+ *     responses:
+ *       200:
+ *         description: Bulk unassignment completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "3 employees unassigned from shift successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "3 employees unassigned from shift successfully"
+ *                     count:
+ *                       type: integer
+ *                       example: 3
+ *                     shiftName:
+ *                       type: string
+ *                       example: "Morning Shift"
+ *                     unassignedEmployees:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "emp1-uuid"
+ *                           name:
+ *                             type: string
+ *                             example: "John Doe"
+ *       400:
+ *         description: Bad Request - Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "shiftId and employeeIds array are required"
+ *       404:
+ *         description: Shift not found or no active assignments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No active assignments found for the specified employees and shift"
+ */

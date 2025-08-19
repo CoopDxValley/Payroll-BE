@@ -109,8 +109,13 @@ const getShiftDetails = catchAsync(async (req: Request, res: Response) => {
 
 // New controller method to calculate working hours
 const calculateWorkingHours = catchAsync(async (req: Request, res: Response) => {
+  const user = req.employee as AuthEmployee;
   const { employeeId } = req.params;
   const { startDate, endDate } = req.query;
+
+  if (!user.companyId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
+  }
 
   if (!startDate || !endDate) {
     throw new ApiError(httpStatus.BAD_REQUEST, "startDate and endDate are required.");
@@ -125,6 +130,44 @@ const calculateWorkingHours = catchAsync(async (req: Request, res: Response) => 
   res.send({ data: workingHours });
 });
 
+// Bulk assign shift to multiple employees
+const bulkAssignShiftToEmployees = catchAsync(async (req: Request, res: Response) => {
+  const user = req.employee as AuthEmployee;
+  
+  if (!user.companyId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
+  }
+
+  const result = await employeeShiftService.bulkAssignShiftToEmployees({
+    ...req.body,
+    companyId: user.companyId,
+  });
+
+  res.status(httpStatus.CREATED).send({
+    message: result.message,
+    data: result,
+  });
+});
+
+// Bulk unassign shift from multiple employees
+const bulkUnassignShiftFromEmployees = catchAsync(async (req: Request, res: Response) => {
+  const user = req.employee as AuthEmployee;
+  
+  if (!user.companyId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
+  }
+
+  const result = await employeeShiftService.bulkUnassignShiftFromEmployees({
+    ...req.body,
+    companyId: user.companyId,
+  });
+
+  res.send({
+    message: result.message,
+    data: result,
+  });
+});
+
 export default {
   assignShiftToEmployee,
   unassignShiftFromEmployee,
@@ -134,4 +177,6 @@ export default {
   getEmployeeShiftHistory,
   getShiftDetails,
   calculateWorkingHours,
+  bulkAssignShiftToEmployees,
+  bulkUnassignShiftFromEmployees,
 }; 

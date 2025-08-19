@@ -11,9 +11,17 @@ const createAttendance = {
 
     checkTime: z
       .string()
-      .transform((val) => val.replace(" ", "T") + "Z")
-      .refine((val) => isoDateTimeRegex.test(val), {
-        message: "Invalid ISO datetime format",
+      .refine((val) => {
+        // Accept both ISO datetime format and HH:MM:SS format
+        if (val.includes("T") || val.includes(" ")) {
+          // ISO format or space-separated format
+          return true;
+        }
+        // HH:MM:SS format
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+        return timeRegex.test(val);
+      }, {
+        message: "checkTime must be in ISO datetime format (YYYY-MM-DDTHH:MM:SS) or time format (HH:MM:SS)",
       }),
 
     checkType: z.enum(["PUNCHIN", "PUNCHOUT"]).optional(),
@@ -53,9 +61,17 @@ const bulkCreateAttendance = {
 
         checkTime: z
           .string()
-          .transform((val) => val.replace(" ", "T") + "Z")
-          .refine((val) => isoDateTimeRegex.test(val), {
-            message: "Invalid ISO datetime format",
+          .refine((val) => {
+            // Accept both ISO datetime format and HH:MM:SS format
+            if (val.includes("T") || val.includes(" ")) {
+              // ISO format or space-separated format
+              return true;
+            }
+            // HH:MM:SS format
+            const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+            return timeRegex.test(val);
+          }, {
+            message: "checkTime must be in ISO datetime format (YYYY-MM-DDTHH:MM:SS) or time format (HH:MM:SS)",
           }),
 
         checkType: z.enum(["PUNCHIN", "PUNCHOUT"]).optional(),
@@ -82,9 +98,17 @@ const bulkDeviceRegistration = {
 
         checkTime: z
           .string()
-          .transform((val) => val.replace(" ", "T") + "Z")
-          .refine((val) => isoDateTimeRegex.test(val), {
-            message: "Invalid ISO datetime format",
+          .refine((val) => {
+            // Accept both ISO datetime format and HH:MM:SS format
+            if (val.includes("T") || val.includes(" ")) {
+              // ISO format or space-separated format
+              return true;
+            }
+            // HH:MM:SS format
+            const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+            return timeRegex.test(val);
+          }, {
+            message: "checkTime must be in ISO datetime format (YYYY-MM-DDTHH:MM:SS) or time format (HH:MM:SS)",
           }),
 
         checkType: z.enum(["PUNCHIN", "PUNCHOUT"]).optional(),

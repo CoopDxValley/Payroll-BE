@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+
+
 const createShift = {
   body: z.object({
     name: z.string().min(3, "Shift name is required"),
@@ -22,7 +24,9 @@ const createShift = {
       // For FIXED_WEEKLY shifts, patternDays are required
       return true; // This will be handled in the service
     }, "Pattern days are required for FIXED_WEEKLY shifts"),
-  }).refine((data) => {
+  })
+  
+  .refine((data) => {
     // If shiftType is FIXED_WEEKLY, enforce exactly 7 pattern days
     if (data.shiftType === "FIXED_WEEKLY") {
       if (!data.patternDays || data.patternDays.length !== 7) {
