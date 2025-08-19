@@ -1,42 +1,46 @@
 import express from "express";
-import shiftDayController from "./shiftDay.controller";
+import shiftController from "./shiftDay.controller";
 import auth from "../../middlewares/auth";
+import { validate } from "../../middlewares/validate";
+import shiftValidation from "./shiftDay.validation";
 // import { checkPermission } from "../../middlewares/checkPermissions";
-// import validate from "../../middlewares/validate";
-// import shiftDayValidation from "./shiftDay.validation";
 
 const router = express.Router();
-router.route("/delete/:id").post(
-  auth(),
-  // checkPermission("delete_shift_day"),
-  shiftDayController.deleteShiftDay
-);
 
 router
   .route("/")
   .post(
     auth(),
-    // checkPermission("create_shift_day"),
-    // validate(shiftDayValidation.createShiftDay),
-    shiftDayController.createShiftDay
+    validate(shiftValidation.createShiftDay),
+    // checkPermission("create_shift"),
+    shiftController.createShift
   )
   .get(
     auth(),
-    // checkPermission("view_shift_day"),
-    shiftDayController.getAllShiftDays
+    // checkPermission("view_shift"),
+    shiftController.getAllShifts
   );
 
 router
   .route("/:id")
   .get(
     auth(),
-    // checkPermission("view_shift_day"),
-    shiftDayController.getShiftDayById
+    // checkPermission("view_shift"),
+    shiftController.getShiftById
   )
   .post(
     auth(),
-    // checkPermission("update_shift_day"),
-    shiftDayController.updateShiftDay
+    validate(shiftValidation.updateShiftDay),
+    // checkPermission("update_shift"),
+    shiftController.updateShift
+  )
+
+  router
+  .route("/delete/:id")
+  .post(
+    auth(),
+    // checkPermission("delete_shift"),
+    shiftController.deleteShift
   );
 
 export default router;

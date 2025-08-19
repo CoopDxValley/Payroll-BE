@@ -3,7 +3,7 @@
 A robust approval workflow system that enables companies to manage approval processes with flexible, company-specific approval and rejection policies. The system supports both hierarchical and parallel workflows, with configurable approval rules and rejection policies.
 
 ## Features
-
+## NEW
 - **Flexible Workflow Types**
 
   - Fully Parallel: All stages active simultaneously

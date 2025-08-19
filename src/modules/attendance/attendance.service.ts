@@ -158,19 +158,19 @@ const checkOvertimeWithCompanyGracePeriod = async (
 const getShiftDayForDate = async (
   shiftId: string,
   date: Date,
-  cycleDays: number
+  // cycleDays: number
 ) => {
   // Calculate which day in the cycle this date represents
   const startOfYear = new Date(date.getFullYear(), 0, 1);
   const dayOfYear = Math.floor(
     (date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)
   );
-  const cycleDay = (dayOfYear % cycleDays) + 1;
+  // const cycleDay = (dayOfYear % cycleDays) + 1;
 
   return await prisma.shiftDay.findFirst({
     where: {
       shiftId,
-      dayNumber: cycleDay,
+      // dayNumber: cycleDay,
     },
   });
 };
@@ -281,7 +281,7 @@ const processOvertimeLogic = async (
     const shiftDay = await getShiftDayForDate(
       activeShift.shiftId,
       dateOnly,
-      activeShift.shift.cycleDays
+      // activeShift.shift.cycleDays
     );
 
     if (shiftDay) {
@@ -407,10 +407,13 @@ const createAttendance = async (data: CreateAttendanceData) => {
   }
 
   // Helper to get shift cycle day number (1 to cycleDays)
-  function getShiftCycleDayNumber(shiftStartDate: Date, targetDate: Date, cycleDays: number): number {
+  function getShiftCycleDayNumber(shiftStartDate: Date, targetDate: Date, 
+  //  cycleDays: number
+  
+  ): number {
     const diffTime = targetDate.getTime() - shiftStartDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return (diffDays % cycleDays) + 1;
+    return  1;
   }
 
   const checkTimeDate = parseCheckTime(checkTime);
@@ -468,10 +471,48 @@ const createAttendance = async (data: CreateAttendanceData) => {
       }
     }
 
+    // Pre-adjust attendance checkTime for PUNCHIN based on shift day's grace and mark early overtime if needed
+    let adjustedCheckTimeDate = checkTimeDate;
+    let earlyOvertimeStart: Date | null = null;
+    let earlyOvertimeEnd: Date | null = null;
+
+    // Fetch employee and shift day to evaluate early punch-in
+    const employee = await getEmployeeWithDetails(deviceUserId);
+    let activeShift = employee?.employeeShifts?.[0];
+    if (employee && activeShift && !isAbsent && finalCheckType === "PUNCHIN") {
+      const cycleDayNumberAdj = getShiftCycleDayNumber(
+        activeShift.startDate,
+        dateOnly,
+        // activeShift.shift.cycleDays
+      );
+      const shiftDayAdj = await tx.shiftDay.findUnique({
+        where: {
+          shiftId_dayNumber: {
+            shiftId: activeShift.shiftId,
+            dayNumber: cycleDayNumberAdj,
+          },
+        },
+      });
+      if (shiftDayAdj) {
+        const shiftStartAdj = new Date(shiftDayAdj.startTime);
+        const sdGraceMsAdj = (shiftDayAdj.gracePeriod ?? 0) * 60 * 1000;
+        const earlyThresholdAdj = new Date(shiftStartAdj.getTime() - sdGraceMsAdj);
+        if (checkTimeDate < earlyThresholdAdj) {
+          // Early before grace: create overtime from actual to shift start, and snap check-in to shift start
+          earlyOvertimeStart = checkTimeDate;
+          earlyOvertimeEnd = shiftStartAdj;
+          adjustedCheckTimeDate = shiftStartAdj;
+        } else if (checkTimeDate < shiftStartAdj) {
+          // Within grace window: snap to shift start, no overtime
+          adjustedCheckTimeDate = shiftStartAdj;
+        }
+      }
+    }
+
     const attendanceData: any = {
       deviceUserId,
       date: dateOnly,
-      checkTime: checkTimeDate,
+      checkTime: adjustedCheckTimeDate,
       checkType: finalCheckType,
       verifyMode,
       workCode,
@@ -485,8 +526,7 @@ const createAttendance = async (data: CreateAttendanceData) => {
       data: attendanceData,
     });
 
-    // Get employee details with company and shift information
-    const employee = await getEmployeeWithDetails(deviceUserId);
+    // Employee context was loaded earlier
     if (!employee) {
       return attendance; // No employee found, just return attendance
     }
@@ -495,7 +535,7 @@ const createAttendance = async (data: CreateAttendanceData) => {
     const holiday = await checkHoliday(employee.companyId, dateOnly);
 
     // Get active shift for the employee
-    const activeShift = employee.employeeShifts[0];
+    activeShift = employee.employeeShifts[0];
 
     // Get paired punches for overtime calculation
     const { punchIn, punchOut } = await getPairedPunches(
@@ -531,7 +571,7 @@ const createAttendance = async (data: CreateAttendanceData) => {
       const cycleDayNumber = getShiftCycleDayNumber(
         activeShift.startDate,
         dateOnly,
-        activeShift.shift.cycleDays
+        // activeShift.shift.cycleDays
       );
 
       const shiftDay = await tx.shiftDay.findUnique({
@@ -547,21 +587,18 @@ const createAttendance = async (data: CreateAttendanceData) => {
         const shiftStartTime = new Date(shiftDay.startTime);
         const shiftEndTime = new Date(shiftDay.endTime);
 
-        // Company grace period (in minutes)
-        const companyGracePeriodMinutes = await getActiveOvertimeGracePeriod(
-          employee.companyId
-        );
-        const gracePeriodMs = companyGracePeriodMinutes * 60 * 1000;
+        // Use shift day's grace period (in minutes)
+        const sdGraceMs = (shiftDay.gracePeriod ?? 0) * 60 * 1000;
 
-        const allowedStartTime = new Date(
-          shiftStartTime.getTime() - gracePeriodMs
+        const earlyThreshold = new Date(
+          shiftStartTime.getTime() - sdGraceMs
         );
-        const allowedEndTime = new Date(
-          shiftEndTime.getTime() + gracePeriodMs
+        const lateThreshold = new Date(
+          shiftEndTime.getTime() + sdGraceMs
         );
 
-        // Early punch logic
-        if (checkTimeDate < allowedStartTime) {
+        // Early punch logic using shift day grace
+        if (earlyOvertimeStart && earlyOvertimeEnd) {
           const overtimeExists = await checkExistingOvertime(
             employee.id,
             dateOnly,
@@ -569,25 +606,21 @@ const createAttendance = async (data: CreateAttendanceData) => {
           );
 
           if (!overtimeExists) {
-            const endTime =
-              punchOut?.checkTime ||
-              new Date(shiftStartTime.getTime() + gracePeriodMs);
             await createOvertimeRecord(
               employee.id,
               dateOnly,
-              checkTimeDate,
-              endTime,
+              earlyOvertimeStart,
+              earlyOvertimeEnd,
               "UNSCHEDULED_WORK",
               "PENDING"
             );
           }
         }
-        // Late punch logic (when punch-out is after allowed end time)
+        // Late punch logic (when punch-out is after shift end + shift grace)
         else if (
           finalCheckType === "PUNCHOUT" &&
-          checkTimeDate > allowedEndTime
+          checkTimeDate > lateThreshold
         ) {
-          // Check overtime for extended shift only on punch out
           const overtimeExists = await checkExistingOvertime(
             employee.id,
             dateOnly,
@@ -595,8 +628,7 @@ const createAttendance = async (data: CreateAttendanceData) => {
           );
 
           if (!overtimeExists) {
-            const startTime =
-              punchIn?.checkTime || new Date(shiftEndTime.getTime() - gracePeriodMs);
+            const startTime = shiftEndTime;
             await createOvertimeRecord(
               employee.id,
               dateOnly,
@@ -607,8 +639,7 @@ const createAttendance = async (data: CreateAttendanceData) => {
             );
           }
         } else {
-          // Punch is within allowed time range (no overtime)
-          console.log("✅ Punch is within allowed time range (no overtime)");
+          // Within allowed time range (no overtime)
         }
       } else {
         console.log("❌ No shift day found for this date");
@@ -621,509 +652,6 @@ const createAttendance = async (data: CreateAttendanceData) => {
   });
 };
 
-
-// const createAttendance = async (data: CreateAttendanceData) => {
-//   const {
-//     deviceUserId,
-//     date,
-//     checkTime,
-//     checkType,
-//     verifyMode,
-//     workCode,
-//     sensorId,
-//     deviceIp,
-//     isAbsent = false,
-//   } = data;
-
-//   if (!deviceUserId || !checkTime) {
-//     throw new ApiError(
-//       httpStatus.BAD_REQUEST,
-//       "Device user ID and check time are required"
-//     );
-//   }
-
-//   function parseDateOnly(dateInput: string | Date): Date {
-//     if (dateInput instanceof Date) {
-//       if (isNaN(dateInput.getTime())) {
-//         throw new ApiError(httpStatus.BAD_REQUEST, `Invalid date`);
-//       }
-//       return dateInput;
-//     }
-//     // else string:
-//     const isoDateStr = dateInput + "T00:00:00Z";
-//     const d = new Date(isoDateStr);
-//     if (isNaN(d.getTime())) {
-//       throw new ApiError(httpStatus.BAD_REQUEST, `Invalid date: ${dateInput}`);
-//     }
-//     return d;
-//   }
-
-//   function parseCheckTime(dateTimeInput: string | Date): Date {
-//     try {
-//       return parseTimestamp(dateTimeInput);
-//     } catch (error) {
-//       throw new ApiError(
-//         httpStatus.BAD_REQUEST,
-//         `Invalid checkTime: ${dateTimeInput}`
-//       );
-//     }
-//   }
-
-//   // Helper to get shift cycle day number (1 to cycleDays)
-//   function getShiftCycleDayNumber(shiftStartDate: Date, targetDate: Date, cycleDays: number): number {
-//     const diffTime = targetDate.getTime() - shiftStartDate.getTime();
-//     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-//     return (diffDays % cycleDays) + 1;
-//   }
-
-//   // Parse dateOnly from date or fallback to date part of checkTime
-//   const checkTimeDate = parseCheckTime(checkTime);
-//   const dateOnly = date
-//     ? parseDateOnly(date)
-//     : parseDateOnly(checkTimeDate.toISOString().slice(0, 10));
-
-//   // Use transaction to ensure atomicity
-//   return await prisma.$transaction(async (tx) => {
-//     // Count existing punches for this user & date
-//     const punchesCount = await tx.attendance.count({
-//       where: {
-//         deviceUserId,
-//         date: dateOnly,
-//       },
-//     });
-
-//     // Only allow 2 punches per day (PUNCHIN + PUNCHOUT)
-//     if (punchesCount >= 2) {
-//       throw new ApiError(
-//         httpStatus.BAD_REQUEST,
-//         "User already has maximum punches for this date (limit: 2 punches per day)"
-//       );
-//     }
-
-//     // Determine check type if not provided and not absent
-//     let finalCheckType = checkType;
-//     if (!finalCheckType && !isAbsent) {
-//       const determinedCheckType = await determineCheckType(
-//         deviceUserId,
-//         checkTimeDate
-//       );
-//       if (determinedCheckType === null) {
-//         throw new ApiError(
-//           httpStatus.BAD_REQUEST,
-//           "User already has both punch in and punch out for this date"
-//         );
-//       }
-//       finalCheckType = determinedCheckType;
-//     }
-
-//     const attendanceData: any = {
-//       deviceUserId,
-//       date: dateOnly,
-//       checkTime: checkTimeDate,
-//       checkType: finalCheckType,
-//       verifyMode,
-//       workCode,
-//       sensorId,
-//       deviceIp,
-//       isAbsent,
-//     };
-
-//     // Create attendance record
-//     const attendance = await tx.attendance.create({
-//       data: attendanceData,
-//     });
-
-//     // Get employee details with company and shift information
-//     const employee = await getEmployeeWithDetails(deviceUserId);
-//     if (!employee) {
-//       return attendance; // No employee found, just return attendance
-//     }
-
-//     // Check for holiday
-//     const holiday = await checkHoliday(employee.companyId, dateOnly);
-
-//     // Get active shift for the employee
-//     const activeShift = employee.employeeShifts[0];
-
-//     console.log("Active Shift:", activeShift);
-
-//     // Get paired punches for overtime calculation
-//     const { punchIn, punchOut } = await getPairedPunches(
-//       deviceUserId,
-//       dateOnly
-//     );
-
-//     // Holiday overtime logic
-//     if (holiday) {
-//       const overtimeExists = await checkExistingOvertime(
-//         employee.id,
-//         dateOnly,
-//         "HOLIDAY_WORK"
-//       );
-
-//       if (!overtimeExists && (punchIn || punchOut)) {
-//         const startTime = punchIn?.checkTime || checkTimeDate;
-//         const endTime = punchOut?.checkTime || checkTimeDate;
-
-//         await createOvertimeRecord(
-//           employee.id,
-//           dateOnly,
-//           startTime,
-//           endTime,
-//           "HOLIDAY_WORK",
-//           "APPROVED"
-//         );
-//       }
-//     }
-
-//     // Shift range overtime logic with company grace period
-//     if (activeShift && !isAbsent) {
-//       // Calculate which shift day number corresponds to the date
-//       const cycleDayNumber = getShiftCycleDayNumber(
-//         activeShift.startDate,
-//         dateOnly,
-//         activeShift.shift.cycleDays
-//       );
-
-//       // Fetch the ShiftDay record for this day number
-//       const shiftDay = await tx.shiftDay.findUnique({
-//         where: {
-//           shiftId_dayNumber: {
-//             shiftId: activeShift.shiftId,
-//             dayNumber: cycleDayNumber,
-//           },
-//         },
-//       });
-
-//       console.log("Shift Day for date:", dateOnly.toISOString().split("T")[0]);
-//       console.log("Shift Day:", shiftDay);
-
-//       if (shiftDay) {
-//         const shiftStartTime = new Date(shiftDay.startTime);
-//         const shiftEndTime = new Date(shiftDay.endTime);
-
-//         console.log("Shift Start Time:", shiftStartTime.toTimeString());
-//         console.log("Shift End Time:", shiftEndTime.toTimeString());
-//         console.log("Punch Time:", checkTimeDate.toTimeString());
-
-//         // Get company-level overtime grace period (default to 0 if none found)
-//         const companyGracePeriodMinutes = await getActiveOvertimeGracePeriod(
-//           employee.companyId
-//         );
-//         const gracePeriodMs = companyGracePeriodMinutes * 60 * 1000; // minutes to ms
-
-//         console.log("Company Grace Period (minutes):", companyGracePeriodMinutes);
-
-//         // Calculate allowed time boundaries with grace period
-//         const allowedStartTime = new Date(
-//           shiftStartTime.getTime() - gracePeriodMs
-//         );
-//         const allowedEndTime = new Date(shiftEndTime.getTime() + gracePeriodMs);
-
-//         console.log("Allowed Start Time:", allowedStartTime.toTimeString());
-//         console.log("Allowed End Time:", allowedEndTime.toTimeString());
-
-//         // Check if current punch is outside allowed time range
-//         if (checkTimeDate < allowedStartTime) {
-//           console.log("⚠️ EARLY PUNCH - Creating UNSCHEDULED_WORK overtime");
-//           // Before allowed start time - UNSCHEDULED_WORK
-//           const overtimeExists = await checkExistingOvertime(
-//             employee.id,
-//             dateOnly,
-//             "UNSCHEDULED_WORK"
-//           );
-
-//           if (!overtimeExists) {
-//             const endTime =
-//               punchOut?.checkTime ||
-//               new Date(shiftStartTime.getTime() + gracePeriodMs);
-//             await createOvertimeRecord(
-//               employee.id,
-//               dateOnly,
-//               checkTimeDate,
-//               endTime,
-//               "UNSCHEDULED_WORK",
-//               "PENDING"
-//             );
-//           }
-//         } else if (checkTimeDate > allowedEndTime) {
-//           console.log("⚠️ LATE PUNCH - Creating EXTENDED_SHIFT overtime");
-//           // After allowed end time - EXTENDED_SHIFT
-//           const overtimeExists = await checkExistingOvertime(
-//             employee.id,
-//             dateOnly,
-//             "EXTENDED_SHIFT"
-//           );
-
-//           if (!overtimeExists) {
-//             const startTime =
-//               punchIn?.checkTime ||
-//               new Date(shiftEndTime.getTime() - gracePeriodMs);
-//             await createOvertimeRecord(
-//               employee.id,
-//               dateOnly,
-//               startTime,
-//               checkTimeDate,
-//               "EXTENDED_SHIFT",
-//               "PENDING"
-//             );
-//           }
-//         } else {
-//           console.log("✅ Punch is within allowed time range (no overtime)");
-//         }
-//       } else {
-//         console.log("❌ No shift day found for this date");
-//       }
-//     } else {
-//       console.log("❌ No active shift or employee is absent");
-//     }
-
-//     return attendance;
-//   });
-// };
-
-// const createAttendance = async (data: CreateAttendanceData) => {
-//   const {
-//     deviceUserId,
-//     date,
-//     checkTime,
-//     checkType,
-//     verifyMode,
-//     workCode,
-//     sensorId,
-//     deviceIp,
-//     isAbsent = false,
-//   } = data;
-
-//   if (!deviceUserId || !checkTime) {
-//     throw new ApiError(
-//       httpStatus.BAD_REQUEST,
-//       "Device user ID and check time are required"
-//     );
-//   }
-
-//   function parseDateOnly(dateInput: string | Date): Date {
-//     if (dateInput instanceof Date) {
-//       if (isNaN(dateInput.getTime())) {
-//         throw new ApiError(httpStatus.BAD_REQUEST, `Invalid date`);
-//       }
-//       return dateInput;
-//     }
-//     // else string:
-//     const isoDateStr = dateInput + "T00:00:00Z";
-//     const d = new Date(isoDateStr);
-//     if (isNaN(d.getTime())) {
-//       throw new ApiError(httpStatus.BAD_REQUEST, `Invalid date: ${dateInput}`);
-//     }
-//     return d;
-//   }
-
-//   function parseCheckTime(dateTimeInput: string | Date): Date {
-//     try {
-//       return parseTimestamp(dateTimeInput);
-//     } catch (error) {
-//       throw new ApiError(
-//         httpStatus.BAD_REQUEST,
-//         `Invalid checkTime: ${dateTimeInput}`
-//       );
-//     }
-//   }
-
-//   // Parse dateOnly from date or fallback to date part of checkTime
-//   const checkTimeDate = parseCheckTime(checkTime);
-//   const dateOnly = date
-//     ? parseDateOnly(date)
-//     : parseDateOnly(checkTimeDate.toISOString().slice(0, 10));
-
-//   // Use transaction to ensure atomicity
-//   return await prisma.$transaction(async (tx) => {
-//     // Count existing punches for this user & date
-//     const punchesCount = await tx.attendance.count({
-//       where: {
-//         deviceUserId,
-//         date: dateOnly,
-//       },
-//     });
-
-//     // Only allow 2 punches per day (PUNCHIN + PUNCHOUT)
-//     if (punchesCount >= 2) {
-//       throw new ApiError(
-//         httpStatus.BAD_REQUEST,
-//         "User already has maximum punches for this date (limit: 2 punches per day)"
-//       );
-//     }
-
-//     // Determine check type if not provided and not absent
-//     let finalCheckType = checkType;
-//     if (!finalCheckType && !isAbsent) {
-//       const determinedCheckType = await determineCheckType(
-//         deviceUserId,
-//         checkTimeDate
-//       );
-//       if (determinedCheckType === null) {
-//         throw new ApiError(
-//           httpStatus.BAD_REQUEST,
-//           "User already has both punch in and punch out for this date"
-//         );
-//       }
-//       finalCheckType = determinedCheckType;
-//     }
-
-//     const attendanceData: any = {
-//       deviceUserId,
-//       date: dateOnly,
-//       checkTime: checkTimeDate,
-//       checkType: finalCheckType,
-//       verifyMode,
-//       workCode,
-//       sensorId,
-//       deviceIp,
-//       isAbsent,
-//     };
-
-//     // Create attendance record
-//     const attendance = await tx.attendance.create({
-//       data: attendanceData,
-//     });
-
-//     // Get employee details with company and shift information
-//     const employee = await getEmployeeWithDetails(deviceUserId);
-//     if (!employee) {
-//       return attendance; // No employee found, just return attendance
-//     }
-
-//     // Check for holiday
-//     const holiday = await checkHoliday(employee.companyId, dateOnly);
-
-//     // Get active shift for the employee
-//     const activeShift = employee.employeeShifts[0];
-
-//     console.log("Active Shift:", activeShift);
-
-//     // Get paired punches for overtime calculation
-//     const { punchIn, punchOut } = await getPairedPunches(
-//       deviceUserId,
-//       dateOnly
-//     );
-
-//     // Holiday overtime logic
-//     if (holiday) {
-//       const overtimeExists = await checkExistingOvertime(
-//         employee.id,
-//         dateOnly,
-//         "HOLIDAY_WORK"
-//       );
-
-//       if (!overtimeExists && (punchIn || punchOut)) {
-//         const startTime = punchIn?.checkTime || checkTimeDate;
-//         const endTime = punchOut?.checkTime || checkTimeDate;
-
-//         await createOvertimeRecord(
-//           employee.id,
-//           dateOnly,
-//           startTime,
-//           endTime,
-//           "HOLIDAY_WORK",
-//           "APPROVED"
-//         );
-//       }
-//     }
-
-//         // Shift range overtime logic with company grace period
-//     if (activeShift && !isAbsent) {
-//       // Get the specific shift day for the current date
-//       const shiftDay = await getShiftDayForDate(
-//         activeShift.shiftId,
-//         dateOnly,
-//         activeShift.shift.cycleDays
-//       );
-
-//       console.log("Shift Day for date:", dateOnly.toISOString().split('T')[0]);
-//       console.log("Shift Day:", shiftDay);
-
-//       if (shiftDay) {
-//         const shiftStartTime = new Date(shiftDay.startTime);
-//         const shiftEndTime = new Date(shiftDay.endTime);
-        
-//         console.log("Shift Start Time:", shiftStartTime.toTimeString());
-//         console.log("Shift End Time:", shiftEndTime.toTimeString());
-//         console.log("Punch Time:", checkTimeDate.toTimeString());
-        
-//         // Get company-level overtime grace period (default to 0 if none found)
-//         const companyGracePeriodMinutes = await getActiveOvertimeGracePeriod(
-//           employee.companyId
-//         );
-//         const gracePeriodMs = companyGracePeriodMinutes * 60 * 1000; // minutes to ms
-
-//         console.log("Company Grace Period (minutes):", companyGracePeriodMinutes);
-
-//         // Calculate allowed time boundaries with grace period
-//         const allowedStartTime = new Date(
-//           shiftStartTime.getTime() - gracePeriodMs
-//         );
-//         const allowedEndTime = new Date(shiftEndTime.getTime() + gracePeriodMs);
-
-//         console.log("Allowed Start Time:", allowedStartTime.toTimeString());
-//         console.log("Allowed End Time:", allowedEndTime.toTimeString());
-
-//         // Check if current punch is outside allowed time range
-//         if (checkTimeDate < allowedStartTime) {
-//           console.log("⚠️ EARLY PUNCH - Creating UNSCHEDULED_WORK overtime");
-//           // Before allowed start time - UNSCHEDULED_WORK
-//           const overtimeExists = await checkExistingOvertime(
-//             employee.id,
-//             dateOnly,
-//             "UNSCHEDULED_WORK"
-//           );
-
-//           if (!overtimeExists) {
-//             const endTime =
-//               punchOut?.checkTime ||
-//               new Date(shiftStartTime.getTime() + gracePeriodMs);
-//             await createOvertimeRecord(
-//               employee.id,
-//               dateOnly,
-//               checkTimeDate,
-//               endTime,
-//               "UNSCHEDULED_WORK",
-//               "PENDING"
-//             );
-//           }
-//         } else if (checkTimeDate > allowedEndTime) {
-//           console.log("⚠️ LATE PUNCH - Creating EXTENDED_SHIFT overtime");
-//           // After allowed end time - EXTENDED_SHIFT
-//           const overtimeExists = await checkExistingOvertime(
-//             employee.id,
-//             dateOnly,
-//             "EXTENDED_SHIFT"
-//           );
-
-//           if (!overtimeExists) {
-//             const startTime =
-//               punchIn?.checkTime ||
-//               new Date(shiftEndTime.getTime() - gracePeriodMs);
-//             await createOvertimeRecord(
-//               employee.id,
-//               dateOnly,
-//               startTime,
-//               checkTimeDate,
-//               "EXTENDED_SHIFT",
-//               "PENDING"
-//             );
-//           }
-//         } else {
-//           console.log("✅ Punch is within allowed time range (no overtime)");
-//         }
-//       } else {
-//         console.log("❌ No shift day found for this date");
-//       }
-//     } else {
-//       console.log("❌ No active shift or employee is absent");
-//     }
-
-//     return attendance;
-//   });
-// };
 
 const determineCheckType = async (
   deviceUserId: string,
@@ -1367,7 +895,7 @@ const bulkDeviceRegistration = async (dataArray: CreateAttendanceData[]) => {
           const shiftDay = await getShiftDayForDate(
             activeShift.shiftId,
             dateOnly,
-            activeShift.shift.cycleDays
+            // activeShift.shift.cycleDays
           );
 
           if (shiftDay) {
@@ -2267,29 +1795,7 @@ const updateAttendanceTimestamp = async (id: string, checkTime: string) => {
   return updated;
 };
 
-// const updateAttendanceTimestamp = async (id: string, checkTime: string) => {
-//   const attendance = await prisma.attendance.findUnique({ where: { id } });
 
-//   if (!attendance) {
-//     throw new ApiError(httpStatus.NOT_FOUND, "Attendance record not found");
-//   }
-
-//   const newCheckTime = new Date(checkTime);
-//   if (isNaN(newCheckTime.getTime())) {
-//     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid checkTime format");
-//   }
-
-//   // Update checkTime (and optionally date to match checkTime's date)
-//   const updated = await prisma.attendance.update({
-//     where: { id },
-//     data: {
-//       checkTime: newCheckTime,
-//       date: new Date(newCheckTime.toDateString()), // keep date synced with checkTime's date
-//     },
-//   });
-
-//   return updated;
-// };
 
 export default {
   createAttendance,

@@ -43,17 +43,28 @@ const processDeviceData = {
 
 const bulkCreateAttendance = {
   body: z.object({
-    employeeId: z.string().uuid(),
+    // employeeId: z.string().uuid(),
     records: z.array(
       z.object({
-        date: z.string().datetime(),
-        checkTime: z.string().datetime(),
-        checkType: z.enum(["IN", "OUT"]).optional(),
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+
+        checkTime: z
+          .string()
+          .transform((val) => val.replace(" ", "T") + "Z")
+          .refine((val) => isoDateTimeRegex.test(val), {
+            message: "Invalid ISO datetime format",
+          }),
+
+        checkType: z.enum(["PUNCHIN", "PUNCHOUT"]).optional(),
         verifyMode: z.number().optional(),
         workCode: z.number().optional(),
         sensorId: z.string().optional(),
         deviceIp: z.string().optional(),
         deviceUserId: z.string().optional(),
+        isAbsent: z.boolean().optional().default(false),
       })
     ),
   }),
@@ -64,12 +75,25 @@ const bulkDeviceRegistration = {
   body: z.object({
     records: z.array(
       z.object({
-        user_id: z.string(), // UserID from ZK device
-        timestamp: z.string(), // Timestamp from ZK device (will be parsed to Date)
-        status: z.number().optional(), // Status from ZK device
-        punch: z.number().optional(), // Punch from ZK device
-        uid: z.string().optional(), // UID from ZK device
-        device_ip: z.string().optional(), // Device IP for tracking
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+
+        checkTime: z
+          .string()
+          .transform((val) => val.replace(" ", "T") + "Z")
+          .refine((val) => isoDateTimeRegex.test(val), {
+            message: "Invalid ISO datetime format",
+          }),
+
+        checkType: z.enum(["PUNCHIN", "PUNCHOUT"]).optional(),
+        verifyMode: z.number().optional(),
+        workCode: z.number().optional(),
+        sensorId: z.string().optional(),
+        deviceIp: z.string().optional(),
+        deviceUserId: z.string().optional(),
+        isAbsent: z.boolean().optional().default(false),
       })
     ),
   }),
