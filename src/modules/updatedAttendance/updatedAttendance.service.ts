@@ -619,7 +619,7 @@ const processSinglePunchOvertime = async (
     prisma
   );
   const effectiveGracePeriod =
-    companyGracePeriodMinutes || shiftDay.gracePeriod || 0;
+    companyGracePeriodMinutes || 0;
 
   const earlyThreshold = subtractGracePeriod(
     shiftStartTime,
@@ -736,8 +736,24 @@ const processRotationOvertime = async (
     shiftEndTime.setDate(shiftEndTime.getDate() + 1);
   }
 
-  // Early arrival overtime
-  if (punchIn < shiftStartTime) {
+  // Get company grace period
+  const companyGracePeriodMinutes = await getCompanyGracePeriod(
+    employee.companyId,
+    prisma
+  );
+  const effectiveGracePeriod = companyGracePeriodMinutes || 0;
+
+  const earlyThreshold = subtractGracePeriod(
+    shiftStartTime,
+    effectiveGracePeriod
+  );
+  const lateThreshold = addGracePeriod(shiftEndTime, effectiveGracePeriod);
+
+  console.log(`Rotation overtime with grace period: ${effectiveGracePeriod} minutes`);
+  console.log(`Early threshold: ${formatTime(earlyThreshold)}, Late threshold: ${formatTime(lateThreshold)}`);
+
+  // Early arrival overtime (only if beyond grace period)
+  if (punchIn < earlyThreshold) {
     await createOvertimeRecord(
       workSessionId,
       deviceUserId,
@@ -748,8 +764,8 @@ const processRotationOvertime = async (
     );
   }
 
-  // Late departure overtime
-  if (punchOut > shiftEndTime) {
+  // Late departure overtime (only if beyond grace period)
+  if (punchOut > lateThreshold) {
     await createOvertimeRecord(
       workSessionId,
       deviceUserId,
@@ -2605,16 +2621,42 @@ const processRotationSinglePunchOvertime = async (
     shiftEndTime.setDate(shiftEndTime.getDate() + 1);
   }
 
+  // Get employee info for grace period
+  const employee = await prisma.employee.findFirst({
+    where: { deviceUserId },
+    select: { companyId: true },
+  });
+
+  if (!employee) {
+    console.log("Employee not found for rotation single punch overtime");
+    return;
+  }
+
+  // Get company grace period
+  const companyGracePeriodMinutes = await getCompanyGracePeriod(
+    employee.companyId,
+    prisma
+  );
+  const effectiveGracePeriod = companyGracePeriodMinutes || 0;
+
+  const earlyThreshold = subtractGracePeriod(
+    shiftStartTime,
+    effectiveGracePeriod
+  );
+  const lateThreshold = addGracePeriod(shiftEndTime, effectiveGracePeriod);
+
   console.log(
     `Shift schedule: ${formatTime(shiftStartTime)} - ${formatTime(
       shiftEndTime
     )}`
   );
   console.log(`Punch time: ${formatTime(punchTime)}`);
+  console.log(`Grace period: ${effectiveGracePeriod} minutes`);
+  console.log(`Early threshold: ${formatTime(earlyThreshold)}, Late threshold: ${formatTime(lateThreshold)}`);
 
   if (isPunchIn) {
-    // Check for early arrival
-    if (punchTime < shiftStartTime) {
+    // Check for early arrival (only if beyond grace period)
+    if (punchTime < earlyThreshold) {
       const overtimeMinutes = calculateDurationMinutes(
         punchTime,
         shiftStartTime
@@ -2648,12 +2690,12 @@ const processRotationSinglePunchOvertime = async (
       });
     } else {
       console.log(
-        `No early arrival overtime needed - punch within shift hours`
+        `No early arrival overtime needed - punch within grace period`
       );
     }
   } else {
-    // Check for late departure (single punch-out)
-    if (punchTime > shiftEndTime) {
+    // Check for late departure (single punch-out, only if beyond grace period)
+    if (punchTime > lateThreshold) {
       const overtimeMinutes = calculateDurationMinutes(shiftEndTime, punchTime);
       console.log(
         `✅ Creating late departure overtime: ${overtimeMinutes} minutes (${formatTime(
@@ -2684,7 +2726,7 @@ const processRotationSinglePunchOvertime = async (
       });
     } else {
       console.log(
-        `No late departure overtime needed - punch within shift hours`
+        `No late departure overtime needed - punch within grace period`
       );
     }
   }
@@ -2723,6 +2765,30 @@ const processRotationSessionOvertime = async (
     shiftEndTime.setDate(shiftEndTime.getDate() + 1);
   }
 
+  // Get employee info for grace period
+  const employee = await prisma.employee.findFirst({
+    where: { deviceUserId },
+    select: { companyId: true },
+  });
+
+  if (!employee) {
+    console.log("Employee not found for rotation session overtime");
+    return;
+  }
+
+  // Get company grace period
+  const companyGracePeriodMinutes = await getCompanyGracePeriod(
+    employee.companyId,
+    prisma
+  );
+  const effectiveGracePeriod = companyGracePeriodMinutes || 0;
+
+  const earlyThreshold = subtractGracePeriod(
+    shiftStartTime,
+    effectiveGracePeriod
+  );
+  const lateThreshold = addGracePeriod(shiftEndTime, effectiveGracePeriod);
+
   console.log(
     `Shift schedule: ${formatTime(shiftStartTime)} - ${formatTime(
       shiftEndTime
@@ -2731,6 +2797,8 @@ const processRotationSessionOvertime = async (
   console.log(
     `Actual times: ${formatTime(punchInTime)} - ${formatTime(punchOutTime)}`
   );
+  console.log(`Grace period: ${effectiveGracePeriod} minutes`);
+  console.log(`Early threshold: ${formatTime(earlyThreshold)}, Late threshold: ${formatTime(lateThreshold)}`);
 
   // Delete any existing overtime records for this session
   await (prisma as any).overtimeTable.deleteMany({
@@ -2741,8 +2809,8 @@ const processRotationSessionOvertime = async (
   let normalizedPunchIn = punchInTime;
   let normalizedPunchOut = punchOutTime;
 
-  // Check for early arrival
-  if (punchInTime < shiftStartTime) {
+  // Check for early arrival (only if beyond grace period)
+  if (punchInTime < earlyThreshold) {
     const overtimeMinutes = calculateDurationMinutes(
       punchInTime,
       shiftStartTime
@@ -2766,8 +2834,8 @@ const processRotationSessionOvertime = async (
     normalizedPunchIn = shiftStartTime;
   }
 
-  // Check for late departure
-  if (punchOutTime > shiftEndTime) {
+  // Check for late departure (only if beyond grace period)
+  if (punchOutTime > lateThreshold) {
     const overtimeMinutes = calculateDurationMinutes(
       shiftEndTime,
       punchOutTime
