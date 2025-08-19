@@ -1197,7 +1197,7 @@ model RotatingShiftType {
 /////UPDATED  ATTENDANCE HANDLING
 
 model WorkSession {
-  id            String        @id @default(cuid())
+  id            String      @id @default(uuid())
   deviceUserId    String
   date          DateTime      @db.Date
   punchIn       DateTime?
@@ -1221,7 +1221,7 @@ model WorkSession {
 
 
 model OvertimeTable {
-  id            String        @id @default(cuid())
+  id            String         @id @default(uuid())
   workSessionId String?
   deviceUserId    String
   date          DateTime      @db.Date  // Date when overtime occurred
