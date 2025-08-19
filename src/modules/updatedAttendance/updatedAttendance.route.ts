@@ -35,7 +35,7 @@ router
     validate(updatedAttendanceValidation.getWorkSessionById),
     updatedAttendanceController.getWorkSessionById
   )
-  .patch(
+  .post(
     auth(),
     validate(updatedAttendanceValidation.updateWorkSession),
     updatedAttendanceController.updateWorkSession
