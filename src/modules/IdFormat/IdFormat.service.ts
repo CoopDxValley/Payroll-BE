@@ -66,7 +66,7 @@ export const getActiveIdFormatForCompany = async (companyId: string) => {
     where: { companyId, isActive: true },
   });
   if (!row) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Resource not found");
+    return [];
   }
   return { ...row, separatorSymbol: fromPrismaSeparator(row.separator) };
 };
