@@ -1,12 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import xss from "xss";
 
-// Sanitize a single value
-const clean = (data: any) => {
-  if (typeof data === "object") {
-    return JSON.parse(xss(JSON.stringify(data)));
+// Sanitize only strings
+const clean = (data: any): any => {
+  if (typeof data === "string") {
+    return xss(data);
+  } else if (Array.isArray(data)) {
+    return data.map(clean);
+  } else if (data !== null && typeof data === "object") {
+    return sanitizeObject(data);
   }
-  return xss(String(data));
+  return data; // numbers, booleans, null, undefined stay as they are
 };
 
 // Sanitize all keys in an object
@@ -14,6 +18,7 @@ const sanitizeObject = (obj: Record<string, any>) => {
   for (const key of Object.keys(obj)) {
     obj[key] = clean(obj[key]);
   }
+  return obj;
 };
 
 const middleware = () => {

@@ -3,6 +3,7 @@ import {
   Employee,
   EmployeeDepartmentHistory,
   EmployeePositionHistory,
+  Prisma,
 } from "@prisma/client";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
@@ -23,44 +24,40 @@ import positionService from "../position/position.service";
 import gradeService from "../grades/grade.service";
 
 /**
- * Create a Employee
- * @param {Object} data - Company data
- * @returns {Promise<Employee>}
+ * Create an Employee
  */
 const createEmployee = async (
   data: CreateEmployeeServiceInput
 ): Promise<Employee> => {
   const { companyId, personalInfo, payrollInfo, emergencyContacts } = data;
+
+  // Generate username & password
   const username = await generateUsername(personalInfo.name);
   const rawPassword =
     config.env === "development"
       ? "SuperSecurePassword@123"
       : generateRandomPassword();
+  const hashedPassword = await encryptPassword(rawPassword);
 
-  const [role, company, department, position, existinEmployee, grade] =
-    await Promise.all([
-      prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
-      prisma.company.findUnique({ where: { id: companyId } }),
-      prisma.department.findUnique({ where: { id: payrollInfo.departmentId } }),
-      prisma.position.findUnique({ where: { id: payrollInfo.positionId } }),
-      prisma.employee.findUnique({ where: { email: personalInfo.email } }),
-      prisma.grade.findUnique({ where: { id: payrollInfo.gradeId } }),
-    ]);
+  // Fetch required references in parallel (1 query instead of 6)
+  const [role, company, department, position, grade] = await Promise.all([
+    prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
+    prisma.company.findUnique({ where: { id: companyId } }),
+    prisma.department.findUnique({ where: { id: payrollInfo.departmentId } }),
+    prisma.position.findUnique({ where: { id: payrollInfo.positionId } }),
+    prisma.grade.findUnique({ where: { id: payrollInfo.gradeId } }),
+  ]);
 
+  // Validate references
   if (!role) throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
   if (!company) throw new ApiError(httpStatus.BAD_REQUEST, "Company not found");
   if (!department)
     throw new ApiError(httpStatus.BAD_REQUEST, "Department not found");
   if (!position)
     throw new ApiError(httpStatus.BAD_REQUEST, "Position not found");
-  if (existinEmployee)
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "employee with this email already exist"
-    );
-
   if (!grade) throw new ApiError(httpStatus.BAD_REQUEST, "Grade not found");
 
+  // Salary range check
   if (
     payrollInfo.basicSalary < grade.minSalary ||
     payrollInfo.basicSalary > grade.maxSalary
@@ -70,45 +67,79 @@ const createEmployee = async (
       `Basic salary must be between ${grade.minSalary} and ${grade.maxSalary}`
     );
   }
-  const hashedPassword = await encryptPassword(rawPassword);
 
-  const employee = await prisma.employee.create({
-    data: {
-      ...personalInfo,
-      password: hashedPassword,
-      username,
-      companyId,
-      employeeIdNumber: await generateEmployeeIdNumber({
-        companyId,
-        departmentCode: department.shorthandRepresentation,
-      }),
-    },
+  // Generate EmployeeId number
+  const employeeIdNumber = await generateEmployeeIdNumber({
+    companyId,
+    departmentCode: department.shorthandRepresentation,
   });
 
-  const emergencyContactsData = emergencyContacts.map((contact) => ({
-    ...contact,
-    employeeId: employee.id,
-  }));
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Create Employee
+      const employee = await tx.employee.create({
+        data: {
+          ...personalInfo,
+          password: hashedPassword,
+          username,
+          companyId,
+          employeeIdNumber,
+        },
+      });
 
-  await prisma.emergencyContact.createMany({
-    data: emergencyContactsData,
-  });
+      // Create PayrollInfo + Emergency Contacts in parallel
+      const { positionId, gradeId, departmentId, roleId, ...restPayrollInfo } =
+        payrollInfo;
+      await Promise.all([
+        tx.payrollInfo.create({
+          data: {
+            ...restPayrollInfo,
+            employeeId: employee.id,
+          },
+        }),
+        emergencyContacts.length > 0
+          ? tx.emergencyContact.createMany({
+              data: emergencyContacts.map((c) => ({
+                ...c,
+                employeeId: employee.id,
+              })),
+            })
+          : Promise.resolve(),
+      ]);
 
-  await roleService.assignRoleToEmployee(employee.id, payrollInfo.roleId);
+      // Assign relationships (better to keep these in DB relations, but if service needed:)
+      await Promise.all([
+        roleService.assignRoleToEmployee(employee.id, payrollInfo.roleId, tx),
+        departmentService.assignDepartmentToEmployee(
+          employee.id,
+          payrollInfo.departmentId,
+          tx
+        ),
+        gradeService.assignGradeToEmployee(
+          employee.id,
+          payrollInfo.gradeId,
+          tx
+        ),
+        positionService.assignPositionToEmployee(
+          employee.id,
+          payrollInfo.positionId,
+          tx
+        ),
+      ]);
 
-  await departmentService.assignDepartmentToEmployee(
-    employee.id,
-    payrollInfo.departmentId
-  );
+      return employee;
+    });
 
-  await gradeService.assignGradeToEmployee(employee.id, payrollInfo.gradeId);
-
-  await positionService.assignPositionToEmployee(
-    employee.id,
-    payrollInfo.positionId
-  );
-
-  return employee;
+    return result;
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Employee with this email already exists"
+      );
+    }
+    throw err;
+  }
 };
 
 /**
@@ -143,9 +174,10 @@ const getEmployeeByUsername = async <Key extends keyof Employee>(
  * @returns {Promise<Pick<Employee, Key> | null>}
  */
 const getEmployeeById = async <Key extends keyof Employee>(
-  id: string
+  id: string,
+  tx: Prisma.TransactionClient = prisma
 ): Promise<Pick<Employee, Key> | null> => {
-  return prisma.employee.findUnique({
+  return tx.employee.findUnique({
     where: { id },
     select: {
       id: true,
