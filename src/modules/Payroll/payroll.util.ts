@@ -67,6 +67,8 @@ export async function calculatePayrollForEmployee(args: {
     totalAdditionalPay += Number(p.amount);
   }
 
+  console.log("-----", totalAdditionalPay);
+
   for (const d of deductions) {
     totalDeduction += Number(d.amount);
   }
@@ -94,8 +96,10 @@ export async function calculatePayrollForEmployee(args: {
   const employeePension = (basicSalary * employeeRate) / 100;
   const employerPension = (basicSalary * employerRate) / 100;
 
+  console.log("--rate", employeePension);
+
   const overallDeduction = totalDeduction + incomeTax + employeePension;
-  const grossSalary = basicSalary + totalAllowance + employeePension;
+  const grossSalary = basicSalary + totalAllowance + totalAdditionalPay;
   const netSalary =
     totalTaxable - overallDeduction + totalExempted + totalAdditionalPay;
 
