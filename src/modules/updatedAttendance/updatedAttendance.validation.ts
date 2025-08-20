@@ -27,6 +27,36 @@ export const smartAttendanceValidation = {
   }),
 };
 
+// Bulk Attendance Validation Schema
+export const bulkAttendanceValidation = {
+  body: z.object({
+    attendanceRecords: z.array(
+      z.object({
+        deviceUserId: z.string().min(1, "Device user ID is required"),
+        date: z.string().min(1, "Date is required"),
+        
+        // ZKTeco device format
+        checkTime: z.string().optional(),
+        deviceIp: z.string().optional(),
+        
+        // Manual format (explicit punch in/out)
+        punchIn: z.string().optional(),
+        punchInSource: z.string().optional(),
+        punchOut: z.string().optional(),
+        punchOutSource: z.string().optional(),
+        
+        // Optional fields
+        shiftId: z.string().optional(),
+      }).refine((data) => {
+        // Either checkTime OR (punchIn/punchOut) must be provided
+        return data.checkTime || data.punchIn || data.punchOut;
+      }, {
+        message: "Either checkTime or punchIn/punchOut must be provided",
+      })
+    ).min(1, "At least one attendance record is required").max(100, "Maximum 100 records allowed per batch"),
+  }),
+};
+
 // WorkSession Validation Schemas
 export const createWorkSessionValidation = {
   body: z.object({
@@ -142,6 +172,9 @@ export const updateOvertimeStatusValidation = {
 export default {
   // Smart Attendance (Main API)
   smartAttendance: smartAttendanceValidation,
+  
+  // Bulk Attendance API
+  bulkAttendance: bulkAttendanceValidation,
   
   // WorkSession
   createWorkSession: createWorkSessionValidation,

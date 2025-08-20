@@ -1126,12 +1126,34 @@ const updateWorkSession = async (
 
   const updateData: any = {};
 
+  // Handle time-only strings for punchIn (same as create logic)
   if (data.punchIn !== undefined) {
-    updateData.punchIn = data.punchIn ? parseDateTime(data.punchIn) : null;
+    if (data.punchIn === null || data.punchIn === "") {
+      updateData.punchIn = null;
+    } else if (typeof data.punchIn === 'string' && data.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      console.log(`Converting update punchIn time-only string: ${data.punchIn}`);
+      const workSessionDateStr = workSession.date.toISOString().split("T")[0];
+      const punchInDateTime = createStableDateTime(workSessionDateStr, data.punchIn);
+      updateData.punchIn = punchInDateTime;
+      console.log(`Converted update punchIn: ${punchInDateTime.toISOString()}`);
+    } else {
+      updateData.punchIn = parseDateTime(data.punchIn);
+    }
   }
 
+  // Handle time-only strings for punchOut (same as create logic)
   if (data.punchOut !== undefined) {
-    updateData.punchOut = data.punchOut ? parseDateTime(data.punchOut) : null;
+    if (data.punchOut === null || data.punchOut === "") {
+      updateData.punchOut = null;
+    } else if (typeof data.punchOut === 'string' && data.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      console.log(`Converting update punchOut time-only string: ${data.punchOut}`);
+      const workSessionDateStr = workSession.date.toISOString().split("T")[0];
+      const punchOutDateTime = createStableDateTime(workSessionDateStr, data.punchOut);
+      updateData.punchOut = punchOutDateTime;
+      console.log(`Converted update punchOut: ${punchOutDateTime.toISOString()}`);
+    } else {
+      updateData.punchOut = parseDateTime(data.punchOut);
+    }
   }
 
   if (data.punchInSource !== undefined) {
@@ -1227,11 +1249,12 @@ const updateWorkSession = async (
   // Reprocess overtime if punch times changed
   if (updateData.punchIn || updateData.punchOut) {
     // IMPORTANT: Get the ACTUAL punch times BEFORE normalization for overtime processing
-    const actualPunchIn = data.punchIn
-      ? parseDateTime(data.punchIn)
+    // Use the properly converted times from updateData (which handles time-only strings correctly)
+    const actualPunchIn = updateData.punchIn !== undefined
+      ? updateData.punchIn
       : workSession.punchIn;
-    const actualPunchOut = data.punchOut
-      ? parseDateTime(data.punchOut)
+    const actualPunchOut = updateData.punchOut !== undefined
+      ? updateData.punchOut
       : workSession.punchOut;
 
     console.log("=== Overtime Reprocessing for Update ===");
@@ -1250,16 +1273,17 @@ const updateWorkSession = async (
     const punchIn = updateData.punchIn || workSession.punchIn;
     const punchOut = updateData.punchOut || workSession.punchOut;
 
-    // Delete existing overtime records
-    await (prisma as any).overtimeTable.deleteMany({
-      where: { workSessionId: id },
-    });
-
-    // Recreate overtime records using ACTUAL punch times (not normalized)
-    // Check if this is a ROTATION shift - use different overtime logic
+    // Handle overtime reprocessing differently for ROTATION vs FIXED_WEEKLY shifts
     if (workSession.shift && workSession.shift.shiftType === "ROTATING") {
       console.log("🔄 Reprocessing ROTATION shift overtime");
+      
       if (actualPunchIn && actualPunchOut) {
+        // Complete session - use session-level overtime processing (which deletes and recreates all)
+        console.log("Complete ROTATION session - reprocessing all overtime");
+        await (prisma as any).overtimeTable.deleteMany({
+          where: { workSessionId: id },
+        });
+        
         await processRotationOvertime(
           id,
           workSession.deviceUserId,
@@ -1267,12 +1291,70 @@ const updateWorkSession = async (
           actualPunchIn,
           actualPunchOut
         );
-      } else {
-        console.log(
-          "Single punch for ROTATION shift - no overtime reprocessing needed"
+      } else if (data.punchIn && !data.punchOut) {
+        // Only punch-in was updated - process single punch-in overtime
+        console.log("ROTATION punch-in updated - processing single punch overtime");
+        
+        // Delete only early arrival overtime records (if any)
+        await (prisma as any).overtimeTable.deleteMany({
+          where: { 
+            workSessionId: id,
+            type: { in: ['EARLY_ARRIVAL', 'UNSCHEDULED'] }
+          },
+        });
+        
+        const assignment = await getRotatingShiftAssignment(
+          (await prisma.employee.findFirst({ where: { deviceUserId: workSession.deviceUserId } }))?.id || '',
+          workSession.date
         );
+        
+        if (assignment) {
+          await processRotationSinglePunchOvertime(
+            id,
+            workSession.deviceUserId,
+            workSession.date,
+            actualPunchIn,
+            assignment,
+            true // isPunchIn
+          );
+        }
+      } else if (data.punchOut && !data.punchIn) {
+        // Only punch-out was updated - process single punch-out overtime
+        console.log("ROTATION punch-out updated - processing single punch overtime");
+        
+        // Delete only late departure overtime records (if any)
+        await (prisma as any).overtimeTable.deleteMany({
+          where: { 
+            workSessionId: id,
+            type: { in: ['LATE_DEPARTURE', 'EXTENDED_SHIFT'] }
+          },
+        });
+        
+        const assignment = await getRotatingShiftAssignment(
+          (await prisma.employee.findFirst({ where: { deviceUserId: workSession.deviceUserId } }))?.id || '',
+          workSession.date
+        );
+        
+        if (assignment) {
+          await processRotationSinglePunchOvertime(
+            id,
+            workSession.deviceUserId,
+            workSession.date,
+            actualPunchOut,
+            assignment,
+            false // isPunchIn
+          );
+        }
+      } else {
+        console.log("No ROTATION overtime changes needed");
       }
     } else {
+      // FIXED_WEEKLY shift - delete all and recreate (existing logic)
+      console.log("📅 Reprocessing FIXED_WEEKLY shift overtime");
+      await (prisma as any).overtimeTable.deleteMany({
+        where: { workSessionId: id },
+      });
+      
       // FIXED_WEEKLY shift - use existing logic
       console.log("📅 Reprocessing FIXED_WEEKLY shift overtime");
       if (actualPunchIn && actualPunchOut) {
@@ -2898,6 +2980,7 @@ const updatedAttendanceService: IUpdatedAttendanceService = {
   smartAttendance,
   punchIn,
   punchOut,
+  
   createOvertimeTable,
   getOvertimeTables,
   getOvertimeTableById,

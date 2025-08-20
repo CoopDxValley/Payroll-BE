@@ -127,7 +127,7 @@
  *               $ref: '#/components/schemas/OvertimeGracePeriod'
  *       404:
  *         description: Not found
- *   patch:
+ *   post:
  *     summary: Update an overtime grace period by ID
  *     tags: [Overtime Grace Period]
  *     security:
@@ -153,7 +153,58 @@
  *               $ref: '#/components/schemas/OvertimeGracePeriod'
  *       404:
  *         description: Not found
- *   delete:
+
+ */
+
+
+
+
+
+
+/**
+ * @swagger
+ * /api/v1/overtime-boundary-grace:
+ *   post:
+ *     summary: Create a new overtime grace period for a company
+ *     tags: [Overtime Grace Period]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateOvertimeGracePeriodDto'
+ *     responses:
+ *       201:
+ *         description: Created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OvertimeGracePeriod'
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Company not found
+ *
+ * /api/v1/overtime-boundary-grace/active:
+ *   get:
+ *     summary: Get all active overtime grace periods
+ *     tags: [Overtime Grace Period]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active overtime grace periods
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/OvertimeGracePeriod'
+ *
+ * /api/v1/overtime-boundary-grace/delete:
+ *   post:
  *     summary: Delete an overtime grace period by ID
  *     tags: [Overtime Grace Period]
  *     security:

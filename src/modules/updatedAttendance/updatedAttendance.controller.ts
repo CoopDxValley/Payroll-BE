@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import updatedAttendanceService from "./updatedAttendance.service";
+import bulkAttendanceService from "./bulkattendanceservice";
 import prisma from "../../client";
 import { createLocalDateForStorage, createLocalDateTime, createStableDateTime } from "./timeUtils";
 import ApiError from "../../utils/api-error";
@@ -294,9 +295,41 @@ const updateOvertimeStatus = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Bulk Attendance Controller
+const bulkAttendance = catchAsync(async (req: Request, res: Response) => {
+  console.log("=== Bulk Attendance API Called ===");
+  
+  // Validate that attendanceRecords array exists
+  if (!req.body.attendanceRecords || !Array.isArray(req.body.attendanceRecords)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "attendanceRecords array is required"
+    );
+  }
+
+  if (req.body.attendanceRecords.length === 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "attendanceRecords array cannot be empty"
+    );
+  }
+
+  // Use the transaction-based method for better performance
+  const result = await bulkAttendanceService.processBulkAttendanceWithTransaction(req.body);
+  
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: `Bulk attendance processed: ${result.successfulRecords} successful, ${result.failedRecords} failed`,
+    data: result,
+  });
+});
+
 export default {
   // Smart Attendance (Main API)
   smartAttendance,
+  
+  // Bulk Attendance API
+  bulkAttendance,
   
   // WorkSession
   createWorkSession,

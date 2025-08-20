@@ -20,6 +20,7 @@ import additionalDeductionDefinitionRoute from "../../modules/additionaldeductio
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
 import attendance from "../../modules/attendance/attendance.route";
+// import updatedattendance from "../../modules/updatedAttendance/updatedAttendance.route";
 import updatedattendance from "../../modules/updatedAttendance/updatedAttendance.route";
 // import swagger from "../../modules/swagger";
 // import { setupSwagger } from "../../swagger/setup";
@@ -40,7 +41,7 @@ import providentFundRoute from "../../modules/providentFund/providentFund.route"
 import pensionRoute from "../../modules/pension/pension.route";
 import overtimeGradePeriod from "../../modules/OvertimeGracePeriod/overtimeGracePeriod.route";
 import payrollDefinitionRoute from "../../modules/payrolldefinition/payrolldefinition.route";
-
+import overtimeManagementRoute from "../../modules/overtimemanagement/overtimeManagement.route";
 const router = express.Router();
 
 const defaultRoutes = [
@@ -65,6 +66,10 @@ const defaultRoutes = [
   {
     path: "/overtime-boundary-grace",
     route: overtimeGradePeriod,
+  },
+  {
+    path: "/overtime",
+    route: overtimeManagementRoute,
   },
   {
     path: "/shifts",
