@@ -7,6 +7,7 @@ import {
   getDepartmentByIdParams,
   updateDepartmentBody,
 } from "./department.type";
+import { Prisma } from "@prisma/client";
 
 const createDepartment = async (
   data: createDepartmentInput & { companyId: string }
@@ -53,8 +54,11 @@ const getAllDepartments = async (companyId: string) => {
   });
 };
 
-const getDepartmentById = async (id: getDepartmentByIdParams["id"]) => {
-  return prisma.department.findUnique({
+const getDepartmentById = async (
+  id: getDepartmentByIdParams["id"],
+  tx: Prisma.TransactionClient = prisma
+) => {
+  return tx.department.findUnique({
     where: { id },
     include: {
       company: true,
@@ -95,10 +99,11 @@ const deleteDepartment = async (id: string) => {
  */
 const assignDepartmentToEmployee = async (
   employeeId: string,
-  departmentId: string
+  departmentId: string,
+  tx: Prisma.TransactionClient = prisma
 ): Promise<string> => {
-  const user = await employeeServices.getEmployeeById(employeeId);
-  const department = await getDepartmentById(departmentId);
+  const user = await employeeServices.getEmployeeById(employeeId, tx);
+  const department = await getDepartmentById(departmentId, tx);
 
   if (!user || !department) {
     throw new ApiError(
@@ -106,7 +111,7 @@ const assignDepartmentToEmployee = async (
       "Department or Employee not found"
     );
   }
-  const existing = await prisma.employeeDepartmentHistory.findUnique({
+  const existing = await tx.employeeDepartmentHistory.findUnique({
     where: {
       employeeId_departmentId: { employeeId, departmentId },
     },
@@ -119,7 +124,7 @@ const assignDepartmentToEmployee = async (
     );
   }
 
-  await prisma.employeeDepartmentHistory.create({
+  await tx.employeeDepartmentHistory.create({
     data: { employeeId, departmentId, fromDate: new Date() },
   });
 

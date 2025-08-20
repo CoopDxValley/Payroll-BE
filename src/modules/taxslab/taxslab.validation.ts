@@ -18,6 +18,7 @@ const createTaxslab = {
         .optional(),
       rate: amount.optional(),
       deductible: amount.optional(),
+      incomeTaxPayable: amount.optional(),
       minIncome: amount,
       maxIncome: amount,
     })
