@@ -212,6 +212,7 @@ async function seedDefaultTaxslabProvidentFund() {
       deductible: 0,
       minIncome: 0,
       maxIncome: 600,
+      incomeTaxPayable: 0,
       isDefault: true,
     },
     {
@@ -221,6 +222,7 @@ async function seedDefaultTaxslabProvidentFund() {
       deductible: 60,
       minIncome: 601,
       maxIncome: 1650,
+      incomeTaxPayable: 10,
       isDefault: true,
     },
     {
@@ -230,6 +232,7 @@ async function seedDefaultTaxslabProvidentFund() {
       deductible: 142.5,
       minIncome: 1651,
       maxIncome: 3200,
+      incomeTaxPayable: 15,
       isDefault: true,
     },
     {
@@ -239,6 +242,7 @@ async function seedDefaultTaxslabProvidentFund() {
       deductible: 302.5,
       minIncome: 3201,
       maxIncome: 5250,
+      incomeTaxPayable: 20,
       isDefault: true,
     },
     {
@@ -248,6 +252,7 @@ async function seedDefaultTaxslabProvidentFund() {
       deductible: 565,
       minIncome: 5251,
       maxIncome: 7800,
+      incomeTaxPayable: 25,
       isDefault: true,
     },
     {
@@ -257,6 +262,7 @@ async function seedDefaultTaxslabProvidentFund() {
       deductible: 955,
       minIncome: 7801,
       maxIncome: 10900,
+      incomeTaxPayable: 30,
       isDefault: true,
     },
     {
@@ -266,6 +272,7 @@ async function seedDefaultTaxslabProvidentFund() {
       deductible: 1500,
       minIncome: 10901,
       maxIncome: 2000000, // Arbitrary high max for practical purposes
+      incomeTaxPayable: 35,
       isDefault: true,
     },
   ];

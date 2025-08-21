@@ -18,10 +18,11 @@ model Company {
   updatedAt        DateTime      @updatedAt
   notes            String?
 
-  accounts                      Account[]
-  positions                     Position[]
-  Role                          Role[]
-  Grade                         Grade[]
+  idFormat  IdFormat?
+  accounts  Account[]
+  positions Position[]
+  Role      Role[]
+  Grade     Grade[]
 
   AdditionalDeductionDefinition AdditionalDeductionDefinition[]
   additionalDeductions          AdditionalDeduction[]
@@ -39,15 +40,37 @@ model Company {
   CompanyPensionRule       CompanyPensionRule[]
   CompanyProvidentFundRule CompanyProvidentFundRule[]
 
-  workingCalendar               WorkingCalendar[]
-  shift                         Shift[]
+  workingCalendar     WorkingCalendar[]
+  shift               Shift[]
   OvertimeGracePeriod OvertimeGracePeriod[]
-  payrollDefinitions            PayrollDefinition[]
+  payrollDefinitions  PayrollDefinition[]
 
-  shiftSchedules  ShiftSchedule[]
+  //shiftSchedules  ShiftSchedule[]
   rotatingShiftTypes     RotatingShiftType[]
 
   
+  shiftSchedules ShiftSchedule[]
+}
+
+enum Separator {
+  SLASH // "/"
+  DASH // "-"
+}
+
+model IdFormat {
+  id          String    @id @default(uuid())
+  companyCode Boolean?
+  year        Boolean?
+  department  Boolean?
+  separator   Separator @default(SLASH)
+  isActive    Boolean   @default(true)
+  digitLength Int       @default(5)
+  order       String
+
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@map("IdFormat")
 }
 
 model Account {
@@ -155,19 +178,19 @@ model Token {
 }
 
 //model Shift {
- // id          String   @id @default(uuid())
- // name        String
+// id          String   @id @default(uuid())
+// name        String
 //  startTime   DateTime
- // endTime     DateTime
- // breakTime   Int // Break duration in minutes
- // gracePeriod Int // Grace period in minutes
- // companyId   String
- // isActive    Boolean  @default(true)
- // createdAt   DateTime @default(now())
- // updatedAt   DateTime @updatedAt
- // company     Company  @relation(fields: [companyId], references: [id])
+// endTime     DateTime
+// breakTime   Int // Break duration in minutes
+// gracePeriod Int // Grace period in minutes
+// companyId   String
+// isActive    Boolean  @default(true)
+// createdAt   DateTime @default(now())
+// updatedAt   DateTime @updatedAt
+// company     Company  @relation(fields: [companyId], references: [id])
 
-  //@@index([companyId])
+//@@index([companyId])
 //}
 
 model Grade {
@@ -374,13 +397,13 @@ model Employee {
   idNumber            String?
   idImageUrl          String?
   idType              IdType           @default(KEBELE)
- maritalStatus       MaritalStatus    @default(SINGLE)
+  maritalStatus       MaritalStatus    @default(SINGLE)
   companyId           String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  isFirstTimeLoggedIn Boolean  @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  isFirstTimeLoggedIn Boolean          @default(true)
   Token               Token[]
-  company             Company  @relation(fields: [companyId], references: [id])
+  company             Company          @relation(fields: [companyId], references: [id])
 
   gradeHistory      EmployeeGradeHistory[]
   payrollInfo       PayrollInfo?
@@ -407,21 +430,22 @@ model Employee {
   additionalDeductions AdditionalDeduction[]
   additionalPays       AdditionalPay[]
 
-    // Shift coverage relations from second model
+  // Shift coverage relations from second model
   employeeShifts         EmployeeShift[]
   originalShiftCoverages ShiftCoverage[] @relation("OriginalShiftEmployee")
   coveringShiftCoverages ShiftCoverage[] @relation("CoveringShiftEmployee")
   requestedCoverages     ShiftCoverage[] @relation("ShiftCoverageRequester")
   approvedCoverages      ShiftCoverage[] @relation("ShiftCoverageApprover")
 
-
   shiftAssignments EmployeeShiftAssignment[]
+  Payroll          Payroll?
 
   //workSessions  WorkSession[] 
 
   @@index([name])
   @@index([phoneNumber])
 }
+
 enum MaritalStatus {
   SINGLE
   MARRIED
@@ -474,7 +498,8 @@ model TaxSlab {
   description String?
   type        TaxType @default(INCOME_TAX)
   rate        Float?
-  deductible  Float?
+  deductible  Float?  @default(0)
+  incomeTaxPayable  Float? @default(0)  
   minIncome   Float
   maxIncome   Float
   isDefault   Boolean @default(false)
@@ -486,10 +511,10 @@ model TaxSlab {
 }
 
 model ProvidentFund {
-  id                      String            @id @default(uuid())
-  employerContribution    Float
-  employeeContribution    Float     
-  isDefault               Boolean           @default(false)
+  id                   String  @id @default(uuid())
+  employerContribution Float
+  employeeContribution Float
+  isDefault            Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -503,8 +528,8 @@ model Pension {
   employeeContribution Float
   isDefault            Boolean @default(false)
 
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   companyPensionRule CompanyPensionRule[]
 }
@@ -575,7 +600,7 @@ model Department {
   deptName                String
   parentId                String? // optional for tree structure
   location                String?
-  shorthandRepresentation String?
+  shorthandRepresentation String
   companyId               String
   //departmentEmployees     Employee[]
   isActive                Boolean  @default(true)
@@ -633,7 +658,6 @@ enum IdType {
   LICENSE
   NATIONALID
 }
-
 
 model PayrollInfo {
   id             String         @id @default(uuid())
@@ -907,109 +931,103 @@ model DelegationRule {
   toEmployee   Employee @relation("ToEmployeeDelegationRule", fields: [toEmployeeId], references: [id])
 }
 
-
-
 model WorkingCalendar {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   companyId   String
   year        Int
-  date        DateTime @db.Date
-  dayType     CalendarDayType  @default(WORKING_DAY)
-  description String?  // e.g., "Christmas Day", "Company Anniversary"
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  company     Company  @relation(fields: [companyId], references: [id])
-  
+  date        DateTime        @db.Date
+  dayType     CalendarDayType @default(WORKING_DAY)
+  description String? // e.g., "Christmas Day", "Company Anniversary"
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
   @@unique([companyId, date])
   @@index([companyId, year])
 }
 
 enum CalendarDayType {
-  WORKING_DAY    // Override - force this day to be working even if pattern says off
-  HOLIDAY    // Override - force this day to be off even if pattern says work
+  WORKING_DAY // Override - force this day to be working even if pattern says off
+  HOLIDAY // Override - force this day to be off even if pattern says work
 }
-
 
 ///////////SHIFT MANAGEMENT  /////////////////////////////////////
 
 model Shift {
-  id           String   @id @default(uuid())
-  name         String   // "Regular"
-  companyId    String
-  isActive     Boolean  @default(true)
- // cycleDays    Int      // Replaces the need for ShiftPattern
-  patternDays  ShiftDay[] // Formerly ShiftPatternDay
+  id             String          @id @default(uuid())
+  name           String // "Regular"
+  companyId      String
+  isActive       Boolean         @default(true)
+  // cycleDays    Int      // Replaces the need for ShiftPattern
+  patternDays    ShiftDay[] // Formerly ShiftPatternDay
   employeeShifts EmployeeShift[]
-  company      Company @relation(fields: [companyId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  shiftType    ShiftType 
-  
- @@index([companyId])
-   // New relation for calendar-based assignments
-  shiftSchedules ShiftSchedule[]      @relation("ShiftSchedulesForShift")
+  company        Company         @relation(fields: [companyId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  shiftType      ShiftType
+  // New relation for calendar-based assignments
+  shiftSchedules ShiftSchedule[] @relation("ShiftSchedulesForShift")
 
  shiftCoverages ShiftCoverage[]  // ← SHIFT COVERAGE
 workSessions  WorkSession[] 
 }
+
 enum ShiftType {
-  FIXED_WEEKLY    // Always 7 days (Monday-Sunday)
-  ROTATING        // Variable pattern with DAY/NIGHT/OFF
+  FIXED_WEEKLY // Always 7 days (Monday-Sunday)
+  ROTATING // Variable pattern with DAY/NIGHT/OFF
 }
+
 model ShiftDay {
-  id           String   @id @default(uuid())
-  shiftId      String
-  dayNumber    Int         // 1–cycleDays
-  dayType      ShiftDayType
-  startTime    DateTime
-  endTime      DateTime
-  breakTime    Int
-  gracePeriod  Int
-  shift        Shift @relation(fields: [shiftId], references: [id])
+  id          String       @id @default(uuid())
+  shiftId     String
+  dayNumber   Int // 1–cycleDays
+  dayType     ShiftDayType
+  startTime   DateTime
+  endTime     DateTime
+  breakTime   Int
+  gracePeriod Int
+  shift       Shift        @relation(fields: [shiftId], references: [id])
 
   @@unique([shiftId, dayNumber]) // Prevent duplicate day numbers
   @@index([shiftId])
-
-
- 
 }
 
 model EmployeeShift {
-  id          String   @id @default(uuid())
-  employeeId  String
-  shiftId     String
-  startDate   DateTime
-  endDate     DateTime?
-  isActive    Boolean  @default(true)
+  id         String    @id @default(uuid())
+  employeeId String
+  shiftId    String
+  startDate  DateTime
+  endDate    DateTime?
+  isActive   Boolean   @default(true)
 
-  employee    Employee @relation(fields: [employeeId], references: [id])
-  shift       Shift    @relation(fields: [shiftId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+  shift    Shift    @relation(fields: [shiftId], references: [id])
+
   @@index([employeeId])
   @@index([shiftId])
 }
 
-
 model ShiftCoverage {
-  id                String   @id @default(uuid())
-  originalEmployeeId String   // Who was supposed to work
-  coveringEmployeeId String   // Who is covering
-  shiftId           String
-  coverageDate      DateTime @db.Date
-  startTime         DateTime
-  endTime           DateTime
-  reason            CoverageType  @default(EMERGENCY)  // "sick leave", "vacation", etc.
-  status            CoverageStatus @default(PENDING)
-  requestedBy       String   // Employee who requested coverage
-  approvedBy        String?  // Manager who approved
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String         @id @default(uuid())
+  originalEmployeeId String // Who was supposed to work
+  coveringEmployeeId String // Who is covering
+  shiftId            String
+  coverageDate       DateTime       @db.Date
+  startTime          DateTime
+  endTime            DateTime
+  reason             CoverageType   @default(EMERGENCY) // "sick leave", "vacation", etc.
+  status             CoverageStatus @default(PENDING)
+  requestedBy        String // Employee who requested coverage
+  approvedBy         String? // Manager who approved
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
-  originalEmployee  Employee @relation("OriginalShiftEmployee", fields: [originalEmployeeId], references: [id])
-  coveringEmployee  Employee @relation("CoveringShiftEmployee", fields: [coveringEmployeeId], references: [id])
-  shift            Shift    @relation(fields: [shiftId], references: [id])
-  requester        Employee @relation("ShiftCoverageRequester", fields: [requestedBy], references: [id])
+  originalEmployee Employee  @relation("OriginalShiftEmployee", fields: [originalEmployeeId], references: [id])
+  coveringEmployee Employee  @relation("CoveringShiftEmployee", fields: [coveringEmployeeId], references: [id])
+  shift            Shift     @relation(fields: [shiftId], references: [id])
+  requester        Employee  @relation("ShiftCoverageRequester", fields: [requestedBy], references: [id])
   approver         Employee? @relation("ShiftCoverageApprover", fields: [approvedBy], references: [id])
 
   @@unique([originalEmployeeId, shiftId, coverageDate])
@@ -1024,38 +1042,37 @@ enum CoverageStatus {
 }
 
 enum CoverageType {
-  SICK_LEAVE       // Employee is sick, needs coverage
-  VACATION         // Planned absence
-  EMERGENCY        // Emergency coverage needed
-  SHIFT_SWAP       // Two employees swapping shifts
-  OVERTIME         // Extra coverage needed
+  SICK_LEAVE // Employee is sick, needs coverage
+  VACATION // Planned absence
+  EMERGENCY // Emergency coverage needed
+  SHIFT_SWAP // Two employees swapping shifts
+  OVERTIME // Extra coverage needed
 }
 
 enum ShiftDayType {
   FULL_DAY
   HALF_DAY
   REST_DAY
- // NIGHT
+  // NIGHT
 }
-
 
 ////=======OVERTIME MANAGEMENT=============
 
 model Overtime {
-  id              String    @id @default(uuid())
-  employeeId     String
-  date           DateTime  @db.Date
-  startTime      DateTime
-  endTime        DateTime
-  duration       Int       // Duration in minutes
-  status         OvertimeStatus @default(PENDING)
-  reason         OvertimeReason
+  id         String         @id @default(uuid())
+  employeeId String
+  date       DateTime       @db.Date
+  startTime  DateTime
+  endTime    DateTime
+  duration   Int // Duration in minutes
+  status     OvertimeStatus @default(PENDING)
+  reason     OvertimeReason
   //approvedBy     String?
-  approvedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  approvedAt DateTime?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
-  employee       Employee  @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
   //approver       Employee? @relation("OvertimeApprover", fields: [approvedBy], references: [id])
 
   @@index([employeeId, date])
@@ -1070,27 +1087,25 @@ enum OvertimeStatus {
 }
 
 enum OvertimeReason {
-  UNSCHEDULED_WORK     // Work outside of scheduled shift
-  EXTENDED_SHIFT       // Staying beyond scheduled end time
-  EMERGENCY            // Emergency work requirement
-  SPECIAL_PROJECT      // Special project requiring extra hours
-  COVERAGE             // Covering for another employee
+  UNSCHEDULED_WORK // Work outside of scheduled shift
+  EXTENDED_SHIFT // Staying beyond scheduled end time
+  EMERGENCY // Emergency work requirement
+  SPECIAL_PROJECT // Special project requiring extra hours
+  COVERAGE // Covering for another employee
 }
-
 
 model OvertimeGracePeriod {
   id                 String   @id @default(uuid())
-  companyId          String   
-  gracePeriodMinutes  Int      @default(10)
+  companyId          String
+  gracePeriodMinutes Int      @default(10)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  company            Company  @relation(fields: [companyId], references: [id])
- isActive    Boolean  @default(true)
+  company  Company @relation(fields: [companyId], references: [id])
+  isActive Boolean @default(true)
+
   @@index([companyId])
 }
-
-
 
 enum PayrollDefinitionStatus {
   created
@@ -1103,42 +1118,74 @@ enum PayrollDefinitionStatus {
 }
 
 model PayrollDefinition {
-  id                         String        @id @default(uuid())
-  payrollName                String
-  startDate                  DateTime
-  endDate                    DateTime
-  payDate                    DateTime
-  payPeriod                  String
-  status                     PayrollDefinitionStatus @default(created)
+  id          String                  @id @default(uuid())
+  payrollName String
+  startDate   DateTime
+  endDate     DateTime
+  payDate     DateTime
+  payPeriod   String
+  status      PayrollDefinitionStatus @default(created)
 
-  createdAt                  DateTime    @default(now())
-  updatedAt                  DateTime    @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  companyId                  String
-  company                    Company       @relation(fields: [companyId], references: [id])
+  companyId   String
+  company     Company @relation(fields: [companyId], references: [id])
 
-
+  Payroll     Payroll[]
 }
 
+model Payroll {
+  id                  String @id @default(uuid())
+  employeeId          String @unique
+  payrollDefinitionId String
 
+  grossSalary    Decimal @default(0.00) @db.Decimal(10, 2)
+  basicSalary    Decimal @default(0.00) @db.Decimal(10, 2)
+  taxableIncome  Decimal @default(0.00) @db.Decimal(10, 2)
+  incomeTax      Decimal @default(0.00) @db.Decimal(10, 2)
+  totalDeduction Decimal @default(0.00) @db.Decimal(10, 2)
+  totalAllowance Decimal @default(0.00) @db.Decimal(10, 2)
+  netSalary      Decimal @default(0.00) @db.Decimal(10, 2)
+
+  employeePensionAmount Decimal @default(0.00) @db.Decimal(10, 2)
+  employerPensionAmount Decimal @default(0.00) @db.Decimal(10, 2)
+
+  status PayrollStatus @default(CREATED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relations
+  employee          Employee          @relation(fields: [employeeId], references: [id])
+  payrollDefinition PayrollDefinition @relation(fields: [payrollDefinitionId], references: [id])
+}
+
+enum PayrollStatus {
+  CREATED
+  PENDING
+  APPROVED
+  FAILED
+  PAID
+}
 
 ////////////// ROTATING SHIFT ASSIGNMENTS AND SCHEDULES //////////////////
 
 // New model to group shifts over a date range (week, month, etc.)
 model ShiftSchedule {
-  id          String          @id @default(uuid())
-  companyId   String
-  shiftId     String?         // optional link to a Shift if needed
-  name        String          // e.g. "Security August 2025 Week 1"
-  startDate   DateTime        @db.Date
-  endDate     DateTime        @db.Date
-  isActive    Boolean         @default(true)
-  isApproved  Boolean         @default(false) // lock schedule once approved
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id         String   @id @default(uuid())
+  companyId  String
+  shiftId    String? // optional link to a Shift if needed
+  name       String // e.g. "Security August 2025 Week 1"
+  startDate  DateTime @db.Date
+  endDate    DateTime @db.Date
+  isActive   Boolean  @default(true)
+  isApproved Boolean  @default(false) // lock schedule once approved
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  company     Company         @relation(fields: [companyId], references: [id])
-  shift       Shift?          @relation("ShiftSchedulesForShift", fields: [shiftId], references: [id])
+  company     Company                   @relation(fields: [companyId], references: [id])
+  shift       Shift?                    @relation("ShiftSchedulesForShift", fields: [shiftId], references: [id])
   assignments EmployeeShiftAssignment[]
 
   @@index([companyId])
@@ -1157,8 +1204,8 @@ model EmployeeShiftAssignment {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  employee    Employee        @relation(fields: [employeeId], references: [id])
-  schedule    ShiftSchedule?  @relation(fields: [scheduleId], references: [id])
+  employee Employee       @relation(fields: [employeeId], references: [id])
+  schedule ShiftSchedule? @relation(fields: [scheduleId], references: [id])
 
   @@unique([employeeId, date]) // one assignment per employee per day
   @@index([employeeId])

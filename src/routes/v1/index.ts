@@ -42,6 +42,9 @@ import pensionRoute from "../../modules/pension/pension.route";
 import overtimeGradePeriod from "../../modules/OvertimeGracePeriod/overtimeGracePeriod.route";
 import payrollDefinitionRoute from "../../modules/payrolldefinition/payrolldefinition.route";
 import overtimeManagementRoute from "../../modules/overtimemanagement/overtimeManagement.route";
+import idFormatRoute from "../../modules/IdFormat/IdFormat.route";
+import payrollRoute from "../../modules/Payroll/payroll.route";
+
 const router = express.Router();
 
 const defaultRoutes = [
@@ -165,9 +168,10 @@ const defaultRoutes = [
   //   path: "/swagger",
   //   // route: setupSwaggerAlternative, // Try alternative setup that serves spec via URL
   //   route: setupSwagger, // Try this first, switch to setupSwaggerAlternative if needed
-  //   path: "/roles",
-  //   route: roleRoute,
-  // },
+  {
+    path: "/roles",
+    route: roleRoute,
+  },
   {
     path: "/taxslab",
     route: taxslabRoute,
@@ -207,6 +211,14 @@ const defaultRoutes = [
   {
     path: "/payroll-definitions",
     route: payrollDefinitionRoute,
+  },
+  {
+    path: "/idformats",
+    route: idFormatRoute,
+  },
+  {
+    path: "/payroll",
+    route: payrollRoute,
   },
 ];
 

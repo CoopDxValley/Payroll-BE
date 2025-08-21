@@ -1,5 +1,5 @@
 import httpStatus from "http-status";
-import { Permission, Role } from "@prisma/client";
+import { Permission, Prisma, Role } from "@prisma/client";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import employeeService from "../employee/employee.services";
@@ -83,9 +83,10 @@ export const getRoleByName = async <Key extends keyof Role>(
  */
 export const getRoleById = async <Key extends keyof Role>(
   id: string,
+  tx: Prisma.TransactionClient = prisma,
   keys: Key[] = ["id", "name", "createdAt", "updatedAt"] as Key[]
 ): Promise<Pick<Role, Key> | null> => {
-  return prisma.role.findUnique({
+  return tx.role.findUnique({
     where: { id, isActive: true },
     select: keys.reduce((obj, k) => ({ ...obj, [k]: true }), {}),
   }) as Promise<Pick<Role, Key> | null>;
@@ -99,15 +100,16 @@ export const getRoleById = async <Key extends keyof Role>(
  */
 export const assignRoleToEmployee = async (
   employeeId: string,
-  roleId: string
+  roleId: string,
+  tx: Prisma.TransactionClient = prisma
 ): Promise<string> => {
-  const user = await employeeService.getEmployeeById(employeeId);
-  const role = await getRoleById(roleId);
+  const user = await employeeService.getEmployeeById(employeeId, tx);
+  const role = await getRoleById(roleId, tx);
 
   if (!user || !role) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Role or Employee not found");
   }
-  const existing = await prisma.employeeRoleHistory.findUnique({
+  const existing = await tx.employeeRoleHistory.findUnique({
     where: {
       employeeId_roleId: { employeeId, roleId },
     },
@@ -120,7 +122,7 @@ export const assignRoleToEmployee = async (
     );
   }
 
-  await prisma.employeeRoleHistory.create({
+  await tx.employeeRoleHistory.create({
     data: { employeeId, roleId, fromDate: new Date() },
   });
 
