@@ -67,4 +67,20 @@ router.route("/:employeeId/working-hours").get(
   employeeShiftController.calculateWorkingHours
 );
 
+// Bulk assign shift to multiple employees
+router.route("/bulk/assign").post(
+  auth(),
+  validate(employeeShiftValidation.bulkAssignShift),
+  // checkPermission("assign_shift"),
+  employeeShiftController.bulkAssignShiftToEmployees
+);
+
+// Bulk unassign shift from multiple employees
+router.route("/bulk/unassign").post(
+  auth(),
+  validate(employeeShiftValidation.bulkUnassignShift),
+  // checkPermission("unassign_shift"),
+  employeeShiftController.bulkUnassignShiftFromEmployees
+);
+
 export default router;

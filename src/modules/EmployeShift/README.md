@@ -14,17 +14,17 @@ This module handles the assignment and management of shifts to employees. It has
 ## API Endpoints
 
 ### 1. Assign Shift to Employee
-```
-POST /employee-shifts/assign
-```
+**POST** `/api/v1/employee-shifts/assign`
+
+Assigns a specific shift to an employee.
 
 **Request Body:**
 ```json
 {
   "employeeId": "uuid",
   "shiftId": "uuid",
-  "startDate": "2024-01-01T00:00:00Z",
-  "endDate": "2024-12-31T23:59:59Z" // Optional
+  "startDate": "2025-01-01T00:00:00Z", // Optional
+  "endDate": "2025-12-31T23:59:59Z"    // Optional
 }
 ```
 
@@ -36,37 +36,112 @@ POST /employee-shifts/assign
     "id": "uuid",
     "employeeId": "uuid",
     "shiftId": "uuid",
-    "startDate": "2024-01-01T00:00:00Z",
-    "endDate": "2024-12-31T23:59:59Z",
+    "startDate": "2025-01-01T00:00:00Z",
+    "endDate": null,
     "isActive": true,
-    "employee": { ... },
-    "shift": {
-      "id": "uuid",
-      "name": "Morning Shift",
-      "shiftType": "FIXED_WEEKLY",
-      "patternDays": [ ... ]
-    }
+    "companyId": "uuid",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2025-01-01T00:00:00Z"
   }
 }
 ```
 
 ### 2. Unassign Shift from Employee
-```
-POST /employee-shifts/unassign?employeeId=uuid&shiftId=uuid
-```
+**POST** `/api/v1/employee-shifts/unassign`
+
+Unassigns a shift from an employee.
+
+**Query Parameters:**
+- `employeeId`: Employee ID
+- `shiftId`: Shift ID
 
 **Response:**
 ```json
 {
   "message": "Shift unassigned from employee successfully",
-  "data": { ... }
+  "data": {
+    "id": "uuid",
+    "employeeId": "uuid",
+    "shiftId": "uuid",
+    "startDate": "2025-01-01T00:00:00Z",
+    "endDate": "2025-01-01T00:00:00Z",
+    "isActive": false,
+    "companyId": "uuid",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2025-01-01T00:00:00Z"
+  }
 }
 ```
 
-### 3. Get All Employee Shifts
+### 3. Bulk Assign Shift to Multiple Employees
+**POST** `/api/v1/employee-shifts/bulk/assign`
+
+Assigns a shift to multiple employees at once.
+
+**Request Body:**
+```json
+{
+  "shiftId": "uuid",
+  "employeeIds": ["uuid1", "uuid2", "uuid3"],
+  "startDate": "2025-01-01T00:00:00Z", // Optional - defaults to today
+  "endDate": "2025-12-31T23:59:59Z"    // Optional - not used in bulk operations
+}
 ```
-GET /employee-shifts?employeeId=uuid // Optional filter
+
+**Response:**
+```json
+{
+  "message": "3 employees assigned to shift successfully",
+  "data": {
+    "message": "3 employees assigned to shift successfully",
+    "count": 3,
+    "shiftName": "Morning Shift",
+    "employees": [
+      { "id": "uuid1", "name": "John Doe" },
+      { "id": "uuid2", "name": "Jane Smith" },
+      { "id": "uuid3", "name": "Bob Johnson" }
+    ]
+  }
+}
 ```
+
+### 4. Bulk Unassign Shift from Multiple Employees
+**POST** `/api/v1/employee-shifts/bulk/unassign`
+
+Unassigns a shift from multiple employees at once.
+
+**Request Body:**
+```json
+{
+  "shiftId": "uuid",
+  "employeeIds": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+**Response:**
+```json
+{
+  "message": "3 employees unassigned from shift successfully",
+  "data": {
+    "message": "3 employees unassigned from shift successfully",
+    "count": 3,
+    "shiftName": "Morning Shift",
+    "unassignedEmployees": [
+      { "id": "uuid1", "name": "John Doe" },
+      { "id": "uuid2", "name": "Jane Smith" },
+      { "id": "uuid3", "name": "Bob Johnson" }
+    ]
+  }
+}
+```
+
+### 5. Get All Employee Shifts
+**GET** `/api/v1/employee-shifts`
+
+Retrieves all employee shift assignments with optional filtering.
+
+**Query Parameters:**
+- `employeeId`: Filter by specific employee (optional)
 
 **Response:**
 ```json
@@ -76,36 +151,91 @@ GET /employee-shifts?employeeId=uuid // Optional filter
       "id": "uuid",
       "employeeId": "uuid",
       "shiftId": "uuid",
-      "startDate": "2024-01-01T00:00:00Z",
+      "startDate": "2025-01-01T00:00:00Z",
       "endDate": null,
       "isActive": true,
-      "employee": { ... },
-      "shift": { ... }
+      "companyId": "uuid",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
     }
   ],
   "count": 1
 }
 ```
 
-### 4. Get Employee Shift by ID
-```
-GET /employee-shifts/:id
+### 6. Get Employee Shift by ID
+**GET** `/api/v1/employee-shifts/:id`
+
+Retrieves a specific employee shift assignment by ID.
+
+**Response:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "employeeId": "uuid",
+    "shiftId": "uuid",
+    "startDate": "2025-01-01T00:00:00Z",
+    "endDate": null,
+    "isActive": true,
+    "companyId": "uuid",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2025-01-01T00:00:00Z"
+  }
+}
 ```
 
-### 5. Get Active Shift for Employee
-```
-GET /employee-shifts/active/:employeeId
+### 7. Get Active Employee Shift
+**GET** `/api/v1/employee-shifts/active/:employeeId`
+
+Retrieves the currently active shift assignment for a specific employee.
+
+**Response:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "employeeId": "uuid",
+    "shiftId": "uuid",
+    "startDate": "2025-01-01T00:00:00Z",
+    "endDate": null,
+    "isActive": true,
+    "companyId": "uuid",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2025-01-01T00:00:00Z"
+  }
+}
 ```
 
-### 6. Get Employee Shift History
-```
-GET /employee-shifts/history/:employeeId
+### 8. Get Employee Shift History
+**GET** `/api/v1/employee-shifts/history/:employeeId`
+
+Retrieves the complete shift assignment history for a specific employee.
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "employeeId": "uuid",
+      "shiftId": "uuid",
+      "startDate": "2025-01-01T00:00:00Z",
+      "endDate": "2025-06-30T23:59:59Z",
+      "isActive": false,
+      "companyId": "uuid",
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-06-30T23:59:59Z"
+    }
+  ],
+  "count": 1
+}
 ```
 
-### 7. Get Shift Details
-```
-GET /employee-shifts/shift/:shiftId
-```
+### 9. Get Shift Details
+**GET** `/api/v1/employee-shifts/shift/:shiftId`
+
+Retrieves detailed information about a specific shift including pattern days.
 
 **Response:**
 ```json
@@ -114,48 +244,36 @@ GET /employee-shifts/shift/:shiftId
     "id": "uuid",
     "name": "Morning Shift",
     "shiftType": "FIXED_WEEKLY",
-    "companyId": "uuid",
-    "isActive": true,
     "patternDays": [
       {
         "id": "uuid",
         "dayNumber": 1,
         "dayType": "FULL_DAY",
-        "startTime": "2024-01-01T08:00:00Z",
-        "endTime": "2024-01-01T17:00:00Z",
-        "breakTime": 60,
-        "gracePeriod": 15
+        "startTime": "2025-01-01T08:00:00Z",
+        "endTime": "2025-01-01T17:00:00Z"
       }
-    ],
-    "createdAt": "2024-01-01T00:00:00Z",
-    "updatedAt": "2024-01-01T00:00:00Z"
+    ]
   }
 }
 ```
 
-### 8. Calculate Working Hours
-```
-GET /employee-shifts/:employeeId/working-hours?startDate=2024-01-01T00:00:00Z&endDate=2024-01-31T23:59:59Z
-```
+### 10. Calculate Working Hours
+**GET** `/api/v1/employee-shifts/:employeeId/working-hours`
 
-**Response for FIXED_WEEKLY shifts:**
+Calculates working hours for an employee within a specific date range.
+
+**Query Parameters:**
+- `startDate`: Start date for calculation
+- `endDate`: End date for calculation
+
+**Response:**
 ```json
 {
   "data": {
     "shiftType": "FIXED_WEEKLY",
     "totalWorkingHours": 40,
     "workingDays": 5,
-    "patternDays": [ ... ]
-  }
-}
-```
-
-**Response for ROTATING shifts:**
-```json
-{
-  "data": {
-    "shiftType": "ROTATING",
-    "message": "Working hours calculation not available for rotating shifts"
+    "patternDays": [...]
   }
 }
 ```
@@ -249,3 +367,13 @@ The module provides comprehensive error handling:
 - **404 Not Found**: Employee, shift, or assignment not found
 - **409 Conflict**: Employee already has an active shift assignment
 - **500 Internal Server Error**: Database or system errors 
+
+### 🔒 **Business Rules Enforced**
+
+- **Employee Validation**: All employees must exist and belong to company
+- **Shift Validation**: Shift must exist and be active
+- **Conflict Prevention**: Employees cannot have multiple active assignments
+- **Bulk Limits**: Maximum 100 employees per operation
+- **Company Isolation**: All operations are company-scoped
+- **Date Logic**: startDate defaults to today, endDate is not set (null)
+- **Active Status**: All bulk assignments are created as active 

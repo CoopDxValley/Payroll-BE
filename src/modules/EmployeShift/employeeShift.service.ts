@@ -330,6 +330,172 @@ const calculateWorkingHours = async (
   }
 };
 
+// Bulk assign shift to multiple employees
+const bulkAssignShiftToEmployees = async (data: {
+  shiftId: string;
+  employeeIds: string[];
+  startDate?: Date;
+  endDate?: Date;
+  companyId: string;
+}) => {
+  const { shiftId, employeeIds, startDate, endDate, companyId } = data;
+
+  // Validate input
+  if (!shiftId || !employeeIds || employeeIds.length === 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "shiftId and employeeIds array are required"
+    );
+  }
+
+  if (employeeIds.length > 100) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Maximum 100 employees can be assigned at once"
+    );
+  }
+
+  // Verify shift exists and belongs to company
+  const shift = await prisma.shift.findFirst({
+    where: { id: shiftId, companyId, isActive: true },
+  });
+
+  if (!shift) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Shift not found");
+  }
+
+  // Verify all employees exist and belong to company
+  const employees = await prisma.employee.findMany({
+    where: { 
+      id: { in: employeeIds },
+      companyId 
+    },
+    select: { id: true, name: true }
+  });
+
+  if (employees.length !== employeeIds.length) {
+    const foundIds = employees.map(emp => emp.id);
+    const missingIds = employeeIds.filter(id => !foundIds.includes(id));
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      `Some employees not found: ${missingIds.join(', ')}`
+    );
+  }
+
+  // Check for existing active assignments
+  const existingAssignments = await prisma.employeeShift.findMany({
+    where: {
+      employeeId: { in: employeeIds },
+      isActive: true,
+    },
+    select: { employeeId: true, employee: { select: { name: true } } }
+  });
+
+  if (existingAssignments.length > 0) {
+    const employeeNames = existingAssignments.map(assignment => assignment.employee.name).join(', ');
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      `Some employees already have active shift assignments: ${employeeNames}`
+    );
+  }
+
+  // Set startDate to today if not provided, don't set endDate
+  const assignmentStartDate = startDate || new Date();
+
+  // Bulk create assignments
+  const assignments = await prisma.employeeShift.createMany({
+    data: employeeIds.map(employeeId => ({
+      employeeId,
+      shiftId,
+      startDate: assignmentStartDate,
+      endDate: null, // Don't set endDate
+      isActive: true,
+    })),
+  });
+
+  return {
+    message: `${assignments.count} employees assigned to shift successfully`,
+    count: assignments.count,
+    shiftName: shift.name,
+    employees: employees.map(emp => ({ id: emp.id, name: emp.name })),
+  };
+};
+
+// Bulk unassign shift from multiple employees
+const bulkUnassignShiftFromEmployees = async (data: {
+  shiftId: string;
+  employeeIds: string[];
+  companyId: string;
+}) => {
+  const { shiftId, employeeIds, companyId } = data;
+
+  // Validate input
+  if (!shiftId || !employeeIds || employeeIds.length === 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "shiftId and employeeIds array are required"
+    );
+  }
+
+  if (employeeIds.length > 1000) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Maximum 1000 employees can be unassigned at once"
+    );
+  }
+
+  // Verify shift exists and belongs to company
+  const shift = await prisma.shift.findFirst({
+    where: { id: shiftId, companyId },
+  });
+
+  if (!shift) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Shift not found");
+  }
+
+  // Find existing assignments
+  const existingAssignments = await prisma.employeeShift.findMany({
+    where: {
+      employeeId: { in: employeeIds },
+      shiftId,
+      isActive: true,
+    },
+    include: {
+      employee: { select: { id: true, name: true } }
+    }
+  });
+
+  if (existingAssignments.length === 0) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      "No active assignments found for the specified employees and shift"
+    );
+  }
+
+  // Bulk deactivate assignments
+  const deactivatedAssignments = await prisma.employeeShift.updateMany({
+    where: {
+      employeeId: { in: employeeIds },
+      shiftId,
+      isActive: true,
+    },
+    data: {
+      isActive: false,
+      endDate: new Date(),
+    },
+  });
+
+  return {
+    message: `${deactivatedAssignments.count} employees unassigned from shift successfully`,
+    count: deactivatedAssignments.count,
+    shiftName: shift.name,
+    unassignedEmployees: existingAssignments.map(assignment => ({
+      id: assignment.employee.id,
+      name: assignment.employee.name,
+    })),
+  };
+};
+
 export default {
   assignShiftToEmployee,
   unassignShiftFromEmployee,
@@ -339,4 +505,6 @@ export default {
   getEmployeeShiftHistory,
   getShiftDetails,
   calculateWorkingHours,
+  bulkAssignShiftToEmployees,
+  bulkUnassignShiftFromEmployees,
 };

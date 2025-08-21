@@ -41,7 +41,9 @@ export async function calculatePayrollForEmployee(args: {
       include: { taxSlab: true },
     }),
   ]);
+  console.log("Taxslabee");
 
+  console.log(taxRules);
   // ==== Computation (numbers in memory, strings for Prisma Decimal fields) ====
   let totalAllowance = 0;
   let totalDeduction = 0;
@@ -86,10 +88,15 @@ export async function calculatePayrollForEmployee(args: {
       totalTaxable > Number(t.taxSlab.minIncome) &&
       totalTaxable < Number(t.taxSlab.maxIncome)
   );
+
+  console.log("gemechuudududu");
+  console.log(slab);
   const deductibleFee = slab?.taxSlab.deductible ?? 0;
-  const taxRate = slab?.taxSlab.incomeTaxPayable ?? 0;
+  const taxRate = slab?.taxSlab.rate ?? 0;
   const incomeTax = slab ? totalTaxable * (taxRate / 100) - deductibleFee : 0;
 
+  // console.log(taxRate);
+  // console.log(taxRules);
   // Pension
   const employeeRate = pension?.pension?.employeeContribution ?? 0;
   const employerRate = pension?.pension?.employerContribution ?? 0;
@@ -97,7 +104,7 @@ export async function calculatePayrollForEmployee(args: {
   const employerPension = (basicSalary * employerRate) / 100;
 
   console.log("--rate", employeePension);
-
+console.log("total deduction", totalDeduction);
   const overallDeduction = totalDeduction + incomeTax + employeePension;
   const grossSalary = basicSalary + totalAllowance + totalAdditionalPay;
   const netSalary =

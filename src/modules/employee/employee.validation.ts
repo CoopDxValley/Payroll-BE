@@ -41,11 +41,12 @@ const personalInfoSchema = z
     nationality: safeName.optional().default("Ethiopia"),
     maritalStatus: z.nativeEnum(MaritalStatus).default(MaritalStatus.SINGLE),
     title: safeName.optional(),
-    imageUrl: safeName.url().optional(),
-
+    // imageUrl: safeName.url().optional(),
+    imageUrl: z.string().url().optional(),
+    idImageUrl: z.string().url().optional(),
     status: z.nativeEnum(EmploymentStatus).default(EmploymentStatus.ACTIVE),
     idNumber: safeName.optional(),
-    idImageUrl: safeName.url().optional(),
+    // idImageUrl: safeName.url().optional(),
     idType: z.nativeEnum(IdType).default(IdType.KEBELE),
   })
   .strict();

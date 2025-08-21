@@ -12,12 +12,16 @@ import shiftDayRoute from "../../modules/shiftDays/shiftDay.route";
 import employeeShiftRoute from "../../modules/EmployeShift/employeeShift.route";
 import shiftCoverageRoute from "../../modules/shiftCoverage/shiftCoverage.route";
 import workingCalendarRoute from "../../modules/workingCalendar/workingCalendar.route";
+import rotationShiftRoute from "../../modules/rotationShift/rotationShift.route";
+import rotatingShiftTypeRoute from "../../modules/RotatingShiftType/rotatingShiftType.route";
 import gradeRoute from "../../modules/grades/grade.routes";
 import leaveRequestRoute from "../../modules/leaveType/leaveType.route";
 import additionalDeductionDefinitionRoute from "../../modules/additionaldeductiondefinition/additionalDeductionDefinition.route";
 import additionalpayDefinition from "../../modules/additionalpaydefinition/additionalPayDefinition.route";
 import approvalRoute from "../../modules/approval/approval.route";
 import attendance from "../../modules/attendance/attendance.route";
+// import updatedattendance from "../../modules/updatedAttendance/updatedAttendance.route";
+import updatedattendance from "../../modules/updatedAttendance/updatedAttendance.route";
 // import swagger from "../../modules/swagger";
 // import { setupSwagger } from "../../swagger/setup";
 
@@ -37,6 +41,7 @@ import providentFundRoute from "../../modules/providentFund/providentFund.route"
 import pensionRoute from "../../modules/pension/pension.route";
 import overtimeGradePeriod from "../../modules/OvertimeGracePeriod/overtimeGracePeriod.route";
 import payrollDefinitionRoute from "../../modules/payrolldefinition/payrolldefinition.route";
+import overtimeManagementRoute from "../../modules/overtimemanagement/overtimeManagement.route";
 import idFormatRoute from "../../modules/IdFormat/IdFormat.route";
 import payrollRoute from "../../modules/Payroll/payroll.route";
 
@@ -66,6 +71,10 @@ const defaultRoutes = [
     route: overtimeGradePeriod,
   },
   {
+    path: "/overtime",
+    route: overtimeManagementRoute,
+  },
+  {
     path: "/shifts",
     route: shiftRoute,
   },
@@ -86,12 +95,24 @@ const defaultRoutes = [
     route: workingCalendarRoute,
   },
   {
+    path: "/rotation-shifts",
+    route: rotationShiftRoute,
+  },
+  {
+    path: "/rotating-shift-types",
+    route: rotatingShiftTypeRoute,
+  },
+  {
     path: "/grades",
     route: gradeRoute,
   },
   {
     path: "/attendance",
     route: attendance,
+  },
+  {
+    path: "/attendances",
+    route: updatedattendance,
   },
   {
     path: "/leave-requests",

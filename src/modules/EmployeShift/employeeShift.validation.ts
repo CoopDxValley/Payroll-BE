@@ -33,9 +33,33 @@ const calculateWorkingHours = {
   }),
 };
 
+const bulkAssignShift = {
+  body: z.object({
+    shiftId: z.string().uuid("Invalid shift ID"),
+    employeeIds: z
+      .array(z.string().uuid("Invalid employee ID"))
+      .min(1, "At least one employee ID is required")
+      .max(100, "Maximum 100 employees can be assigned at once"),
+    startDate: z.string().datetime("Invalid start date format").optional(),
+    endDate: z.string().datetime("Invalid end date format").optional(),
+  }),
+};
+
+const bulkUnassignShift = {
+  body: z.object({
+    shiftId: z.string().uuid("Invalid shift ID"),
+    employeeIds: z
+      .array(z.string().uuid("Invalid employee ID"))
+      .min(1, "At least one employee ID is required")
+      .max(1000, "Maximum 1000 employees can be unassigned at once"),
+  }),
+};
+
 export default {
   assignShift,
   unassignShift,
   getShiftDetails,
   calculateWorkingHours,
+  bulkAssignShift,
+  bulkUnassignShift,
 };

@@ -45,6 +45,10 @@ model Company {
   OvertimeGracePeriod OvertimeGracePeriod[]
   payrollDefinitions  PayrollDefinition[]
 
+  //shiftSchedules  ShiftSchedule[]
+  rotatingShiftTypes     RotatingShiftType[]
+
+  
   shiftSchedules ShiftSchedule[]
 }
 
@@ -409,7 +413,7 @@ model Employee {
   positionHistory   EmployeePositionHistory[]
   emergencyContacts EmergencyContact[]
   overtimes         Overtime[] // From second model
-
+//  OvertimeTable    OvertimeTable[]
   stageEmployees StageEmployee[]
   requests       Request[]
   stageStatuses  StageStatus[]
@@ -435,6 +439,8 @@ model Employee {
 
   shiftAssignments EmployeeShiftAssignment[]
   Payroll          Payroll?
+
+  //workSessions  WorkSession[] 
 
   @@index([name])
   @@index([phoneNumber])
@@ -964,9 +970,8 @@ model Shift {
   // New relation for calendar-based assignments
   shiftSchedules ShiftSchedule[] @relation("ShiftSchedulesForShift")
 
-  shiftCoverages ShiftCoverage[] // ← SHIFT COVERAGE
-
-  @@index([companyId])
+ shiftCoverages ShiftCoverage[]  // ← SHIFT COVERAGE
+workSessions  WorkSession[] 
 }
 
 enum ShiftType {
@@ -1189,15 +1194,15 @@ model ShiftSchedule {
 
 // Assign explicit shift type per employee per calendar date
 model EmployeeShiftAssignment {
-  id                String            @id @default(uuid())
-  employeeId        String
-  scheduleId        String? // Link to ShiftSchedule for grouping
-  date              DateTime          @db.Date
-  RotatingShiftType RotatingShiftType
-  hours             Int // 12 for DAY/NIGHT, 0 for OFF
-  isApproved        Boolean           @default(false) // Once approved, immutable
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id          String          @id @default(uuid())
+  employeeId  String
+  scheduleId  String?         // Link to ShiftSchedule for grouping
+  date        DateTime        @db.Date
+// RotatingShiftType   RotatingShiftType 
+  hours       Int             // 12 for DAY/NIGHT, 0 for OFF
+  isApproved  Boolean         @default(false)  // Once approved, immutable
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   employee Employee       @relation(fields: [employeeId], references: [id])
   schedule ShiftSchedule? @relation(fields: [scheduleId], references: [id])
@@ -1205,10 +1210,97 @@ model EmployeeShiftAssignment {
   @@unique([employeeId, date]) // one assignment per employee per day
   @@index([employeeId])
   @@index([date])
+    // NEW: Can be null for OFF days
+  shiftTypeId String?         // null = OFF day, uuid = actual shift
+  RotatingShiftType   RotatingShiftType? @relation(fields: [shiftTypeId], references: [id])
 }
 
-enum RotatingShiftType {
-  DAY
-  NIGHT
-  OFF
+//enum RotatingShiftType  {
+//DAY // 06:00 -06:00
+//  NIGHT //06:60 -06:00
+//  OFF
+//}
+
+
+model RotatingShiftType {
+  id          String          @id @default(uuid())
+  companyId   String
+  name        String          // "DAY", "NIGHT", "MORNING", "EVENING"
+  startTime   String          // "06:00", "18:00", etc.
+  endTime     String          // "18:00", "06:00", etc.
+  duration    Int             // hours
+  isActive    Boolean         @default(true)
+    // <-- Add this back-relation
+  employeeShiftAssignments EmployeeShiftAssignment[]
+
+
+  
+   company     Company         @relation(fields: [companyId], references: [id])
+   @@index([companyId])
 }
+
+
+
+/////UPDATED  ATTENDANCE HANDLING
+
+model WorkSession {
+  id            String      @id @default(uuid())
+  deviceUserId    String
+  date          DateTime      @db.Date
+  punchIn       DateTime?
+  punchOut      DateTime?
+  duration      Int?          // in minutes
+  shiftId       String?
+  //dayType       CalendarDayType
+  //status        SessionStatus
+  earlyMinutes  Int?          @default(0)
+  lateMinutes   Int?          @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+//  employee      Employee      @relation(fields: [employeeId], references: [id])
+  shift         Shift?        @relation(fields: [shiftId], references: [id])
+  OvertimeTable      OvertimeTable[]
+
+  punchInSource   String        @default("manual")  // Default: manual
+  punchOutSource  String        @default("manual")  // Default: manual
+}
+
+
+model OvertimeTable {
+  id            String         @id @default(uuid())
+  workSessionId String?
+  deviceUserId    String
+  date          DateTime      @db.Date  // Date when overtime occurred
+  punchIn     DateTime      // Actual overtime start time
+  punchOut      DateTime?     // Actual overtime end time
+  duration      Int  ?        // in minutes
+  type          OvertimeType
+  status        OvertimeStatus @default(PENDING)
+//payMultiplier Float        @default(1.5)
+  //isCrossDay    Boolean      @default(false)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  workSession   WorkSession?  @relation(fields: [workSessionId], references: [id])
+  //employee      Employee     @relation(fields: [employeeId], references: [id])
+
+  @@index([workSessionId])
+//  @@index([employeeId, date])
+  @@index([status])
+
+  punchInSource   String        @default("manual")  // Default: manual
+  punchOutSource  String        @default("manual")  // Default: manual
+}
+
+enum OvertimeType {
+  EARLY_ARRIVAL    // Before shift start
+  LATE_DEPARTURE   // After shift end
+  HOLIDAY_WORK     // Worked on holiday
+  REST_DAY_WORK    // Worked on rest day
+  EXTENDED_SHIFT   // Beyond max shift hours
+  UNSCHEDULED      // No shift scheduled
+}
+

@@ -132,6 +132,8 @@ const createEmployee = async (
 
     return result;
   } catch (err: any) {
+
+    console.log(err);
     if (err.code === "P2002") {
       throw new ApiError(
         httpStatus.BAD_REQUEST,

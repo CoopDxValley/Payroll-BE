@@ -22,23 +22,60 @@ export interface EmployeeData {
   phoneNumber: string;
 }
 
-export interface EmployeeShiftData {
+export interface EmployeeShift {
   id: string;
   employeeId: string;
   shiftId: string;
   startDate: Date;
-  endDate: Date | null;
+  endDate?: Date;
   isActive: boolean;
-  employee: EmployeeData;
-  shift: ShiftData;
+  companyId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface AssignShiftData {
+export interface AssignShiftRequest {
   employeeId: string;
   shiftId: string;
-  startDate: Date;
-  endDate?: Date;
-  companyId: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface UnassignShiftRequest {
+  employeeId: string;
+  shiftId: string;
+}
+
+export interface BulkAssignShiftRequest {
+  shiftId: string;
+  employeeIds: string[];
+  startDate?: string; // Optional - defaults to today if not provided
+  endDate?: string;   // Optional - not used in bulk operations (set to null)
+}
+
+export interface BulkUnassignShiftRequest {
+  shiftId: string;
+  employeeIds: string[];
+}
+
+export interface BulkAssignShiftResponse {
+  message: string;
+  count: number;
+  shiftName: string;
+  employees: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
+export interface BulkUnassignShiftResponse {
+  message: string;
+  count: number;
+  shiftName: string;
+  unassignedEmployees: Array<{
+    id: string;
+    name: string;
+  }>;
 }
 
 export interface WorkingHoursCalculation {
