@@ -23,10 +23,10 @@
  *             properties:
  *               username:
  *                 type: string
- *                 example: IT-head
+ *                 example: biruk
  *               password:
  *                 type: string
- *                 example: SuperSecurePassword123
+ *                 example: SuperSecurePassword@123
  *     responses:
  *       200:
  *         description: Successful login, returns JWT token

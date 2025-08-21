@@ -121,7 +121,7 @@
 /**
  * @swagger
  * /api/v1/company/update:
- *   patch:
+ *   post:
  *     summary: Update existing company information
  *     tags: [Company]
  *     security:

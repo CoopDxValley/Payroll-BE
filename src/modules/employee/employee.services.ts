@@ -135,7 +135,7 @@ const createEmployee = async (
     if (err.code === "P2002") {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        "Employee with this email already exists"
+        `${err.target} already exists`
       );
     }
     throw err;
