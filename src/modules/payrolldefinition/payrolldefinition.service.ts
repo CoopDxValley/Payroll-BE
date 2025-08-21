@@ -94,7 +94,7 @@ const getCurrentMonth = async (companyId: string) => {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)
   );
 
-  return prisma.payrollDefinition.findMany({
+  return prisma.payrollDefinition.findFirst({
     where: {
       companyId,
       startDate: { gte: startOfMonth },

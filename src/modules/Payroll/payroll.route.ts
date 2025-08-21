@@ -15,4 +15,6 @@ router
     payrollController.createPayroll
   );
 
+router.get("/current-month", auth(), payrollController.getCurrentMonthPayroll);
+
 export default router;

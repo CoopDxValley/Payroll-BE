@@ -4,6 +4,7 @@ import ApiError from "../../utils/api-error";
 import prisma from "../../client";
 import { createPayrollInput, employeeForPayrollInclude } from "./payroll.type";
 import { calculatePayrollForEmployee } from "./payroll.util";
+import payrolldefinitionService from "../payrolldefinition/payrolldefinition.service";
 
 export const createPayroll = async (
   data: createPayrollInput & { companyId: string }
@@ -54,4 +55,25 @@ export const createPayroll = async (
   return createdPayroll;
 };
 
-export default { createPayroll };
+export const getCurrentMonthPayroll = async (companyId: string) => {
+  const currentMonth = new Date().getMonth() + 1; // Months are 0-based
+  const currentYear = new Date().getFullYear();
+
+  const currentPayrollDefinition =
+    await payrolldefinitionService.getCurrentMonth(companyId);
+
+  if (!currentPayrollDefinition) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      "Current payroll definition not found"
+    );
+  }
+
+  const payrolls = await prisma.payroll.findMany({
+    where: { payrollDefinitionId: currentPayrollDefinition.id },
+  });
+
+  return payrolls;
+};
+
+export default { createPayroll, getCurrentMonthPayroll };

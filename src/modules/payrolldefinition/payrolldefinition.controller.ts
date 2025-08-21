@@ -57,9 +57,7 @@ export const getCurrentMonth = catchAsync(async (req, res) => {
   const data = await payrollDefinitionService.getCurrentMonth(
     authEmployee.companyId
   );
-  res
-    .status(httpStatus.OK)
-    .send({ message: "Fetched successfully", data, count: data.length });
+  res.status(httpStatus.OK).send({ message: "Fetched successfully", data });
 });
 
 export const getLatest = catchAsync(async (req, res) => {

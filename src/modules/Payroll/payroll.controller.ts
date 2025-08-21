@@ -27,4 +27,14 @@ const createPayroll = catchAsync<
   }
 );
 
-export default { createPayroll };
+const getCurrentMonthPayroll = catchAsync<CustomRequest<never, never, never>>(
+  async (req: CustomRequest<never, never, never>, res: Response) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const payrolls = await payrollService.getCurrentMonthPayroll(
+      authEmployee.companyId
+    );
+    res.send({ data: payrolls });
+  }
+);
+
+export default { createPayroll, getCurrentMonthPayroll };
