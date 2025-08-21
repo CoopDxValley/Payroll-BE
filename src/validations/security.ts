@@ -42,7 +42,6 @@ export const safeOptionalText = z
   .optional();
 
 export function deepSanitize(input: unknown): unknown {
-  console.log("deepSanitize input:", input);
   if (typeof input === "string") return stripControlChars(input.trim());
   if (Array.isArray(input)) return input.map(deepSanitize);
   if (input && typeof input === "object") {
