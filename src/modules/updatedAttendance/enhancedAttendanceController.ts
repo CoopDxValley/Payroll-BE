@@ -3,6 +3,8 @@ import catchAsync from "../../utils/catch-async";
 import httpStatus from "http-status";
 import enhancedAttendanceService from "./enhancedAttendanceService";
 import { AuthEmployee } from "../auth/auth.type";
+import { PayrollDefinitionStatus } from "@prisma/client";
+import prisma from "../../client";
 
 // Get attendance by date range
 const getAttendanceByDateRange = catchAsync(
@@ -177,10 +179,41 @@ const getMonthlyAttendance = catchAsync(async (req: Request, res: Response) => {
     companyId: companyId,
   });
 
-  // Calculate month range
+  // get payroll-defined month range
+  const getCurrentMonth = async (companyId: string) => {
+    const now = new Date();
+    const startOfMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0)
+    );
+    const endOfMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)
+    );
+
+    const def = await prisma.payrollDefinition.findFirst({
+      where: {
+        companyId,
+        startDate: { gte: startOfMonth },
+        endDate: { lte: endOfMonth },
+      },
+      orderBy: { startDate: "desc" },
+    });
+
+    return def;
+  };
+
+  const def = await getCurrentMonth(companyId);
+
+  console.log(def);
+
+  // fall back to calendar month if payrollDefinition not found
   const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const startDate =
+    def?.startDate ?? new Date(today.getFullYear(), today.getMonth(), 1);
+  const endDate =
+    def?.endDate ?? new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  console.log(startDate);
+  console.log(endDate);
 
   res.status(httpStatus.OK).json({
     success: true,
@@ -188,8 +221,8 @@ const getMonthlyAttendance = catchAsync(async (req: Request, res: Response) => {
     data: result,
     meta: {
       monthRange: {
-        startDate: startOfMonth.toISOString().split("T")[0],
-        endDate: endOfMonth.toISOString().split("T")[0],
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
       },
       month: today.toLocaleString("default", { month: "long" }),
       year: today.getFullYear(),
@@ -321,6 +354,35 @@ const getAttendanceSummary = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get payroll definition summary
+const getPayrollDefinitionSummary = catchAsync(
+  async (req: Request, res: Response) => {
+    console.log(
+      "=== Enhanced Attendance Controller: Payroll Definition Summary ==="
+    );
+
+    const authEmployee = req.employee as AuthEmployee;
+    const companyId = authEmployee.companyId;
+    // const { payrollDefinitionId } = req.query;
+
+    const result = await enhancedAttendanceService.getPayrollDefinitionSummary({
+      companyId,
+      // payrollDefinitionId: payrollDefinitionId as string,
+    });
+
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: "Payroll definition summary retrieved successfully",
+      data: result,
+      meta: {
+        totalEmployees: result.employees.length,
+        companyId,
+        // payrollDefinitionId: payrollDefinitionId || "current",
+      },
+    });
+  }
+);
+
 // Enhanced attendance controller object
 const enhancedAttendanceController = {
   getAttendanceByDateRange,
@@ -330,6 +392,7 @@ const enhancedAttendanceController = {
   getYearlyAttendance,
   getAttendanceByDate,
   getAttendanceSummary,
+  getPayrollDefinitionSummary,
 };
 
 export default enhancedAttendanceController;

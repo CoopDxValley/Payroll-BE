@@ -94,9 +94,60 @@
  *           items:
  *             $ref: '#/components/schemas/CreateWorkingCalendar'
  */
-
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     CreateWorkingCalendar:
+ *       type: object
+ *       required:
+ *         - year
+ *         - date
+ *         - dayType
+ *       properties:
+ *         year:
+ *           type: integer
+ *           minimum: 1900
+ *           maximum: 2100
+ *           example: 2025
+ *         date:
+ *           type: string
+ *           format: date
+ *           example: "2025-01-01"
+ *         dayType:
+ *           type: string
+ *           enum: [WORKING_DAY, HOLIDAY]
+ *           example: HOLIDAY
+ *         description:
+ *           type: string
+ *           example: "Labor Day"
+ *         isActive:
+ *           type: boolean
+ *           example: true
+ *         companyId:
+ *           type: string
+ *           format: uuid
+ *           description: Injected from auth
+ *           example: "550e8400-e29b-41d4-a716-446655440000"
+ * 
+ *     WorkingCalendarEntry:
+ *       allOf:
+ *         - $ref: '#/components/schemas/CreateWorkingCalendar'
+ *         - type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *               example: "c2a1d1b4-5f7d-44f8-b65a-123456789abc"
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *               example: "2025-01-01T12:00:00Z"
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *               example: "2025-01-01T12:30:00Z"
+ *
  * /api/v1/working-calendar:
  *   post:
  *     summary: Create a new working calendar entry
@@ -140,14 +191,14 @@
  *         name: dayType
  *         schema:
  *           type: string
- *         description: Filter by day type (e.g., WORKING_DAY, HOLIDAY)
+ *           enum: [WORKING_DAY, HOLIDAY]
+ *         description: Filter by day type
  *       - in: query
  *         name: date
  *         schema:
  *           type: string
  *           format: date
  *         description: Filter by exact date
-
  *     responses:
  *       200:
  *         description: List of working calendar entries
@@ -166,6 +217,7 @@
  *       400:
  *         description: Bad Request
  */
+
 
 /**
  * @swagger
