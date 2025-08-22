@@ -12,19 +12,19 @@ import {
   phoneNumber,
   safeName,
   safeText,
-  safeUsername,
+  // safeUsername,
   UUID,
 } from "../../validations/security";
 
 const personalInfoSchema = z
   .object({
     name: safeName,
-    username: safeUsername.optional(),
+    // username: safeUsername.optional(),
     phoneNumber,
     employeeIdNumber: safeName.optional(),
     deviceUserId: safeName.optional(),
 
-    isSuperAdmin: z.boolean().default(false),
+    // isSuperAdmin: z.boolean().default(false),
     email: email.optional(),
     optionalPhoneNumber: phoneNumber.optional(),
 
@@ -64,7 +64,7 @@ export const payrollInfoSchema = z
     accountNumber: safeName.min(5),
 
     positionId: UUID,
-    roleId: UUID,
+    // roleId: UUID,
     departmentId: UUID,
     gradeId: UUID,
   })
