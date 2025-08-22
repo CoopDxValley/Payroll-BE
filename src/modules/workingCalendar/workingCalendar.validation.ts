@@ -1,13 +1,32 @@
 import { z } from "zod";
 // import { objectId } from "./custom.validation";
 
+// const createWorkingCalendar = {
+//   body: z.object({
+//     year: z
+//       .number()
+//       .min(1900, "Year must be at least 1900")
+//       .max(2100, "Year must be at most 2100"),
+//     date: z.string().datetime("Invalid date format"),
+//     dayType: z.enum(["WORKING_DAY", "HOLIDAY"], {
+//       errorMap: () => ({
+//         message: "Invalid dayType. Must be WORKING_DAY or HOLIDAY",
+//       }),
+//     }),
+//     description: z.string().optional(),
+//     isActive: z.boolean().optional(),
+//     companyId: z.string().uuid().optional(), // Will be injected from auth
+//   }),
+// };
 const createWorkingCalendar = {
   body: z.object({
     year: z
       .number()
       .min(1900, "Year must be at least 1900")
       .max(2100, "Year must be at most 2100"),
-    date: z.string().datetime("Invalid date format"),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
     dayType: z.enum(["WORKING_DAY", "HOLIDAY"], {
       errorMap: () => ({
         message: "Invalid dayType. Must be WORKING_DAY or HOLIDAY",
@@ -18,7 +37,6 @@ const createWorkingCalendar = {
     companyId: z.string().uuid().optional(), // Will be injected from auth
   }),
 };
-
 const getAllWorkingCalendar = {
   query: z.object({
     year: z
