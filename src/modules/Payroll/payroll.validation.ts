@@ -9,3 +9,15 @@ export const createPayrollSchema = {
     })
     .strict(),
 };
+
+export const getPayrollByPayrollDefinitionIdSchema = {
+  params: z.object({
+    id: UUID,
+  }),
+};
+
+export const getNonPayrollEmployeeSchema = {
+  query: z.object({
+    id: UUID,
+  }),
+};
