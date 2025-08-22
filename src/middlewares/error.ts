@@ -4,6 +4,7 @@ import config from "../config/config";
 import logger from "../config/logger";
 import ApiError from "../utils/api-error";
 import { Prisma } from "@prisma/client";
+import multer from "multer";
 
 export const errorConverter: ErrorRequestHandler = (err, req, res, next) => {
   let error = err;
@@ -16,6 +17,16 @@ export const errorConverter: ErrorRequestHandler = (err, req, res, next) => {
         : httpStatus.INTERNAL_SERVER_ERROR;
     const message = error.message || httpStatus[statusCode];
     error = new ApiError(statusCode, message, false, err.details);
+  }
+
+  if (err instanceof multer.MulterError) {
+    console.log("--- multer", err);
+    // Multer-specific errors
+    if (err.code === "LIMIT_FILE_SIZE") {
+      // return res.status(400).json({ message: "File too large (max 2MB)" });
+      error = new ApiError(400, "File too large (max 2MB)");
+    }
+    error = new ApiError(400, err.message);
   }
 
   next(error);

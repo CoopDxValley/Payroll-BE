@@ -19,6 +19,7 @@ import {
   GetEmployeeInfoByIdParams,
   getEmployeesQuery,
 } from "./employee.type";
+import { uploadExcel } from "../../middlewares/upload-excels";
 
 const router = Router();
 
@@ -82,5 +83,14 @@ router.route("/seach/keyword/employee").get(
 router
   .route("/download/template/employee-sheets")
   .get(auth(), employeeController.downloadEmployeeSheets);
+
+router.route("/upload/employee-sheets").post(
+  auth(),
+  // validate<never, never, never>({
+  //   body: employeeUploadSchema,
+  // }),
+  uploadExcel.single("file"),
+  employeeController.uploadEmployee
+);
 
 export default router;

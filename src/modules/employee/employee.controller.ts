@@ -21,6 +21,7 @@ import departmentService from "../department/department.service";
 import positionService from "../position/position.service";
 import gradeService from "../grades/grade.service";
 import { EmploymentType, Gender, IdType, MaritalStatus } from "@prisma/client";
+import { toDate, toNumber, toString } from "../../utils/type-convert";
 
 export const registerEmployee = catchAsync<
   CustomRequest<never, never, CreateEmployeeInput>
@@ -393,4 +394,124 @@ export const downloadEmployeeSheets = catchAsync<
     "attachment; filename=employee_template.xlsx"
   );
   res.status(httpStatus.OK).send(Buffer.from(buffer));
+});
+
+export const uploadEmployee = catchAsync(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "No file uploaded");
+  }
+  const authEmployee = req.employee as AuthEmployee;
+
+  const [departments, positions, grades] = await Promise.all([
+    departmentService.getAllDepartments(authEmployee.companyId),
+    positionService.getAllPositions(authEmployee.companyId),
+    gradeService.getAllGrades(authEmployee.companyId),
+  ]);
+
+  const workbook = new ExcelJS.Workbook();
+  const uint8 = new Uint8Array(req.file.buffer);
+
+  await workbook.xlsx.load(uint8 as any);
+
+  const sheet = workbook.getWorksheet("Employees");
+
+  if (!sheet) {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .json({ message: "Employees sheet not found in file" });
+  }
+
+  const departmentNames = new Map(departments.map((d) => [d.deptName, d.id]));
+  const gradeNames = new Map(grades.map((g) => [g.name, g.id]));
+  const positionNames = new Map(positions.map((p) => [p.positionName, p.id]));
+
+  const employees: CreateEmployeeInput[] = [];
+
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // skip headers
+    let values = row.values as ExcelJS.CellValue[];
+
+    const personalInfo: CreateEmployeeInput["personalInfo"] = {
+      name: toString(values[1]) ?? "",
+      gender: values[2] as Gender,
+      dateOfBirth: toDate(values[3]),
+      phoneNumber: toString(values[4]) ?? "",
+      deviceUserId: toString(values[5]) ?? "",
+      nationality: toString(values[6]) ?? "",
+      idNumber: toString(values[7]) ?? "",
+      idType: values[8] as IdType,
+      maritalStatus: values[11] as MaritalStatus,
+      optionalPhoneNumber: undefined,
+      zone: undefined,
+      woreda: undefined,
+      kebele: undefined,
+      region: undefined,
+      houseNo: undefined,
+      idImageUrl: undefined,
+      status: "ACTIVE",
+      country: "Ethiopia",
+    };
+
+    const payrollInfo: CreateEmployeeInput["payrollInfo"] = {
+      departmentId: departmentNames.get(toString(values[9]) ?? "") ?? "",
+      gradeId: gradeNames.get(toString(values[10]) ?? "") ?? "",
+      accountNumber: toString(values[17]) ?? "",
+      basicSalary: toNumber(values[13]) ?? 0,
+      employmentType: values[14] as EmploymentType,
+      hireDate: toDate(values[15]) ?? new Date(),
+      tinNumber: toString(values[12]) ?? "",
+      positionId: positionNames.get(toString(values[16]) ?? "") ?? "",
+      payFrequency: "MONTHLY",
+      currency: "ETB",
+    };
+
+    const emergencyContacts: CreateEmployeeInput["emergencyContacts"] = [
+      {
+        fullName: toString(values[18]) ?? "",
+        relationship: toString(values[19]) ?? "",
+        phone: toString(values[20]) ?? "",
+        email: undefined,
+        address: undefined,
+      },
+    ];
+
+    // Validate required fields
+    if (
+      !personalInfo.name ||
+      !personalInfo.phoneNumber ||
+      !personalInfo.idNumber ||
+      !payrollInfo.departmentId ||
+      !payrollInfo.gradeId ||
+      !payrollInfo.accountNumber ||
+      !payrollInfo.basicSalary ||
+      !payrollInfo.employmentType ||
+      !payrollInfo.hireDate ||
+      !payrollInfo.tinNumber ||
+      !payrollInfo.positionId ||
+      !emergencyContacts[0].fullName ||
+      !emergencyContacts[0].relationship ||
+      !emergencyContacts[0].phone
+    ) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `Invalid or missing data in row ${rowNumber}`
+      );
+    }
+    employees.push({
+      personalInfo,
+      payrollInfo,
+      emergencyContacts,
+    });
+  });
+
+  if (employees.length === 0)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "No employee data found in file"
+    );
+  await employeeService.bulkCreateEmployees(employees, authEmployee.companyId);
+
+  res.status(httpStatus.CREATED).send({
+    message: "Employees created successfully",
+  });
 });

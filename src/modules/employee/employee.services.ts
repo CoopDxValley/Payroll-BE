@@ -8,6 +8,7 @@ import {
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import {
+  CreateEmployeeInput,
   CreateEmployeeServiceInput,
   EmployeeSearchQuery,
   GeneratePasswordInput,
@@ -16,7 +17,6 @@ import {
 import { generateRandomPassword, generateUsername } from "../../utils/helper";
 import config from "../../config/config";
 import { encryptPassword } from "../../utils/encryption";
-// import * as roleService from "../role/role.services";
 import departmentService from "../department/department.service";
 import exclude from "../../utils/exclude";
 import { generateEmployeeIdNumber } from "../../utils/fetch-id-format";
@@ -75,6 +75,11 @@ const createEmployee = async (
   });
 
   try {
+    console.log(
+      "---- hey",
+      typeof personalInfo.phoneNumber,
+      personalInfo.phoneNumber
+    );
     const result = await prisma.$transaction(async (tx) => {
       // Create Employee
       const employee = await tx.employee.create({
@@ -84,6 +89,7 @@ const createEmployee = async (
           username,
           companyId,
           employeeIdNumber,
+          phoneNumber: personalInfo.phoneNumber as string,
         },
       });
 
@@ -428,6 +434,21 @@ async function getEmployeeHistory(employeeId: string) {
   });
 }
 
+async function bulkCreateEmployees(
+  data: CreateEmployeeInput[],
+  companyId: string
+) {
+  for (const emp of data) {
+    const { payrollInfo, personalInfo, emergencyContacts } = emp;
+    await createEmployee({
+      companyId,
+      personalInfo,
+      payrollInfo,
+      emergencyContacts,
+    });
+  }
+}
+
 export default {
   createEmployee,
   getEmployeeById,
@@ -440,4 +461,5 @@ export default {
   generatePassword,
   searchEmployees,
   getEmployeeHistory,
+  bulkCreateEmployees,
 };
