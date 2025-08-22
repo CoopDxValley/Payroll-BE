@@ -3,6 +3,7 @@ import {
   assignEmployeeToDepartmentSchema,
   assignEmployeeToPositionSchema,
   createEmployeeSchema,
+  emergencyContactSchema,
   employeeSearchSchema,
   generatePasswordSchema,
   getEmployeeSchema,
@@ -10,6 +11,12 @@ import {
 } from "./employee.validation";
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
+
+export type PayrollInfo = z.infer<
+  typeof createEmployeeSchema.shape.payrollInfo
+>;
+export type EmergencyContacts = z.infer<typeof emergencyContactSchema>;
+
 export type CreateEmployeeServiceInput = CreateEmployeeInput & {
   companyId: string;
 };
