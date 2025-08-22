@@ -11,11 +11,10 @@ const clean = (data: any): any => {
   }
 
   if (data !== null && typeof data === "object") {
-    const sanitized: Record<string, any> = {};
     for (const key of Object.keys(data)) {
-      sanitized[key] = clean(data[key]);
+      data[key] = clean(data[key]);
     }
-    return sanitized;
+    return data;
   }
 
   // numbers, booleans, null, undefined stay as they are
@@ -25,13 +24,13 @@ const clean = (data: any): any => {
 const middleware = () => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.body && typeof req.body === "object") {
-      req.body = clean(req.body);
+      req.body = clean(req.body); // safe to reassign
     }
     if (req.query && typeof req.query === "object") {
-      req.query = clean(req.query);
+      clean(req.query); // mutate in place
     }
     if (req.params && typeof req.params === "object") {
-      req.params = clean(req.params);
+      clean(req.params); // mutate in place
     }
     next();
   };
