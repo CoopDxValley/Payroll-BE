@@ -893,35 +893,29 @@ const createWorkSession = async (
     return await updateWorkSession(existingSession.id, updateData);
   }
 
-  // Calculate duration and overtime
-  let duration = null;
+  // Calculate early/late minutes if shift is assigned
   let earlyMinutes = 0;
   let lateMinutes = 0;
 
-  if (punchInTime && punchOutTime) {
-    duration = calculateDuration(punchInTime, punchOutTime);
+  if (punchInTime && punchOutTime && shiftId) {
+    const shift = await getShiftInfo(shiftId, dateOnly);
 
-    // Calculate early/late minutes if shift is assigned
-    if (shiftId) {
-      const shift = await getShiftInfo(shiftId, dateOnly);
+    console.log("dfkdfjdkjfkjdjkfkjdjk");
+    console.log(shift);
+    if (shift && shift.patternDays.length > 0) {
+      const shiftDay = shift.patternDays[0];
+      const shiftStartTime = new Date(shiftDay.startTime);
+      const shiftEndTime = new Date(shiftDay.endTime);
 
-      console.log("dfkdfjdkjfkjdjkfkjdjk");
-      console.log(shift);
-      if (shift && shift.patternDays.length > 0) {
-        const shiftDay = shift.patternDays[0];
-        const shiftStartTime = new Date(shiftDay.startTime);
-        const shiftEndTime = new Date(shiftDay.endTime);
-
-        if (punchInTime < shiftStartTime) {
-          earlyMinutes = Math.round(
-            (shiftStartTime.getTime() - punchInTime.getTime()) / (1000 * 60)
-          );
-        }
-        if (punchOutTime > shiftEndTime) {
-          lateMinutes = Math.round(
-            (punchOutTime.getTime() - shiftEndTime.getTime()) / (1000 * 60)
-          );
-        }
+      if (punchInTime < shiftStartTime) {
+        earlyMinutes = Math.round(
+          (shiftStartTime.getTime() - punchInTime.getTime()) / (1000 * 60)
+        );
+      }
+      if (punchOutTime > shiftEndTime) {
+        lateMinutes = Math.round(
+          (punchOutTime.getTime() - shiftEndTime.getTime()) / (1000 * 60)
+        );
       }
     }
   }
@@ -942,6 +936,22 @@ const createWorkSession = async (
     normalizedPunchOut = normalizationResult.normalizedPunchOut;
   }
 
+  // Calculate duration from NORMALIZED times (what shows in the response)
+  let duration = null;
+  if (normalizedPunchIn && normalizedPunchOut) {
+    duration = calculateDuration(normalizedPunchIn, normalizedPunchOut);
+  }
+
+  // Calculate deducted minutes (break time from shift)
+  let dedutedMinutes = 0;
+  if (shiftId && normalizedPunchIn && normalizedPunchOut) {
+    const shift = await getShiftInfo(shiftId, dateOnly);
+    if (shift && shift.patternDays.length > 0) {
+      const shiftDay = shift.patternDays[0];
+      dedutedMinutes = shiftDay.breakTime || 0; // Break time in minutes
+    }
+  }
+
   // Create WorkSession with normalized times
   const workSession = await (prisma as any).workSession.create({
     data: {
@@ -955,6 +965,7 @@ const createWorkSession = async (
       shiftId,
       earlyMinutes,
       lateMinutes,
+      dedutedMinutes,
     },
     include: {
       shift: {

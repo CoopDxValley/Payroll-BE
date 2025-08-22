@@ -1258,7 +1258,7 @@ model WorkSession {
   lateMinutes   Int?          @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  
+  dedutedMinutes Int?          @default(0)
 //  employee      Employee      @relation(fields: [employeeId], references: [id])
   shift         Shift?        @relation(fields: [shiftId], references: [id])
   OvertimeTable      OvertimeTable[]
