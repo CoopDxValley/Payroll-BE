@@ -1027,6 +1027,7 @@ const getAttendanceSummary = async (
       id: ws.id,
       date: ws.date,
       employeeName: employeeInfo.name,
+      
       phoneNumber: employeeInfo.phoneNumber,
       punchIn: formatTime(ws.punchIn),
       punchOut: formatTime(ws.punchOut),

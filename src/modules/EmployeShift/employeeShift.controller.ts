@@ -73,6 +73,26 @@ const getEmployeeShiftById = catchAsync(async (req: Request, res: Response) => {
   res.send({ data: employeeShift });
 });
 
+// Get all employees assigned to a specific shift
+const getEmployeesByShiftId = catchAsync(async (req: Request, res: Response) => {
+  const { shiftId } = req.params;
+  const authEmployee = req.employee as AuthEmployee;
+  const companyId = authEmployee.companyId;
+
+  const result = await employeeShiftService.getEmployeesByShiftId(shiftId, companyId);
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: "Employees assigned to shift retrieved successfully",
+    data: result,
+    meta: {
+      shiftId,
+      totalEmployees: result.totalEmployees,
+      companyId,
+    },
+  });
+});
+
 const getActiveEmployeeShift = catchAsync(async (req: Request, res: Response) => {
   const { employeeId } = req.params;
   const employeeShift = await employeeShiftService.getActiveEmployeeShift(employeeId);
@@ -173,6 +193,7 @@ export default {
   unassignShiftFromEmployee,
   getEmployeeShifts,
   getEmployeeShiftById,
+  getEmployeesByShiftId,
   getActiveEmployeeShift,
   getEmployeeShiftHistory,
   getShiftDetails,

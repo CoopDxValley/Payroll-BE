@@ -153,9 +153,20 @@ const createShift = async (data: CreateShiftData) => {
   });
 };
 
-const getAllShifts = async (companyId: string) => {
+const getAllShifts = async (companyId: string, type?: string) => {
+  const whereClause: any = { companyId, isActive: true };
+
+  if (type) {
+    // Normalize input to valid enum values
+    const validTypes = ["FIXED_WEEKLY", "ROTATING"];
+    if (!validTypes.includes(type)) {
+      throw new Error(`Invalid shift type. Allowed: ${validTypes.join(", ")}`);
+    }
+    whereClause.shiftType = type;
+  }
+
   const shifts = await prisma.shift.findMany({
-    where: { companyId, isActive: true },
+    where: whereClause,
     include: {
       patternDays: true,
       employeeShifts: true,
@@ -165,6 +176,38 @@ const getAllShifts = async (companyId: string) => {
 
   return shifts.map(formatShiftResponse);
 };
+
+// const getAllShifts = async (companyId: string, type?: string) => {
+//   const whereClause: any = { companyId, isActive: true };
+
+//   if (type) {
+//     whereClause.shiftType = type; // filter only if provided
+//   }
+
+//   const shifts = await prisma.shift.findMany({
+//     where: whereClause,
+//     include: {
+//       patternDays: true,
+//       employeeShifts: true,
+//     },
+//     orderBy: { createdAt: "desc" },
+//   });
+
+//   return shifts.map(formatShiftResponse);
+// };
+
+// const getAllShifts = async (companyId: string) => {
+//   const shifts = await prisma.shift.findMany({
+//     where: { companyId, isActive: true },
+//     include: {
+//       patternDays: true,
+//       employeeShifts: true,
+//     },
+//     orderBy: { createdAt: "desc" },
+//   });
+
+//   return shifts.map(formatShiftResponse);
+// };
 
 const getShiftById = async (id: string) => {
   const shift = await prisma.shift.findUnique({

@@ -66,7 +66,7 @@ const assignShiftToEmployee = async (data: {
   const { employeeId, shiftId, startDate, endDate, companyId } = data;
 
   // ✅ Step 1: Required field validation
-  if (!employeeId || !shiftId ) {
+  if (!employeeId || !shiftId) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       "employeeId, shiftId, and startDate are required"
@@ -265,6 +265,110 @@ const getEmployeeShiftById = async (id: string) => {
   });
 };
 
+// Get all employees assigned to a specific shift
+const getEmployeesByShiftId = async (shiftId: string, companyId?: string) => {
+  console.log("=== Getting Employees by Shift ID ===");
+  console.log("Shift ID:", shiftId);
+  console.log("Company ID:", companyId);
+
+  const where: any = {
+    shiftId,
+    isActive: true, // Only get active assignments
+    shift: {
+      isActive: true, // Only get employees assigned to active shifts
+    },
+  };
+
+  // Add company filter if provided
+  if (companyId) {
+    where.employee = {
+      companyId,
+    };
+    where.shift.companyId = companyId;
+  }
+
+  const employeeShifts = await prisma.employeeShift.findMany({
+    where,
+    include: {
+      employee: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          phoneNumber: true,
+          deviceUserId: true,
+          employeeIdNumber: true,
+          gender: true,
+          // Include current position and grade
+          positionHistory: {
+            where: { toDate: null },
+            select: {
+              position: {
+                select: {
+                  id: true,
+                  positionName: true,
+                },
+              },
+            },
+          },
+          gradeHistory: {
+            where: { toDate: null },
+            select: {
+              grade: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      shift: {
+        select: {
+          id: true,
+          name: true,
+          shiftType: true,
+          patternDays: true,
+        },
+      },
+    },
+    orderBy: [
+      { employee: { name: "asc" } }, // Sort by employee name
+      { startDate: "desc" }, // Then by most recent assignment
+    ],
+  });
+
+  console.log(
+    `Found ${employeeShifts.length} employees assigned to shift ${shiftId}`
+  );
+
+  // Transform the response to focus on employees
+  const employees = employeeShifts.map((es) => ({
+    // employeeShiftId: es.id,
+    // assignmentStartDate: es.startDate,
+    // assignmentEndDate: es.endDate,
+    // employee: {
+    id: es.employee.id,
+    name: es.employee.name,
+    username: es.employee.username,
+    phoneNumber: es.employee.phoneNumber,
+    deviceUserId: es.employee.deviceUserId,
+    employeeIdNumber: es.employee.employeeIdNumber,
+    gender: es.employee.gender,
+    currentPosition: es.employee.positionHistory[0]?.position || null,
+    currentGrade: es.employee.gradeHistory[0]?.grade || null,
+    // },
+    // shift: es.shift,
+  }));
+
+  return {
+    shiftId,
+    totalEmployees: employees.length,
+    employees,
+  };
+};
+
 // New method to get shift details with pattern information
 const getShiftDetails = async (shiftId: string, companyId: string) => {
   const shift = await prisma.shift.findFirst({
@@ -290,16 +394,21 @@ const calculateWorkingHours = async (
   endDate: Date
 ) => {
   const employeeShift = await getActiveEmployeeShift(employeeId);
-  
+
   if (!employeeShift) {
-    throw new ApiError(httpStatus.NOT_FOUND, "No active shift found for employee");
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      "No active shift found for employee"
+    );
   }
 
   const { shift } = employeeShift;
-  
+
   if (shift.shiftType === "FIXED_WEEKLY" && shift.patternDays) {
     // Calculate working hours based on pattern days
-    const workingDays = shift.patternDays.filter(day => day.dayType !== "REST_DAY");
+    const workingDays = shift.patternDays.filter(
+      (day) => day.dayType !== "REST_DAY"
+    );
     const totalWorkingHours = workingDays.reduce((total, day) => {
       if (day.dayType === "FULL_DAY") {
         const start = new Date(day.startTime);
@@ -310,7 +419,7 @@ const calculateWorkingHours = async (
         const start = new Date(day.startTime);
         const end = new Date(day.endTime);
         const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        return total + (hours / 2);
+        return total + hours / 2;
       }
       return total;
     }, 0);
@@ -366,19 +475,19 @@ const bulkAssignShiftToEmployees = async (data: {
 
   // Verify all employees exist and belong to company
   const employees = await prisma.employee.findMany({
-    where: { 
+    where: {
       id: { in: employeeIds },
-      companyId 
+      companyId,
     },
-    select: { id: true, name: true }
+    select: { id: true, name: true },
   });
 
   if (employees.length !== employeeIds.length) {
-    const foundIds = employees.map(emp => emp.id);
-    const missingIds = employeeIds.filter(id => !foundIds.includes(id));
+    const foundIds = employees.map((emp) => emp.id);
+    const missingIds = employeeIds.filter((id) => !foundIds.includes(id));
     throw new ApiError(
       httpStatus.NOT_FOUND,
-      `Some employees not found: ${missingIds.join(', ')}`
+      `Some employees not found: ${missingIds.join(", ")}`
     );
   }
 
@@ -388,11 +497,13 @@ const bulkAssignShiftToEmployees = async (data: {
       employeeId: { in: employeeIds },
       isActive: true,
     },
-    select: { employeeId: true, employee: { select: { name: true } } }
+    select: { employeeId: true, employee: { select: { name: true } } },
   });
 
   if (existingAssignments.length > 0) {
-    const employeeNames = existingAssignments.map(assignment => assignment.employee.name).join(', ');
+    const employeeNames = existingAssignments
+      .map((assignment) => assignment.employee.name)
+      .join(", ");
     throw new ApiError(
       httpStatus.CONFLICT,
       `Some employees already have active shift assignments: ${employeeNames}`
@@ -404,7 +515,7 @@ const bulkAssignShiftToEmployees = async (data: {
 
   // Bulk create assignments
   const assignments = await prisma.employeeShift.createMany({
-    data: employeeIds.map(employeeId => ({
+    data: employeeIds.map((employeeId) => ({
       employeeId,
       shiftId,
       startDate: assignmentStartDate,
@@ -417,7 +528,7 @@ const bulkAssignShiftToEmployees = async (data: {
     message: `${assignments.count} employees assigned to shift successfully`,
     count: assignments.count,
     shiftName: shift.name,
-    employees: employees.map(emp => ({ id: emp.id, name: emp.name })),
+    employees: employees.map((emp) => ({ id: emp.id, name: emp.name })),
   };
 };
 
@@ -461,8 +572,8 @@ const bulkUnassignShiftFromEmployees = async (data: {
       isActive: true,
     },
     include: {
-      employee: { select: { id: true, name: true } }
-    }
+      employee: { select: { id: true, name: true } },
+    },
   });
 
   if (existingAssignments.length === 0) {
@@ -489,7 +600,7 @@ const bulkUnassignShiftFromEmployees = async (data: {
     message: `${deactivatedAssignments.count} employees unassigned from shift successfully`,
     count: deactivatedAssignments.count,
     shiftName: shift.name,
-    unassignedEmployees: existingAssignments.map(assignment => ({
+    unassignedEmployees: existingAssignments.map((assignment) => ({
       id: assignment.employee.id,
       name: assignment.employee.name,
     })),
@@ -501,6 +612,7 @@ export default {
   unassignShiftFromEmployee,
   getEmployeeShifts,
   getEmployeeShiftById,
+  getEmployeesByShiftId,
   getActiveEmployeeShift,
   getEmployeeShiftHistory,
   getShiftDetails,
