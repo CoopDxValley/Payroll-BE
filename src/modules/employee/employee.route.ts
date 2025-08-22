@@ -79,4 +79,8 @@ router.route("/seach/keyword/employee").get(
   employeeController.searchEmployees
 );
 
+router
+  .route("/download/template/employee-sheets")
+  .get(auth(), employeeController.downloadEmployeeSheets);
+
 export default router;
