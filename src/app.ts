@@ -26,8 +26,10 @@ if (config.env !== "test") {
   app.use(morgan.errorHandler);
 }
 
-// http smuggling
-app.use(httpSmugglingMiddleware());
+app.disable("x-powered-by");
+
+// ✅ HTTP smuggling guard — mount EARLY
+app.use(httpSmugglingMiddleware({ allowChunked: false })); // behind Nginx, chunked should be stripped
 
 // Helmet Security Headers
 app.use(helmet());
