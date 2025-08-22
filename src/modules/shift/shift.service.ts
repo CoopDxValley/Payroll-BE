@@ -4,8 +4,11 @@ import ApiError from "../../utils/api-error";
 import { CreateShiftData, UpdateShiftData } from "./shift.types";
 
 // Helper function to convert time string to DateTime
-const convertTimeStringToDateTime = (timeString: string, baseDate: Date = new Date()): Date => {
-  const [hours, minutes, seconds] = timeString.split(':').map(Number);
+const convertTimeStringToDateTime = (
+  timeString: string,
+  baseDate: Date = new Date()
+): Date => {
+  const [hours, minutes, seconds] = timeString.split(":").map(Number);
   const date = new Date(baseDate);
   date.setHours(hours, minutes, seconds, 0);
   return date;
@@ -13,9 +16,9 @@ const convertTimeStringToDateTime = (timeString: string, baseDate: Date = new Da
 
 // Helper function to convert DateTime to time string
 const convertDateTimeToTimeString = (dateTime: Date): string => {
-  const hours = dateTime.getHours().toString().padStart(2, '0');
-  const minutes = dateTime.getMinutes().toString().padStart(2, '0');
-  const seconds = dateTime.getSeconds().toString().padStart(2, '0');
+  const hours = dateTime.getHours().toString().padStart(2, "0");
+  const minutes = dateTime.getMinutes().toString().padStart(2, "0");
+  const seconds = dateTime.getSeconds().toString().padStart(2, "0");
   return `${hours}:${minutes}:${seconds}`;
 };
 
@@ -41,9 +44,9 @@ const validateFixedWeeklyPatternDays = (patternDays: any[]) => {
   }
 
   // Check if all day numbers 1-7 are present
-  const dayNumbers = patternDays.map(day => day.dayNumber).sort();
+  const dayNumbers = patternDays.map((day) => day.dayNumber).sort();
   const expectedDays = [1, 2, 3, 4, 5, 6, 7];
-  
+
   if (JSON.stringify(dayNumbers) !== JSON.stringify(expectedDays)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
@@ -71,9 +74,12 @@ const createShift = async (data: CreateShiftData) => {
   // For FIXED_WEEKLY shifts, validate pattern days
   if (shiftType === "FIXED_WEEKLY") {
     if (!patternDays || patternDays.length === 0) {
-      throw new ApiError(httpStatus.BAD_REQUEST, "Pattern days are required for FIXED_WEEKLY shifts");
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Pattern days are required for FIXED_WEEKLY shifts"
+      );
     }
-    
+
     // Validate exactly 7 pattern days covering all days 1-7
     validateFixedWeeklyPatternDays(patternDays);
   }
@@ -86,28 +92,65 @@ const createShift = async (data: CreateShiftData) => {
     throw new ApiError(httpStatus.CONFLICT, "Shift already exists");
   }
 
+  // const result = await prisma.shift.create({
+  //   data: {
+  //     name,
+  //     shiftType,
+  //     companyId,
+  //     patternDays: shiftType === "FIXED_WEEKLY" ? {
+  //       create: patternDays!.map(day => ({
+  //         dayNumber: day.dayNumber,
+  //         dayType: day.dayType,
+  //         startTime: convertTimeStringToDateTime(day.startTime), // Convert to DateTime
+  //         endTime: convertTimeStringToDateTime(day.endTime),     // Convert to DateTime
+  //         breakTime: day.breakTime,
+  //         gracePeriod: day.gracePeriod,
+  //       }))
+  //     } : undefined,
+  //   },
+  //   include: {
+  //     patternDays: true,
+  //   },
+  // });
+
+  // return formatShiftResponse(result);
+
   const result = await prisma.shift.create({
     data: {
       name,
       shiftType,
       companyId,
-      patternDays: shiftType === "FIXED_WEEKLY" ? {
-        create: patternDays!.map(day => ({
-          dayNumber: day.dayNumber,
-          dayType: day.dayType,
-          startTime: convertTimeStringToDateTime(day.startTime), // Convert to DateTime
-          endTime: convertTimeStringToDateTime(day.endTime),     // Convert to DateTime
-          breakTime: day.breakTime,
-          gracePeriod: day.gracePeriod,
-        }))
-      } : undefined,
+      patternDays:
+        shiftType === "FIXED_WEEKLY"
+          ? {
+              create: patternDays!.map((day) => {
+                if (day.dayType === "REST_DAY") {
+                  return {
+                    dayNumber: day.dayNumber,
+                    dayType: day.dayType,
+                    startTime: convertTimeStringToDateTime("00:00:00"),
+                    endTime: convertTimeStringToDateTime("00:00:00"),
+                    breakTime: 0,
+                    gracePeriod: 0,
+                  };
+                }
+
+                return {
+                  dayNumber: day.dayNumber,
+                  dayType: day.dayType,
+                  startTime: convertTimeStringToDateTime(day.startTime),
+                  endTime: convertTimeStringToDateTime(day.endTime),
+                  breakTime: day.breakTime,
+                  gracePeriod: day.gracePeriod,
+                };
+              }),
+            }
+          : undefined,
     },
     include: {
       patternDays: true,
     },
   });
-
-  return formatShiftResponse(result);
 };
 
 const getAllShifts = async (companyId: string) => {
@@ -155,24 +198,26 @@ const updateShift = async (id: string, data: UpdateShiftData) => {
   // If updating pattern days, first delete existing ones and then create new ones
   if (data.patternDays && existing.shiftType === "FIXED_WEEKLY") {
     await prisma.shiftDay.deleteMany({
-      where: { shiftId: id }
+      where: { shiftId: id },
     });
   }
 
-  const result = await prisma.shift.update({ 
-    where: { id }, 
+  const result = await prisma.shift.update({
+    where: { id },
     data: {
       ...data,
-      patternDays: data.patternDays ? {
-        create: data.patternDays.map(day => ({
-          dayNumber: day.dayNumber,
-          dayType: day.dayType,
-          startTime: convertTimeStringToDateTime(day.startTime), // Convert to DateTime
-          endTime: convertTimeStringToDateTime(day.endTime),     // Convert to DateTime
-          breakTime: day.breakTime,
-          gracePeriod: day.gracePeriod,
-        }))
-      } : undefined,
+      patternDays: data.patternDays
+        ? {
+            create: data.patternDays.map((day) => ({
+              dayNumber: day.dayNumber,
+              dayType: day.dayType,
+              startTime: convertTimeStringToDateTime(day.startTime), // Convert to DateTime
+              endTime: convertTimeStringToDateTime(day.endTime), // Convert to DateTime
+              breakTime: day.breakTime,
+              gracePeriod: day.gracePeriod,
+            })),
+          }
+        : undefined,
     },
     include: {
       patternDays: true,
