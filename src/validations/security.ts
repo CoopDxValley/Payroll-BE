@@ -38,6 +38,7 @@ export const safeText = z
 export const safeOptionalText = z
   .string()
   .max(1000, "Text too long")
+  .regex(safeNameRegex, "Invalid characters")
   .transform((s) => stripControlChars(s.trim()))
   .optional();
 
