@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { createPayrollSchema } from "./payroll.validation";
+import {
+  createPayrollSchema,
+  getNonPayrollEmployeeSchema,
+  getPayrollByPayrollDefinitionIdSchema,
+} from "./payroll.validation";
 
 export type createPayrollInput = z.infer<typeof createPayrollSchema.body>;
 
@@ -16,3 +20,11 @@ export const employeeForPayrollInclude = {
 export type EmployeeForPayroll = Prisma.EmployeeGetPayload<{
   include: typeof employeeForPayrollInclude;
 }>;
+
+export type getPayrollByPayrollDefinitionId = z.infer<
+  typeof getPayrollByPayrollDefinitionIdSchema.params
+>;
+
+export type getNonPayrollEmployee = z.infer<
+  typeof getNonPayrollEmployeeSchema.query
+>;

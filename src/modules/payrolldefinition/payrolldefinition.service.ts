@@ -94,7 +94,7 @@ const getCurrentMonth = async (companyId: string) => {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)
   );
 
-  return prisma.payrollDefinition.findFirst({
+  const def = await prisma.payrollDefinition.findFirst({
     where: {
       companyId,
       startDate: { gte: startOfMonth },
@@ -102,6 +102,8 @@ const getCurrentMonth = async (companyId: string) => {
     },
     orderBy: { startDate: "desc" },
   });
+
+  return def;
 };
 
 const getLatest = async (companyId: string) => {

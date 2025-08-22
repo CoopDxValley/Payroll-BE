@@ -55,10 +55,7 @@ export const createPayroll = async (
   return createdPayroll;
 };
 
-export const getCurrentMonthPayroll = async (companyId: string) => {
-  const currentMonth = new Date().getMonth() + 1; // Months are 0-based
-  const currentYear = new Date().getFullYear();
-
+const getCurrentMonthPayroll = async (companyId: string) => {
   const currentPayrollDefinition =
     await payrolldefinitionService.getCurrentMonth(companyId);
 
@@ -76,4 +73,82 @@ export const getCurrentMonthPayroll = async (companyId: string) => {
   return payrolls;
 };
 
-export default { createPayroll, getCurrentMonthPayroll };
+const getPayrollByPayrollDefinitionId = async (payrollDefinitionId: string) => {
+  const payrolls = await prisma.payroll.findMany({
+    where: { payrollDefinitionId },
+  });
+  return payrolls;
+};
+
+const getNonPayrollEmployee = async (payrollDefinitionId: string) => {
+  const payrollDefinition = await prisma.payrollDefinition.findUnique({
+    where: { id: payrollDefinitionId },
+  });
+
+  if (!payrollDefinition)
+    throw new ApiError(httpStatus.NOT_FOUND, "Payroll definition not found");
+
+  const nonPayrollEmployees = await prisma.employee.findMany({
+    where: {
+      id: {
+        notIn: await prisma.payroll
+          .findMany({
+            where: { payrollDefinitionId },
+            select: { employeeId: true },
+          })
+          .then((payrolls) => payrolls.map((p) => p.employeeId)),
+      },
+    },
+    select: {
+      name: true,
+      gradeHistory: {
+        where: { toDate: null },
+      },
+      positionHistory: {
+        where: { toDate: null },
+      },
+    },
+  });
+
+  return nonPayrollEmployees;
+};
+
+const payrollSetup = async (companyId: string) => {
+  const currentPayrollDefinition =
+    await payrolldefinitionService.getCurrentMonth(companyId);
+
+  if (!currentPayrollDefinition) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      "Current payroll definition not found"
+    );
+  }
+
+  const request = await prisma.request.findFirst({
+    where: {
+      moduleId: currentPayrollDefinition.id,
+    },
+  });
+
+  if (!request)
+    throw new ApiError(httpStatus.NOT_FOUND, "This month Payroll is not ready");
+
+  const instance = await prisma.approvalInstance.findFirst({
+    where: {
+      requestId: request.id,
+    },
+  });
+
+  // const payrolls = await prisma.payroll.findMany({
+  //   where: { payrollDefinitionId: currentPayrollDefinition.id },
+  // });
+
+  // return payrolls;
+};
+
+export default {
+  createPayroll,
+  getCurrentMonthPayroll,
+  getPayrollByPayrollDefinitionId,
+  getNonPayrollEmployee,
+};

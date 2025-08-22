@@ -116,3 +116,84 @@
  *       404:
  *         description: Payroll records not found for the current month
  */
+
+/**
+ * @swagger
+ * /api/v1/payroll/definition/{id}:
+ *   get:
+ *     summary: Get payrolls by payroll definition ID
+ *     tags: [Payroll]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: List of payroll records for the specified payroll definition ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         description: The ID of the payroll record
+ *                       status:
+ *                         type: string
+ *                         enum: [PENDING, APPROVED, PAID, FAILED]
+ *                         description: Status of the payroll
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       payrollDefinitionId:
+ *                         type: string
+ *                         format: uuid
+ *                       employeeId:
+ *                         type: string
+ *                         format: uuid
+ *                       basicSalary:
+ *                         type: number
+ *                         format: decimal
+ *                       grossSalary:
+ *                         type: number
+ *                         format: decimal
+ *                       taxableIncome:
+ *                         type: number
+ *                         format: decimal
+ *                       incomeTax:
+ *                         type: number
+ *                         format: decimal
+ *                       totalDeduction:
+ *                         type: number
+ *                         format: decimal
+ *                       totalAllowance:
+ *                         type: number
+ *                         format: decimal
+ *                       netSalary:
+ *                         type: number
+ *                         format: decimal
+ *                       employeePensionAmount:
+ *                         type: number
+ *                         format: decimal
+ *                       employerPensionAmount:
+ *                         type: number
+ *                         format: decimal
+ *       401:
+ *         description: Unauthorized - Missing or invalid token
+ *       404:
+ *         description: Payroll records not found for the current month
+ */
