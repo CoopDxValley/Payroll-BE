@@ -16,7 +16,7 @@ import {
 import { generateRandomPassword, generateUsername } from "../../utils/helper";
 import config from "../../config/config";
 import { encryptPassword } from "../../utils/encryption";
-import * as roleService from "../role/role.services";
+// import * as roleService from "../role/role.services";
 import departmentService from "../department/department.service";
 import exclude from "../../utils/exclude";
 import { generateEmployeeIdNumber } from "../../utils/fetch-id-format";
@@ -40,8 +40,8 @@ const createEmployee = async (
   const hashedPassword = await encryptPassword(rawPassword);
 
   // Fetch required references in parallel (1 query instead of 6)
-  const [role, company, department, position, grade] = await Promise.all([
-    prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
+  const [company, department, position, grade] = await Promise.all([
+    // prisma.role.findUnique({ where: { id: payrollInfo.roleId } }),
     prisma.company.findUnique({ where: { id: companyId } }),
     prisma.department.findUnique({ where: { id: payrollInfo.departmentId } }),
     prisma.position.findUnique({ where: { id: payrollInfo.positionId } }),
@@ -49,7 +49,7 @@ const createEmployee = async (
   ]);
 
   // Validate references
-  if (!role) throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
+  // if (!role) throw new ApiError(httpStatus.BAD_REQUEST, "Role not found");
   if (!company) throw new ApiError(httpStatus.BAD_REQUEST, "Company not found");
   if (!department)
     throw new ApiError(httpStatus.BAD_REQUEST, "Department not found");
@@ -88,7 +88,7 @@ const createEmployee = async (
       });
 
       // Create PayrollInfo + Emergency Contacts in parallel
-      const { positionId, gradeId, departmentId, roleId, ...restPayrollInfo } =
+      const { positionId, gradeId, departmentId, ...restPayrollInfo } =
         payrollInfo;
       await Promise.all([
         tx.payrollInfo.create({
@@ -109,7 +109,7 @@ const createEmployee = async (
 
       // Assign relationships (better to keep these in DB relations, but if service needed:)
       await Promise.all([
-        roleService.assignRoleToEmployee(employee.id, payrollInfo.roleId, tx),
+        // roleService.assignRoleToEmployee(employee.id, payrollInfo.roleId, tx),
         departmentService.assignDepartmentToEmployee(
           employee.id,
           payrollInfo.departmentId,
@@ -132,7 +132,6 @@ const createEmployee = async (
 
     return result;
   } catch (err: any) {
-
     console.log(err);
     if (err.code === "P2002") {
       throw new ApiError(

@@ -28,18 +28,12 @@
  *                 type: object
  *                 required:
  *                   - name
- *                   - username
  *                   - phoneNumber
  *                   - password
  *                   - gender
  *                 properties:
  *                   name:
  *                     type: string
- *                   username:
- *                     type: string
- *                   password:
- *                     type: string
- *                     minLength: 6
  *                   phoneNumber:
  *                     type: string
  *                   optionalPhoneNumber:
@@ -51,9 +45,6 @@
  *                     type: string
  *                   deviceUserId:
  *                     type: string
- *                   isSuperAdmin:
- *                     type: boolean
- *                     default: false
  *                   gender:
  *                     type: string
  *                     enum: [MALE, FEMALE]
@@ -104,7 +95,6 @@
  *                   - employmentType
  *                   - accountNumber
  *                   - positionId
- *                   - roleId
  *                   - departmentId
  *                   - gradeId
  *                 properties:
@@ -129,9 +119,6 @@
  *                   accountNumber:
  *                     type: string
  *                   positionId:
- *                     type: string
- *                     format: uuid
- *                   roleId:
  *                     type: string
  *                     format: uuid
  *                   departmentId:
