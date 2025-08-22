@@ -24,9 +24,19 @@ const createShift = catchAsync(async (req: Request, res: Response) => {
     .send({ message: "Shift created", data: shift });
 });
 
+// const getAllShifts = catchAsync(async (req: Request, res: Response) => {
+//   const user = req.employee as AuthEmployee;
+//   const shifts = await shiftService.getAllShifts(user.companyId);
+//   res.send({ data: shifts, count: shifts.length });
+// });
+
+
 const getAllShifts = catchAsync(async (req: Request, res: Response) => {
   const user = req.employee as AuthEmployee;
-  const shifts = await shiftService.getAllShifts(user.companyId);
+  const { type } = req.query; // optional param
+console.log(type);
+console.log("fdjkfjdkfjkdkjdfjkkjdfjkdfjk")
+  const shifts = await shiftService.getAllShifts(user.companyId, type as string | undefined);
   res.send({ data: shifts, count: shifts.length });
 });
 

@@ -31,7 +31,7 @@ router.route("/").get(
 );
 
 // Get specific employee shift by ID
-router.route("/:id").get(
+router.route("/data/assigned/:id").get(
   auth(),
   // checkPermission("view_employee_shifts"),
   employeeShiftController.getEmployeeShiftById
@@ -57,6 +57,14 @@ router.route("/shift/:shiftId").get(
   validate(employeeShiftValidation.getShiftDetails),
   // checkPermission("view_employee_shifts"),
   employeeShiftController.getShiftDetails
+);
+
+// Get all employees assigned to a specific shift
+router.route("/shift/employees/:shiftId").get(
+  auth(),
+  validate(employeeShiftValidation.getEmployeesByShiftId),
+  // checkPermission("view_employee_shifts"),
+  employeeShiftController.getEmployeesByShiftId
 );
 
 // Calculate working hours for employee

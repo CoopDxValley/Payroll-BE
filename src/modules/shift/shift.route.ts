@@ -18,6 +18,7 @@ router
   .get(
     auth(),
     // checkPermission("view_shift"),
+    validate(shiftValidation.getShifts),
     shiftController.getAllShifts
   );
 
@@ -33,14 +34,12 @@ router
     validate(shiftValidation.updateShift),
     // checkPermission("update_shift"),
     shiftController.updateShift
-  )
-
-  router
-  .route("/delete/:id")
-  .post(
-    auth(),
-    // checkPermission("delete_shift"),
-    shiftController.deleteShift
   );
+
+router.route("/delete/:id").post(
+  auth(),
+  // checkPermission("delete_shift"),
+  shiftController.deleteShift
+);
 
 export default router;

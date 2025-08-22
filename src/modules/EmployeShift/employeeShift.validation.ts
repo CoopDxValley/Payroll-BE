@@ -55,10 +55,17 @@ const bulkUnassignShift = {
   }),
 };
 
+const getEmployeesByShiftId = {
+  params: z.object({
+    shiftId: z.string().uuid("Invalid shift ID"),
+  }),
+};
+
 export default {
   assignShift,
   unassignShift,
   getShiftDetails,
+  getEmployeesByShiftId,
   calculateWorkingHours,
   bulkAssignShift,
   bulkUnassignShift,

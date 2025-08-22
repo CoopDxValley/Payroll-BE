@@ -174,8 +174,16 @@ const updateShift = {
       }
     ),
 };
-
+const getShifts = {
+  query: z.object({
+    type: z
+      .enum(["FIXED_WEEKLY", "ROTATING"])
+      .optional()
+      .transform((val) => val ?? undefined), // normalize to undefined if not provided
+  }),
+};
 export default {
   createShift,
   updateShift,
+  getShifts
 };

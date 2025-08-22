@@ -243,15 +243,31 @@ export const queryEmployee = async (
   const skip = (page - 1) * limit;
   const sortBy = options.sortBy;
   const sortType = options.sortType ?? "desc";
+  const shiftType = options.type;
+
+  // Build where clause
+  let whereClause: any = { companyId };
+
+  // If shift type filter is provided, join with EmployeeShift
+  if (shiftType) {
+    whereClause.employeeShifts = {
+      some: {
+        shift: {
+          shiftType: shiftType,
+        },
+      },
+    };
+  }
 
   const [employees, total] = await Promise.all([
     prisma.employee.findMany({
-      where: { companyId },
+      where: whereClause,
       select: {
         id: true,
         name: true,
         gender: true,
         employeeIdNumber: true,
+        deviceUserId: true,
         positionHistory: {
           where: { toDate: null },
           select: {
@@ -264,12 +280,23 @@ export const queryEmployee = async (
             grade: { select: { name: true } },
           },
         },
+        employeeShifts: {
+          select: {
+            shift: {
+              select: {
+                id: true,
+                name: true,
+                shiftType: true,
+              },
+            },
+          },
+        },
       },
       skip,
       take: parseInt(limit.toString()),
       orderBy: sortBy ? { [sortBy]: sortType } : undefined,
     }),
-    prisma.employee.count(),
+    prisma.employee.count({ where: whereClause }),
   ]);
   const totalPages = Math.ceil(total / limit);
   return {

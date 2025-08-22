@@ -52,7 +52,7 @@ export const getEmployees = catchAsync<
     res: Response
   ) => {
     const authEmployee = req.employee as AuthEmployee;
-    const options = pick(req.query, ["sortBy", "sortType", "limit", "page"]);
+    const options = pick(req.query, ["sortBy", "sortType", "limit", "page", "type"]);
     const result = await employeeService.queryEmployee(
       authEmployee.companyId,
       options
