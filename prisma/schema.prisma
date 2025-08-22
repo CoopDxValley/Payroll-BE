@@ -374,8 +374,9 @@ model Employee {
   username         String  @unique
   phoneNumber      String
   password         String
-  employeeIdNumber String? @unique // Device user ID from attendance device
-  deviceUserId     String? @unique
+  employeeIdNumber String?  @unique // Device user ID from attendance device
+  deviceUserId     String?  @unique
+  salaryPerHour    Decimal? @db.Decimal(10, 2)
 
   attendanceRequirement AttendanceRequirement @default(REQUIRED)
 

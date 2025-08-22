@@ -21,14 +21,9 @@ const createPayroll = catchAsync<
 
     const payroll = await payrollService.createPayroll(inputData);
 
-    res.status(httpStatus.CREATED).send({
-      message: "Payroll Create Successfully",
-      data: {
-        payroll,
-        // expectedHours: expectedHours,
-        // workingHours: workingHours,
-      },
-    });
+    res
+      .status(httpStatus.CREATED)
+      .send({ message: "Payroll Create Successfully", data: {payroll} });
   }
 );
 

@@ -1,36 +1,36 @@
 import { Request, Response, NextFunction } from "express";
 import xss from "xss";
 
-// Sanitize only strings
 const clean = (data: any): any => {
   if (typeof data === "string") {
     return xss(data);
-  } else if (Array.isArray(data)) {
-    return data.map(clean);
-  } else if (data !== null && typeof data === "object") {
-    return sanitizeObject(data);
   }
-  return data; // numbers, booleans, null, undefined stay as they are
-};
 
-// Sanitize all keys in an object
-const sanitizeObject = (obj: Record<string, any>) => {
-  for (const key of Object.keys(obj)) {
-    obj[key] = clean(obj[key]);
+  if (Array.isArray(data)) {
+    return data.map((item) => clean(item));
   }
-  return obj;
+
+  if (data !== null && typeof data === "object") {
+    for (const key of Object.keys(data)) {
+      data[key] = clean(data[key]);
+    }
+    return data;
+  }
+
+  // numbers, booleans, null, undefined stay as they are
+  return data;
 };
 
 const middleware = () => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.body && typeof req.body === "object") {
-      sanitizeObject(req.body);
+      req.body = clean(req.body); // safe to reassign
     }
     if (req.query && typeof req.query === "object") {
-      sanitizeObject(req.query);
+      clean(req.query); // mutate in place
     }
     if (req.params && typeof req.params === "object") {
-      sanitizeObject(req.params);
+      clean(req.params); // mutate in place
     }
     next();
   };

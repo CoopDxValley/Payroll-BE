@@ -26,7 +26,7 @@ router
   .get(auth(), positionController.getPositionById)
   .post(
     auth(),
-    // validate(positionValidation.updatePosition),
+    validate(positionValidation.updatePosition),
     positionController.updatePosition
   );
 
