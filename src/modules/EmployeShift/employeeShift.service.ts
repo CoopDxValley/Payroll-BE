@@ -266,10 +266,353 @@ const getEmployeeShiftById = async (id: string) => {
 };
 
 // Get all employees assigned to a specific shift
-const getEmployeesByShiftId = async (shiftId: string, companyId?: string) => {
+const getEmployeesByShiftId = async (
+  shiftId: string,
+  companyId?: string,
+  scheduleId?: string | null // <-- new optional param
+) => {
   console.log("=== Getting Employees by Shift ID ===");
   console.log("Shift ID:", shiftId);
   console.log("Company ID:", companyId);
+  console.log("Schedule ID:", scheduleId);
+
+  // First, get the shift to check its type
+  const shift = await prisma.shift.findUnique({
+    where: { id: shiftId },
+    select: {
+      id: true,
+      name: true,
+      shiftType: true,
+      companyId: true,
+    },
+  });
+
+  if (!shift) {
+    throw new Error(`Shift with ID ${shiftId} not found`);
+  }
+
+  console.log(`Shift type: ${shift.shiftType}`);
+
+  // Handle ROTATION shifts differently
+  if (shift.shiftType === "ROTATING") {
+    return await getEmployeesForRotatingShift(shiftId, companyId, scheduleId);
+  }
+
+  // Handle FIXED_WEEKLY shifts (existing logic)
+  return await getEmployeesForFixedWeeklyShift(shiftId, companyId, scheduleId);
+};
+
+// Helper function for ROTATION shifts - fetch from EmployeeShiftAssignment
+const getEmployeesForRotatingShift = async (
+  shiftId: string,
+  companyId?: string,
+  scheduleId?: string | null
+) => {
+  console.log("=== Fetching ROTATION shift employees from EmployeeShiftAssignment ===");
+
+  const where: any = {
+    // isApproved: true, // Only approved assignments
+  };
+
+  // Add company filter if provided
+  if (companyId) {
+    where.employee = {
+      companyId,
+    };
+    
+    // Note: Not filtering by RotatingShiftType.companyId because:
+    // 1. OFF days might have null shiftTypeId (no RotatingShiftType)
+    // 2. We want to include all assignments for employees in this company
+  }
+
+  // For rotation shifts, handle schedule filtering
+  if (scheduleId) {
+    // If scheduleId is provided, filter by that specific schedule
+    console.log(`Filtering by scheduleId: ${scheduleId}`);
+    where.scheduleId = scheduleId;
+  } else {
+    // If no scheduleId provided, get all assignments regardless of schedule
+    // This will include assignments with scheduleId and without scheduleId
+    console.log("No scheduleId provided - fetching all rotation assignments for company");
+    
+    // We don't add any scheduleId filter here, so it will get all assignments
+    // The company filter (added above) will ensure we only get assignments for the right company
+  }
+
+  console.log("Query where clause:", JSON.stringify(where, null, 2));
+
+  const assignments = await prisma.employeeShiftAssignment.findMany({
+    where,
+    include: {
+      employee: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          phoneNumber: true,
+          deviceUserId: true,
+          employeeIdNumber: true,
+          gender: true,
+          // Include current position and grade
+          positionHistory: {
+            where: { toDate: null },
+            select: {
+              position: {
+                select: {
+                  id: true,
+                  positionName: true,
+                },
+              },
+            },
+          },
+          gradeHistory: {
+            where: { toDate: null },
+            select: {
+              grade: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      RotatingShiftType: {
+        select: {
+          id: true,
+          name: true,
+          startTime: true,
+          endTime: true,
+        },
+      },
+      schedule: {
+        select: {
+          id: true,
+          name: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+    orderBy: [
+      { date: "desc" }, // Most recent assignments first
+      { employee: { name: "asc" } }, // Then by employee name
+    ],
+  });
+
+  console.log(`Found ${assignments.length} rotation assignments`);
+  
+  // Also let's check if there are any assignments at all for this company
+  const totalAssignments = await prisma.employeeShiftAssignment.count({
+    where: {
+      employee: {
+        companyId: companyId,
+      },
+    },
+  });
+  console.log(`Total assignments in company: ${totalAssignments}`);
+
+  // Let's also check for assignments with the specific scheduleId if provided
+  if (scheduleId) {
+    const scheduleAssignments = await prisma.employeeShiftAssignment.count({
+      where: {
+        scheduleId: scheduleId,
+        employee: {
+          companyId: companyId,
+        },
+      },
+    });
+    console.log(`Assignments with scheduleId ${scheduleId}: ${scheduleAssignments}`);
+  }
+
+  // Check if there are assignments without the RotatingShiftType filter
+  const assignmentsWithoutShiftTypeFilter = await prisma.employeeShiftAssignment.count({
+    where: {
+      employee: {
+        companyId: companyId,
+      },
+      scheduleId: scheduleId || undefined,
+      isApproved: true,
+    },
+  });
+  console.log(`Assignments without RotatingShiftType filter: ${assignmentsWithoutShiftTypeFilter}`);
+
+  // Group assignments by employee to get unique employees with their assignments
+  const employeeAssignments = new Map();
+
+  assignments.forEach((assignment) => {
+    const employeeId = assignment.employee.id;
+    
+    if (!employeeAssignments.has(employeeId)) {
+      employeeAssignments.set(employeeId, {
+        employee: assignment.employee,
+        assignments: [],
+        totalDays: 0,
+        activeDays: 0,
+        offDays: 0,
+      });
+    }
+
+    const emp = employeeAssignments.get(employeeId);
+    emp.assignments.push({
+      id: assignment.id,
+      date: assignment.date,
+      hours: assignment.hours,
+      shiftType: assignment.RotatingShiftType,
+      isApproved: assignment.isApproved,
+      schedule: assignment.schedule,
+    });
+
+    emp.totalDays++;
+    if (assignment.hours > 0) {
+      emp.activeDays++;
+    } else {
+      emp.offDays++;
+    }
+  });
+
+  // Transform to final response format
+  const employees = Array.from(employeeAssignments.values()).map((emp) => ({
+    id: emp.employee.id,
+    name: emp.employee.name,
+    username: emp.employee.username,
+    phoneNumber: emp.employee.phoneNumber,
+    deviceUserId: emp.employee.deviceUserId,
+    employeeIdNumber: emp.employee.employeeIdNumber,
+    gender: emp.employee.gender,
+    currentPosition: emp.employee.positionHistory[0]?.position || null,
+    currentGrade: emp.employee.gradeHistory[0]?.grade || null,
+    // ROTATION-specific data
+    rotationData: {
+      totalDays: emp.totalDays,
+      activeDays: emp.activeDays,
+      offDays: emp.offDays,
+      recentAssignments: emp.assignments.slice(0, 7), // Last 7 days
+      // allAssignments: emp.assignments,
+    },
+  }));
+
+  // Always check for additional employees in EmployeeShift table who might not be in the schedule
+  console.log("Checking for additional employees in EmployeeShift table...");
+  
+  const employeeShifts = await prisma.employeeShift.findMany({
+    where: {
+      shiftId,
+      isActive: true,
+      employee: companyId ? { companyId } : undefined,
+    },
+    include: {
+      employee: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          phoneNumber: true,
+          deviceUserId: true,
+          employeeIdNumber: true,
+          gender: true,
+          positionHistory: {
+            where: { toDate: null },
+            select: {
+              position: {
+                select: {
+                  id: true,
+                  positionName: true,
+                },
+              },
+            },
+          },
+          gradeHistory: {
+            where: { toDate: null },
+            select: {
+              grade: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  console.log(`Found ${employeeShifts.length} employees in EmployeeShift table`);
+
+  // Get employee IDs who already have rotation assignments in the schedule
+  const employeesWithAssignments = new Set(employees.map(emp => emp.id));
+  
+  // Add employees from EmployeeShift who don't already have assignments in the schedule
+  const additionalEmployees = employeeShifts
+    .filter(es => !employeesWithAssignments.has(es.employee.id))
+    .map((es) => ({
+      id: es.employee.id,
+      name: es.employee.name,
+      username: es.employee.username,
+      phoneNumber: es.employee.phoneNumber,
+      deviceUserId: es.employee.deviceUserId,
+      employeeIdNumber: es.employee.employeeIdNumber,
+      gender: es.employee.gender,
+      currentPosition: es.employee.positionHistory[0]?.position || null,
+      currentGrade: es.employee.gradeHistory[0]?.grade || null,
+      // Add a note that this employee is assigned to shift but not in this schedule
+      rotationData: {
+        totalDays: 0,
+        activeDays: 0,
+        offDays: 0,
+        recentAssignments: [],
+        allAssignments: [],
+        note: scheduleId 
+          ? `Employee is assigned to rotation shift but not included in schedule ${scheduleId}`
+          : "Employee is assigned to rotation shift but has no schedule assignments",
+      },
+      // Add the shift assignment details from EmployeeShift
+      shiftAssignment: {
+        startDate: es.startDate,
+        endDate: es.endDate,
+        isActive: es.isActive,
+        assignmentType: "ROTATION_SHIFT_ASSIGNMENT",
+        note: scheduleId 
+          ? "Employee assigned to rotation shift but not in this specific schedule"
+          : "Employee assigned to rotation shift with no schedule assignments",
+      },
+    }));
+
+  console.log(`Found ${additionalEmployees.length} additional employees not in the schedule`);
+
+  // Combine employees with schedule assignments and those without
+  const allEmployees = [...employees, ...additionalEmployees];
+  
+  // Sort by name for consistent ordering
+  allEmployees.sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    shiftId,
+    shiftType: "ROTATING",
+    scheduleId: scheduleId || null,
+    totalEmployees: allEmployees.length,
+    totalAssignments: assignments.length,
+    employeesWithScheduleAssignments: employees.length,
+    employeesWithoutScheduleAssignments: additionalEmployees.length,
+    employees: allEmployees,
+  };
+};
+
+// Helper function for FIXED_WEEKLY shifts (existing logic)
+const getEmployeesForFixedWeeklyShift = async (
+  shiftId: string,
+  companyId?: string,
+  scheduleId?: string | null
+) => {
+  console.log("=== Fetching FIXED_WEEKLY shift employees from EmployeeShift ===");
+  
+  // Note: EmployeeShift model doesn't have scheduleId field
+  // For FIXED_WEEKLY shifts, scheduleId parameter will be ignored
+  if (scheduleId) {
+    console.log(`Warning: scheduleId ${scheduleId} provided for FIXED_WEEKLY shift, but this field doesn't exist in EmployeeShift model. Ignoring scheduleId.`);
+  }
 
   const where: any = {
     shiftId,
@@ -286,6 +629,8 @@ const getEmployeesByShiftId = async (shiftId: string, companyId?: string) => {
     };
     where.shift.companyId = companyId;
   }
+
+  // Note: scheduleId is NOT added here because EmployeeShift model doesn't have this field
 
   const employeeShifts = await prisma.employeeShift.findMany({
     where,
@@ -340,15 +685,13 @@ const getEmployeesByShiftId = async (shiftId: string, companyId?: string) => {
   });
 
   console.log(
-    `Found ${employeeShifts.length} employees assigned to shift ${shiftId}`
+    `Found ${employeeShifts.length} employees assigned to FIXED_WEEKLY shift ${shiftId} ${
+      scheduleId ? `with scheduleId ${scheduleId}` : ""
+    }`
   );
 
   // Transform the response to focus on employees
   const employees = employeeShifts.map((es) => ({
-    // employeeShiftId: es.id,
-    // assignmentStartDate: es.startDate,
-    // assignmentEndDate: es.endDate,
-    // employee: {
     id: es.employee.id,
     name: es.employee.name,
     username: es.employee.username,
@@ -358,16 +701,127 @@ const getEmployeesByShiftId = async (shiftId: string, companyId?: string) => {
     gender: es.employee.gender,
     currentPosition: es.employee.positionHistory[0]?.position || null,
     currentGrade: es.employee.gradeHistory[0]?.grade || null,
-    // },
-    // shift: es.shift,
+    // FIXED_WEEKLY-specific data
+    shiftAssignment: {
+      startDate: es.startDate,
+      endDate: es.endDate,
+      isActive: es.isActive,
+      shift: es.shift,
+    },
   }));
 
   return {
     shiftId,
+    shiftType: "FIXED_WEEKLY",
+    scheduleId: scheduleId || null,
     totalEmployees: employees.length,
     employees,
   };
 };
+
+// // Get all employees assigned to a specific shift
+// const getEmployeesByShiftId = async (shiftId: string, companyId?: string) => {
+//   console.log("=== Getting Employees by Shift ID ===");
+//   console.log("Shift ID:", shiftId);
+//   console.log("Company ID:", companyId);
+
+//   const where: any = {
+//     shiftId,
+//     isActive: true, // Only get active assignments
+//     shift: {
+//       isActive: true, // Only get employees assigned to active shifts
+//     },
+//   };
+
+//   // Add company filter if provided
+//   if (companyId) {
+//     where.employee = {
+//       companyId,
+//     };
+//     where.shift.companyId = companyId;
+//   }
+
+//   const employeeShifts = await prisma.employeeShift.findMany({
+//     where,
+//     include: {
+//       employee: {
+//         select: {
+//           id: true,
+//           name: true,
+//           username: true,
+//           phoneNumber: true,
+//           deviceUserId: true,
+//           employeeIdNumber: true,
+//           gender: true,
+//           // Include current position and grade
+//           positionHistory: {
+//             where: { toDate: null },
+//             select: {
+//               position: {
+//                 select: {
+//                   id: true,
+//                   positionName: true,
+//                 },
+//               },
+//             },
+//           },
+//           gradeHistory: {
+//             where: { toDate: null },
+//             select: {
+//               grade: {
+//                 select: {
+//                   id: true,
+//                   name: true,
+//                 },
+//               },
+//             },
+//           },
+//         },
+//       },
+//       shift: {
+//         select: {
+//           id: true,
+//           name: true,
+//           shiftType: true,
+//           patternDays: true,
+//         },
+//       },
+//     },
+//     orderBy: [
+//       { employee: { name: "asc" } }, // Sort by employee name
+//       { startDate: "desc" }, // Then by most recent assignment
+//     ],
+//   });
+
+//   console.log(
+//     `Found ${employeeShifts.length} employees assigned to shift ${shiftId}`
+//   );
+
+//   // Transform the response to focus on employees
+//   const employees = employeeShifts.map((es) => ({
+//     // employeeShiftId: es.id,
+//     // assignmentStartDate: es.startDate,
+//     // assignmentEndDate: es.endDate,
+//     // employee: {
+//     id: es.employee.id,
+//     name: es.employee.name,
+//     username: es.employee.username,
+//     phoneNumber: es.employee.phoneNumber,
+//     deviceUserId: es.employee.deviceUserId,
+//     employeeIdNumber: es.employee.employeeIdNumber,
+//     gender: es.employee.gender,
+//     currentPosition: es.employee.positionHistory[0]?.position || null,
+//     currentGrade: es.employee.gradeHistory[0]?.grade || null,
+//     // },
+//     // shift: es.shift,
+//   }));
+
+//   return {
+//     shiftId,
+//     totalEmployees: employees.length,
+//     employees,
+//   };
+// };
 
 // New method to get shift details with pattern information
 const getShiftDetails = async (shiftId: string, companyId: string) => {

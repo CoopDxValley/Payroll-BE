@@ -1,491 +1,644 @@
+import prisma from "../../client";
+import {
+  UpdateWorkSessionRequest,
+  IWorkSessionWithRelations,
+} from "./updatedAttendance.type";
+import {
+  formatTime,
+  calculateDurationMinutes,
+  createStableDateTime,
+  normalizePunchTimesToShift,
+  getCompanyGracePeriod,
+  addGracePeriod,
+  subtractGracePeriod,
+} from "./timeUtils";
+
+// Helper function to parse date/time strings with timezone awareness
+const parseDateTime = (dateTimeStr: string | Date | any): Date => {
+  // If it's already a Date object, return it
+  if (dateTimeStr instanceof Date) {
+    return dateTimeStr;
+  }
+
+  // If it's not a string, convert to string first
+  if (typeof dateTimeStr !== "string") {
+    dateTimeStr = String(dateTimeStr);
+  }
+
+  // If it's an empty string or null/undefined, use current time
+  if (!dateTimeStr || dateTimeStr === "null" || dateTimeStr === "undefined") {
+    return new Date();
+  }
+
+  // If it contains T or space, it's likely an ISO datetime
+  if (dateTimeStr.includes("T") || dateTimeStr.includes(" ")) {
+    // IMPORTANT: Treat as local time, not UTC
+    const parsed = new Date(dateTimeStr);
+    return parsed;
+  }
+
+  // If it's just time (HH:MM:SS), combine with today's date
+  if (dateTimeStr.match(/^\d{2}:\d{2}:\d{2}$/)) {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const combined = `${today}T${dateTimeStr}`;
+    const parsed = new Date(combined);
+    return parsed;
+  }
+
+  // If it's just a date (YYYY-MM-DD), combine with current time
+  const date = new Date(dateTimeStr);
+  const now = new Date();
+  date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+  return date;
+};
+
+// Helper function to calculate duration in minutes
+const calculateDuration = (startTime: Date, endTime: Date): number => {
+  const diffMs = endTime.getTime() - startTime.getTime();
+  return Math.round(diffMs / (1000 * 60));
+};
+
+// Helper function to get shift information
+const getShiftInfo = async (shiftId: string, date: Date) => {
+  const shift = await prisma.shift.findUnique({
+    where: { id: shiftId },
+    include: {
+      patternDays: {
+        where: {
+          dayNumber: date.getDay() === 0 ? 7 : date.getDay(), // Convert Sunday=0 to Sunday=7
+        },
+      },
+    },
+  });
+  return shift;
+};
+
+// Helper function to get work session by ID
+const getWorkSessionById = async (
+  id: string
+): Promise<IWorkSessionWithRelations> => {
+  const workSession = await prisma.workSession.findUnique({
+    where: { id },
+    include: {
+      shift: {
+        select: {
+          id: true,
+          name: true,
+          shiftType: true,
+        },
+      },
+      OvertimeTable: true,
+    },
+  });
+
+  if (!workSession) {
+    throw new Error(`Work session with ID ${id} not found`);
+  }
+
+  // Type assertion to handle the nullable punchOut field
+  return workSession as IWorkSessionWithRelations;
+};
+
+// Overtime processing functions (simplified versions for update)
+const processRotationOvertime = async (
+  workSessionId: string,
+  deviceUserId: string,
+  date: Date,
+  punchIn: Date,
+  punchOut: Date
+) => {
+  console.log("Processing rotation overtime for update");
+  // For now, we'll create basic overtime records
+  // This can be enhanced later with full rotation logic
+
+  // Create early arrival overtime if punch-in is before shift start
+  // Create late departure overtime if punch-out is after shift end
+  // This is a simplified version - the full logic is in the main service
+};
+
+const processOvertimeLogic = async (
+  workSessionId: string,
+  deviceUserId: string,
+  date: Date,
+  punchIn: Date,
+  punchOut: Date,
+  shiftId: string
+) => {
+  console.log("Processing FIXED_WEEKLY overtime for update");
+
+  // Get shift information
+  const shift = await getShiftInfo(shiftId, date);
+  if (!shift || !shift.patternDays.length) {
+    console.log("No shift pattern found for overtime calculation");
+    return;
+  }
+
+  const shiftDay = shift.patternDays[0];
+
+  // Create shift times on the work date
+  const workDateStr = date.toISOString().split("T")[0];
+  const shiftStartTimeStr = formatTime(new Date(shiftDay.startTime));
+  const shiftEndTimeStr = formatTime(new Date(shiftDay.endTime));
+
+  if (!shiftStartTimeStr || !shiftEndTimeStr) {
+    console.log("Invalid shift times found");
+    return;
+  }
+
+  const shiftStartTime = createStableDateTime(workDateStr, shiftStartTimeStr);
+  const shiftEndTime = createStableDateTime(workDateStr, shiftEndTimeStr);
+
+  // Get employee info for company grace period
+  const employee = await prisma.employee.findFirst({
+    where: { deviceUserId },
+    select: { companyId: true },
+  });
+
+  // Get company grace period
+  const companyGracePeriodMinutes = await getCompanyGracePeriod(
+    employee?.companyId || "",
+    prisma
+  );
+  const effectiveGracePeriod = companyGracePeriodMinutes || 0;
+
+  // Calculate grace boundaries
+  const earlyThreshold = subtractGracePeriod(
+    shiftStartTime,
+    effectiveGracePeriod
+  );
+  const lateThreshold = addGracePeriod(shiftEndTime, effectiveGracePeriod);
+
+  console.log(
+    `Processing overtime with grace period: ${effectiveGracePeriod} minutes`
+  );
+  console.log(
+    `Shift times: ${formatTime(shiftStartTime)} - ${formatTime(shiftEndTime)}`
+  );
+  console.log(`Punch times: ${formatTime(punchIn)} - ${formatTime(punchOut)}`);
+  console.log(
+    `Early threshold: ${formatTime(
+      earlyThreshold
+    )}, Late threshold: ${formatTime(lateThreshold)}`
+  );
+
+  // Check for early arrival overtime (only if beyond grace period)
+  if (punchIn < earlyThreshold) {
+    const overtimeMinutes = calculateDuration(punchIn, shiftStartTime);
+    console.log(
+      `✅ Creating early arrival overtime: ${overtimeMinutes} minutes`
+    );
+
+    await (prisma as any).overtimeTable.create({
+      data: {
+        workSessionId,
+        deviceUserId,
+        date,
+        punchIn,
+        punchOut: shiftStartTime,
+        type: "EARLY_ARRIVAL",
+        status: "PENDING",
+        punchInSource: "manual",
+        punchOutSource: "manual",
+      },
+    });
+  } else {
+    console.log(
+      `❌ No early arrival overtime - punch in ${formatTime(
+        punchIn
+      )} is not before ${formatTime(earlyThreshold)}`
+    );
+  }
+
+  // Check for late departure overtime (only if beyond grace period)
+  if (punchOut > lateThreshold) {
+    const overtimeMinutes = calculateDuration(shiftEndTime, punchOut);
+    console.log(
+      `✅ Creating late departure overtime: ${overtimeMinutes} minutes`
+    );
+
+    await (prisma as any).overtimeTable.create({
+      data: {
+        workSessionId,
+        deviceUserId,
+        date,
+        punchIn: shiftEndTime,
+        punchOut,
+        type: "LATE_DEPARTURE",
+        status: "PENDING",
+        punchInSource: "manual",
+        punchOutSource: "manual",
+      },
+    });
+  } else {
+    console.log(
+      `❌ No late departure overtime - punch out ${formatTime(
+        punchOut
+      )} is not after ${formatTime(lateThreshold)}`
+    );
+  }
+};
+
 // const updateWorkSession = async (
 //   id: string,
 //   data: UpdateWorkSessionRequest
 // ): Promise<IWorkSessionWithRelations> => {
-//   const workSession = await getWorkSessionById(id);
+const updateWorkSession = async (
+  id: string,
+  data: UpdateWorkSessionRequest
+): Promise<IWorkSessionWithRelations | undefined> => {
+  const workSession = await getWorkSessionById(id);
 
-//   const updateData: any = {};
+  const updateData: any = {};
 
-//   // Handle time-only strings for punchIn (same as create logic)
-//   if (data.punchIn !== undefined) {
-//     if (data.punchIn === null || data.punchIn === "") {
-//       updateData.punchIn = null;
-//     } else if (
-//       typeof data.punchIn === "string" &&
-//       data.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)
-//     ) {
-//       console.log(
-//         `Converting update punchIn time-only string: ${data.punchIn}`
-//       );
-//       const workSessionDateStr = workSession.date.toISOString().split("T")[0];
-//       const punchInDateTime = createStableDateTime(
-//         workSessionDateStr,
-//         data.punchIn
-//       );
-//       updateData.punchIn = punchInDateTime;
-//       console.log(`Converted update punchIn: ${punchInDateTime.toISOString()}`);
-//     } else {
-//       updateData.punchIn = parseDateTime(data.punchIn);
-//     }
-//   }
+  // Store ACTUAL punch times BEFORE any normalization for calculations
+  let actualPunchInForCalculations = null;
+  let actualPunchOutForCalculations = null;
 
-//   // Handle time-only strings for punchOut (same as create logic)
-//   if (data.punchOut !== undefined) {
-//     if (data.punchOut === null || data.punchOut === "") {
-//       updateData.punchOut = null;
-//     } else if (
-//       typeof data.punchOut === "string" &&
-//       data.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)
-//     ) {
-//       console.log(
-//         `Converting update punchOut time-only string: ${data.punchOut}`
-//       );
-//       const workSessionDateStr = workSession.date.toISOString().split("T")[0];
-//       const punchOutDateTime = createStableDateTime(
-//         workSessionDateStr,
-//         data.punchOut
-//       );
-//       updateData.punchOut = punchOutDateTime;
-//       console.log(
-//         `Converted update punchOut: ${punchOutDateTime.toISOString()}`
-//       );
-//     } else {
-//       updateData.punchOut = parseDateTime(data.punchOut);
-//     }
-//   }
+  // Parse actual input times (before normalization)
+  if (data.punchIn !== undefined) {
+    if (data.punchIn === null || data.punchIn === "") {
+      actualPunchInForCalculations = null;
+      updateData.punchIn = null;
+    } else if (
+      typeof data.punchIn === "string" &&
+      data.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)
+    ) {
+      console.log(
+        `Converting update punchIn time-only string: ${data.punchIn}`
+      );
+      const workSessionDateStr = workSession.date.toISOString().split("T")[0];
+      actualPunchInForCalculations = createStableDateTime(
+        workSessionDateStr,
+        data.punchIn
+      );
+      updateData.punchIn = actualPunchInForCalculations; // Store actual time initially
+      console.log(
+        `Converted update punchIn: ${actualPunchInForCalculations.toISOString()}`
+      );
+    } else {
+      actualPunchInForCalculations = parseDateTime(data.punchIn);
+      updateData.punchIn = actualPunchInForCalculations;
+    }
+  } else {
+    actualPunchInForCalculations = workSession.punchIn;
+  }
 
-//   if (data.punchInSource !== undefined) {
-//     updateData.punchInSource = data.punchInSource;
-//   }
+  if (data.punchOut !== undefined) {
+    if (data.punchOut === null || data.punchOut === "") {
+      actualPunchOutForCalculations = null;
+      updateData.punchOut = null;
+    } else if (
+      typeof data.punchOut === "string" &&
+      data.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)
+    ) {
+      console.log(
+        `Converting update punchOut time-only string: ${data.punchOut}`
+      );
+      const workSessionDateStr = workSession.date.toISOString().split("T")[0];
+      actualPunchOutForCalculations = createStableDateTime(
+        workSessionDateStr,
+        data.punchOut
+      );
+      updateData.punchOut = actualPunchOutForCalculations; // Store actual time initially
+      console.log(
+        `Converted update punchOut: ${actualPunchOutForCalculations.toISOString()}`
+      );
+    } else {
+      actualPunchOutForCalculations = parseDateTime(data.punchOut);
+      updateData.punchOut = actualPunchOutForCalculations;
+    }
+  } else {
+    actualPunchOutForCalculations = workSession.punchOut;
+  }
 
-//   if (data.punchOutSource !== undefined) {
-//     updateData.punchOutSource = data.punchOutSource;
-//   }
+  console.log("=== ACTUAL Times for Calculations ===");
+  console.log(
+    "Actual punch in for calculations:",
+    formatTime(actualPunchInForCalculations)
+  );
+  console.log(
+    "Actual punch out for calculations:",
+    formatTime(actualPunchOutForCalculations)
+  );
 
-//   if (data.shiftId !== undefined) {
-//     updateData.shiftId = data.shiftId;
-//   }
+  // Handle other fields
+  if (data.punchInSource !== undefined) {
+    updateData.punchInSource = data.punchInSource;
+  }
 
-//   // Recalculate duration and early/late minutes
-//   if (updateData.punchIn || updateData.punchOut) {
-//     const punchIn = updateData.punchIn || workSession.punchIn;
-//     const punchOut = updateData.punchOut || workSession.punchOut;
+  if (data.punchOutSource !== undefined) {
+    updateData.punchOutSource = data.punchOutSource;
+  }
 
-//     if (punchIn && punchOut) {
-//       updateData.duration = calculateDuration(punchIn, punchOut);
+  if (data.shiftId !== undefined) {
+    updateData.shiftId = data.shiftId;
+  }
 
-//       // Recalculate overtime if shift is assigned
-//       if (workSession.shiftId || data.shiftId) {
-//         const shiftId = data.shiftId || workSession.shiftId;
-//         if (shiftId) {
-//           const shift = await getShiftInfo(shiftId, workSession.date);
-//           if (shift && shift.patternDays.length > 0) {
-//             const shiftDay = shift.patternDays[0];
-//             const shiftStartTime = new Date(shiftDay.startTime);
-//             const shiftEndTime = new Date(shiftDay.endTime);
+  // Calculate duration using ACTUAL times (not normalized)
+  if (actualPunchInForCalculations && actualPunchOutForCalculations) {
+    updateData.duration = calculateDuration(
+      actualPunchInForCalculations,
+      actualPunchOutForCalculations
+    );
+    console.log("=== Duration Calculation (ACTUAL TIMES) ===");
+    console.log("Actual punch in:", formatTime(actualPunchInForCalculations));
+    console.log("Actual punch out:", formatTime(actualPunchOutForCalculations));
+    console.log("Actual duration (minutes):", updateData.duration);
+  }
 
-//             updateData.earlyMinutes = 0;
-//             updateData.lateMinutes = 0;
+  // Calculate early/late minutes using ACTUAL times vs shift times
+  if (actualPunchInForCalculations && actualPunchOutForCalculations) {
+    const finalShiftId = updateData.shiftId || workSession.shiftId;
+    if (finalShiftId) {
+      const shift = await getShiftInfo(finalShiftId, workSession.date);
+      if (shift && shift.patternDays.length > 0) {
+        const shiftDay = shift.patternDays[0];
 
-//             if (punchIn < shiftStartTime) {
-//               updateData.earlyMinutes = Math.round(
-//                 (shiftStartTime.getTime() - punchIn.getTime()) / (1000 * 60)
-//               );
-//             }
-//             if (punchOut > shiftEndTime) {
-//               updateData.lateMinutes = Math.round(
-//                 (punchOut.getTime() - shiftEndTime.getTime()) / (1000 * 60)
-//               );
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
+        // Create shift times on the work date
+        const workDateStr = workSession.date.toISOString().split("T")[0];
+        const shiftStartTimeStr = formatTime(new Date(shiftDay.startTime));
+        const shiftEndTimeStr = formatTime(new Date(shiftDay.endTime));
 
-//   // Normalize punch times for display (if both punch times are being updated)
-//   if (updateData.punchIn || updateData.punchOut) {
-//     const finalPunchIn = updateData.punchIn || workSession.punchIn;
-//     const finalPunchOut = updateData.punchOut || workSession.punchOut;
-//     const finalShiftId = updateData.shiftId || workSession.shiftId;
+        if (!shiftStartTimeStr || !shiftEndTimeStr) {
+          console.log("Invalid shift times found for early/late calculation");
+          return;
+        }
 
-//     if (finalShiftId && (finalPunchIn || finalPunchOut)) {
-//       console.log("Normalizing updated punch times to shift schedule");
-//       const normalizationResult = await normalizePunchTimesToShift(
-//         finalPunchIn,
-//         finalPunchOut,
-//         finalShiftId,
-//         workSession.date,
-//         prisma
-//       );
+        const shiftStartTime = createStableDateTime(
+          workDateStr,
+          shiftStartTimeStr
+        );
+        const shiftEndTime = createStableDateTime(workDateStr, shiftEndTimeStr);
 
-//       // Update with normalized times
-//       if (updateData.punchIn !== undefined) {
-//         updateData.punchIn = normalizationResult.normalizedPunchIn;
-//       }
-//       if (updateData.punchOut !== undefined) {
-//         updateData.punchOut = normalizationResult.normalizedPunchOut;
-//       }
-//     }
-//   }
+        updateData.earlyMinutes = 0;
+        updateData.lateMinutes = 0;
 
-//   // Store ACTUAL punch times BEFORE normalization for overtime and deductible calculations
-//   let actualPunchInForCalculations = null;
-//   let actualPunchOutForCalculations = null;
+        // Early arrival: actual punch-in before shift start
+        if (actualPunchInForCalculations < shiftStartTime) {
+          updateData.earlyMinutes = Math.round(
+            (shiftStartTime.getTime() -
+              actualPunchInForCalculations.getTime()) /
+              (1000 * 60)
+          );
+        }
 
-//   if (updateData.punchIn !== undefined || updateData.punchOut !== undefined) {
-//     // Get the ACTUAL times (before any normalization) - these are the parsed times from the input
-//     if (data.punchIn !== undefined) {
-//       if (data.punchIn === null || data.punchIn === "") {
-//         actualPunchInForCalculations = null;
-//       } else if (typeof data.punchIn === "string" && data.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)) {
-//         const workSessionDateStr = workSession.date.toISOString().split("T")[0];
-//         actualPunchInForCalculations = createStableDateTime(workSessionDateStr, data.punchIn);
-//       } else {
-//         actualPunchInForCalculations = parseDateTime(data.punchIn);
-//       }
-//     } else {
-//       actualPunchInForCalculations = workSession.punchIn;
-//     }
+        // Late departure: actual punch-out after shift end
+        if (actualPunchOutForCalculations > shiftEndTime) {
+          updateData.lateMinutes = Math.round(
+            (actualPunchOutForCalculations.getTime() - shiftEndTime.getTime()) /
+              (1000 * 60)
+          );
+        }
 
-//     if (data.punchOut !== undefined) {
-//       if (data.punchOut === null || data.punchOut === "") {
-//         actualPunchOutForCalculations = null;
-//       } else if (typeof data.punchOut === "string" && data.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)) {
-//         const workSessionDateStr = workSession.date.toISOString().split("T")[0];
-//         actualPunchOutForCalculations = createStableDateTime(workSessionDateStr, data.punchOut);
-//       } else {
-//         actualPunchOutForCalculations = parseDateTime(data.punchOut);
-//       }
-//     } else {
-//       actualPunchOutForCalculations = workSession.punchOut;
-//     }
+        console.log("=== Early/Late Minutes (ACTUAL TIMES) ===");
+        console.log("Shift start:", formatTime(shiftStartTime));
+        console.log("Shift end:", formatTime(shiftEndTime));
+        console.log(
+          "Actual punch in:",
+          formatTime(actualPunchInForCalculations)
+        );
+        console.log(
+          "Actual punch out:",
+          formatTime(actualPunchOutForCalculations)
+        );
+        console.log("Early minutes:", updateData.earlyMinutes);
+        console.log("Late minutes:", updateData.lateMinutes);
+      }
+    }
+  }
 
-//     console.log("=== ACTUAL Times for Calculations ===");
-//     console.log("Actual punch in for calculations:", formatTime(actualPunchInForCalculations));
-//     console.log("Actual punch out for calculations:", formatTime(actualPunchOutForCalculations));
-//   }
+  // Calculate deductible minutes using ACTUAL times
+  if (actualPunchInForCalculations && actualPunchOutForCalculations) {
+    const finalShiftId = updateData.shiftId || workSession.shiftId;
+    if (finalShiftId) {
+      // Get employee shift info
+      const employee = await prisma.employee.findFirst({
+        where: { deviceUserId: workSession.deviceUserId },
+        include: {
+          employeeShifts: {
+            where: { isActive: true },
+            include: {
+              shift: {
+                select: {
+                  id: true,
+                  shiftType: true,
+                },
+              },
+            },
+            take: 1,
+          },
+        },
+      });
 
-//   // Calculate deducted minutes and process overtime BEFORE database update
-//   if (actualPunchInForCalculations || actualPunchOutForCalculations) {
-//     const finalShiftId = updateData.shiftId || workSession.shiftId;
+      if (employee && employee.employeeShifts.length > 0) {
+        const activeShift = employee.employeeShifts[0];
 
-//     if (
-//       actualPunchInForCalculations &&
-//       actualPunchOutForCalculations &&
-//       finalShiftId
-//     ) {
-//       // Get employee shift info
-//       const employee = await prisma.employee.findFirst({
-//         where: { deviceUserId: workSession.deviceUserId },
-//         include: {
-//           employeeShifts: {
-//             where: { isActive: true },
-//             include: {
-//               shift: {
-//                 select: {
-//                   id: true,
-//                   shiftType: true,
-//                 },
-//               },
-//             },
-//             take: 1,
-//           },
-//         },
-//       });
+        // Get shift day info for deductible calculations
+        const dateObj = new Date(workSession.date);
+        const jsDay = dateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const dayNumber = jsDay === 0 ? 7 : jsDay; // Convert to 1-7 format (1 = Monday, 7 = Sunday)
 
-//       if (employee && employee.employeeShifts.length > 0) {
-//         const activeShift = employee.employeeShifts[0];
+        const shiftDay = await prisma.shiftDay.findFirst({
+          where: {
+            shiftId: finalShiftId,
+            dayNumber: dayNumber,
+          },
+        });
 
-//         // Get shift day info for deductible calculations
-//         const dateObj = new Date(workSession.date);
-//         const jsDay = dateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
-//         const dayNumber = jsDay === 0 ? 7 : jsDay; // Convert to 1-7 format (1 = Monday, 7 = Sunday)
+        if (shiftDay) {
+          // Start with break time
+          let dedutedMinutes = shiftDay.breakTime || 0;
 
-//         const shiftDay = await prisma.shiftDay.findFirst({
-//           where: {
-//             shiftId: finalShiftId,
-//             dayNumber: dayNumber,
-//           },
-//         });
+          // For FIXED_WEEKLY shifts, add attendance penalties (late arrival + early departure)
+          if (activeShift.shift.shiftType === "FIXED_WEEKLY") {
+            const gracePeriodMinutes = shiftDay.gracePeriod || 0;
 
-//         if (shiftDay) {
-//           // Start with break time
-//           let dedutedMinutes = shiftDay.breakTime || 0;
+            // Extract time strings from shift DateTime objects and create them on the work date
+            const shiftStartTimeStr = formatTime(new Date(shiftDay.startTime));
+            const shiftEndTimeStr = formatTime(new Date(shiftDay.endTime));
 
-//           // For FIXED_WEEKLY shifts, add attendance penalties (late arrival + early departure)
-//           if (activeShift.shift.shiftType === "FIXED_WEEKLY") {
-//             const gracePeriodMinutes = shiftDay.gracePeriod || 0;
+            if (shiftStartTimeStr && shiftEndTimeStr) {
+              const workDateStr = workSession.date.toISOString().split("T")[0];
+              const shiftStartTime = createStableDateTime(
+                workDateStr,
+                shiftStartTimeStr
+              );
+              const shiftEndTime = createStableDateTime(
+                workDateStr,
+                shiftEndTimeStr
+              );
 
-//             // Extract time strings from shift DateTime objects and create them on the work date
-//             const shiftStartTimeStr = formatTime(new Date(shiftDay.startTime));
-//             const shiftEndTimeStr = formatTime(new Date(shiftDay.endTime));
+              // Calculate late arrival penalty (beyond grace period)
+              if (actualPunchInForCalculations > shiftStartTime) {
+                const lateArrivalMinutes = Math.round(
+                  (actualPunchInForCalculations.getTime() -
+                    shiftStartTime.getTime()) /
+                    (1000 * 60)
+                );
+                // Only count as deductible if beyond grace period
+                if (lateArrivalMinutes > gracePeriodMinutes) {
+                  dedutedMinutes += lateArrivalMinutes - gracePeriodMinutes;
+                }
+              }
 
-//             if (shiftStartTimeStr && shiftEndTimeStr) {
-//               const workDateStr = workSession.date.toISOString().split("T")[0]; // Use the work date string (YYYY-MM-DD format)
-//               const shiftStartTime = createStableDateTime(
-//                 workDateStr,
-//                 shiftStartTimeStr
-//               );
-//               const shiftEndTime = createStableDateTime(
-//                 workDateStr,
-//                 shiftEndTimeStr
-//               );
+              // Calculate early departure penalty (beyond grace period)
+              if (actualPunchOutForCalculations < shiftEndTime) {
+                const earlyDepartureMinutes = Math.round(
+                  (shiftEndTime.getTime() -
+                    actualPunchOutForCalculations.getTime()) /
+                    (1000 * 60)
+                );
+                // Only count as deductible if beyond grace period
+                if (earlyDepartureMinutes > gracePeriodMinutes) {
+                  dedutedMinutes += earlyDepartureMinutes - gracePeriodMinutes;
+                }
+              }
 
-//               // Calculate late arrival penalty (beyond grace period)
-//               if (actualPunchInForCalculations > shiftStartTime) {
-//                 const lateArrivalMinutes = Math.round(
-//                   (actualPunchInForCalculations.getTime() -
-//                     shiftStartTime.getTime()) /
-//                     (1000 * 60)
-//                 );
-//                 // Only count as deductible if beyond grace period
-//                 if (lateArrivalMinutes > gracePeriodMinutes) {
-//                   dedutedMinutes += lateArrivalMinutes - gracePeriodMinutes;
-//                 }
-//               }
+              console.log(
+                "=== Deductible Minutes Calculation (ACTUAL TIMES) ==="
+              );
+              console.log("Break time:", shiftDay.breakTime || 0);
+              console.log("Grace period:", gracePeriodMinutes);
+              console.log("Shift start:", formatTime(shiftStartTime));
+              console.log("Shift end:", formatTime(shiftEndTime));
+              console.log(
+                "Actual punch in:",
+                formatTime(actualPunchInForCalculations)
+              );
+              console.log(
+                "Actual punch out:",
+                formatTime(actualPunchOutForCalculations)
+              );
+              console.log("Total deductible minutes:", dedutedMinutes);
+            }
+          }
 
-//               // Calculate early departure penalty (beyond grace period)
-//               if (actualPunchOutForCalculations < shiftEndTime) {
-//                 const earlyDepartureMinutes = Math.round(
-//                   (shiftEndTime.getTime() -
-//                     actualPunchOutForCalculations.getTime()) /
-//                     (1000 * 60)
-//                 );
-//                 // Only count as deductible if beyond grace period
-//                 if (earlyDepartureMinutes > gracePeriodMinutes) {
-//                   dedutedMinutes += earlyDepartureMinutes - gracePeriodMinutes;
-//                 }
-//               }
+          updateData.dedutedMinutes = dedutedMinutes;
+        }
+      }
+    }
+  }
 
-//               console.log(
-//                 "=== Update Deductible Minutes Calculation (FIXED_WEEKLY) ==="
-//               );
-//               console.log("Break time:", shiftDay.breakTime || 0);
-//               console.log("Grace period:", gracePeriodMinutes);
-//               console.log("Shift start:", formatTime(shiftStartTime));
-//               console.log("Shift end:", formatTime(shiftEndTime));
-//               console.log(
-//                 "Actual punch in:",
-//                 formatTime(actualPunchInForCalculations)
-//               );
-//               console.log(
-//                 "Actual punch out:",
-//                 formatTime(actualPunchOutForCalculations)
-//               );
-//               console.log("Total deductible minutes:", dedutedMinutes);
-//             }
-//           }
+  // Process overtime using ACTUAL times (before normalization)
+  if (actualPunchInForCalculations && actualPunchOutForCalculations) {
+    const finalShiftId = updateData.shiftId || workSession.shiftId;
+    if (finalShiftId) {
+      // Get employee shift info
+      const employee = await prisma.employee.findFirst({
+        where: { deviceUserId: workSession.deviceUserId },
+        include: {
+          employeeShifts: {
+            where: { isActive: true },
+            include: {
+              shift: {
+                select: {
+                  id: true,
+                  shiftType: true,
+                },
+              },
+            },
+            take: 1,
+          },
+        },
+      });
 
-//           updateData.dedutedMinutes = dedutedMinutes;
-//         }
+      if (employee && employee.employeeShifts.length > 0) {
+        const activeShift = employee.employeeShifts[0];
 
-//         // Process overtime BEFORE database update (following createWorkSession pattern)
-//         console.log(
-//           "=== Processing Overtime for Update (Before DB Update) ==="
-//         );
+        console.log("=== Processing Overtime (ACTUAL TIMES) ===");
 
-//         // Delete existing overtime records for this session
-//         await (prisma as any).overtimeTable.deleteMany({
-//           where: { workSessionId: id },
-//         });
+        // Delete existing overtime records for this session
+        await (prisma as any).overtimeTable.deleteMany({
+          where: { workSessionId: id },
+        });
 
-//         // Process overtime using ACTUAL punch times (before normalization)
-//         if (activeShift.shift.shiftType === "ROTATING") {
-//           console.log("🔄 Processing ROTATION shift overtime");
-//           await processRotationOvertime(
-//             id,
-//             workSession.deviceUserId,
-//             workSession.date,
-//             actualPunchInForCalculations,
-//             actualPunchOutForCalculations
-//           );
-//         } else {
-//           console.log("📅 Processing FIXED_WEEKLY shift overtime");
-//           await processOvertimeLogic(
-//             id,
-//             workSession.deviceUserId,
-//             workSession.date,
-//             actualPunchInForCalculations,
-//             actualPunchOutForCalculations,
-//             finalShiftId
-//           );
-//         }
-//       }
-//     }
-//   }
+        // Process overtime using ACTUAL punch times
+        if (activeShift.shift.shiftType === "ROTATING") {
+          console.log("🔄 Processing ROTATION shift overtime");
+          await processRotationOvertime(
+            id,
+            workSession.deviceUserId,
+            workSession.date,
+            actualPunchInForCalculations,
+            actualPunchOutForCalculations
+          );
+        } else {
+          console.log("📅 Processing FIXED_WEEKLY shift overtime");
+          await processOvertimeLogic(
+            id,
+            workSession.deviceUserId,
+            workSession.date,
+            actualPunchInForCalculations,
+            actualPunchOutForCalculations,
+            finalShiftId
+          );
+        }
+      }
+    }
+  }
 
-//   const updated = await (prisma as any).workSession.update({
-//     where: { id },
-//     data: updateData,
-//     include: {
-//       shift: {
-//         select: {
-//           id: true,
-//           name: true,
-//           shiftType: true,
-//         },
-//       },
-//       OvertimeTable: true,
-//     },
-//   });
+  // Normalize punch times for display ONLY (after all calculations are done)
+  if (updateData.punchIn || updateData.punchOut) {
+    const finalPunchIn = updateData.punchIn || workSession.punchIn;
+    const finalPunchOut = updateData.punchOut || workSession.punchOut;
+    const finalShiftId = updateData.shiftId || workSession.shiftId;
 
-//   // return await getWorkSessionById(id);
-//   // Use the properly converted times from updateData (which handles time-only strings correctly)
-//   const actualPunchIn =
-//     updateData.punchIn !== undefined ? updateData.punchIn : workSession.punchIn;
-//   const actualPunchOut =
-//     updateData.punchOut !== undefined
-//       ? updateData.punchOut
-//       : workSession.punchOut;
+    if (finalShiftId && (finalPunchIn || finalPunchOut)) {
+      console.log("=== Normalizing Times for Display ===");
+      const normalizationResult = await normalizePunchTimesToShift(
+        finalPunchIn,
+        finalPunchOut,
+        finalShiftId,
+        workSession.date,
+        prisma
+      );
 
-//   console.log("=== Overtime Reprocessing for Update ===");
-//   console.log(
-//     `Actual punch-in (for overtime): ${
-//       actualPunchIn ? formatTime(actualPunchIn) : "unchanged"
-//     }`
-//   );
-//   console.log(
-//     `Actual punch-out (for overtime): ${
-//       actualPunchOut ? formatTime(actualPunchOut) : "unchanged"
-//     }`
-//   );
+      // Update with normalized times for display
+      if (updateData.punchIn !== undefined) {
+        updateData.punchIn = normalizationResult.normalizedPunchIn;
+      }
+      if (updateData.punchOut !== undefined) {
+        updateData.punchOut = normalizationResult.normalizedPunchOut;
+      }
 
-//   // Use normalized times for session record, but actual times for overtime
-//   const punchIn = updateData.punchIn || workSession.punchIn;
-//   const punchOut = updateData.punchOut || workSession.punchOut;
+      console.log(
+        "Normalized punch in for display:",
+        formatTime(updateData.punchIn)
+      );
+      console.log(
+        "Normalized punch out for display:",
+        formatTime(updateData.punchOut)
+      );
+    }
+  }
 
-//   // Handle overtime reprocessing differently for ROTATION vs FIXED_WEEKLY shifts
-//   if (workSession.shift && workSession.shift.shiftType === "ROTATING") {
-//     console.log("🔄 Reprocessing ROTATION shift overtime");
+  // Update the database with normalized display times
+  const updated = await (prisma as any).workSession.update({
+    where: { id },
+    data: updateData,
+    include: {
+      shift: {
+        select: {
+          id: true,
+          name: true,
+          shiftType: true,
+        },
+      },
+      OvertimeTable: true,
+    },
+  });
 
-//     if (actualPunchIn && actualPunchOut) {
-//       // Complete session - use session-level overtime processing (which deletes and recreates all)
-//       console.log("Complete ROTATION session - reprocessing all overtime");
-//       await (prisma as any).overtimeTable.deleteMany({
-//         where: { workSessionId: id },
-//       });
+  // Get the updated work session
+  const result = await getWorkSessionById(id);
 
-//       await processRotationOvertime(
-//         id,
-//         workSession.deviceUserId,
-//         workSession.date,
-//         actualPunchIn,
-//         actualPunchOut
-//       );
-//     } else if (data.punchIn && !data.punchOut) {
-//       // Only punch-in was updated - process single punch-in overtime
-//       console.log(
-//         "ROTATION punch-in updated - processing single punch overtime"
-//       );
+  // Transform the response to return HH:MM:SS format for punch times
+  const transformedResult = {
+    ...result,
+    punchIn: result.punchIn ? formatTime(result.punchIn) : null,
+    punchOut: result.punchOut ? formatTime(result.punchOut) : null,
+  };
 
-//       // Delete only early arrival overtime records (if any)
-//       await (prisma as any).overtimeTable.deleteMany({
-//         where: {
-//           workSessionId: id,
-//           type: { in: ["EARLY_ARRIVAL", "UNSCHEDULED"] },
-//         },
-//       });
+  return transformedResult as IWorkSessionWithRelations;
+};
 
-//       const assignment = await getRotatingShiftAssignment(
-//         (
-//           await prisma.employee.findFirst({
-//             where: { deviceUserId: workSession.deviceUserId },
-//           })
-//         )?.id || "",
-//         workSession.date
-//       );
-
-//       if (assignment) {
-//         await processRotationSinglePunchOvertime(
-//           id,
-//           workSession.deviceUserId,
-//           workSession.date,
-//           actualPunchIn,
-//           assignment,
-//           true // isPunchIn
-//         );
-//       }
-//     } else if (data.punchOut && !data.punchIn) {
-//       // Only punch-out was updated - process single punch-out overtime
-//       console.log(
-//         "ROTATION punch-out updated - processing single punch overtime"
-//       );
-
-//       // Delete only late departure overtime records (if any)
-//       await (prisma as any).overtimeTable.deleteMany({
-//         where: {
-//           workSessionId: id,
-//           type: { in: ["LATE_DEPARTURE", "EXTENDED_SHIFT"] },
-//         },
-//       });
-
-//       const assignment = await getRotatingShiftAssignment(
-//         (
-//           await prisma.employee.findFirst({
-//             where: { deviceUserId: workSession.deviceUserId },
-//           })
-//         )?.id || "",
-//         workSession.date
-//       );
-
-//       if (assignment) {
-//         await processRotationSinglePunchOvertime(
-//           id,
-//           workSession.deviceUserId,
-//           workSession.date,
-//           actualPunchOut,
-//           assignment,
-//           false // isPunchIn
-//         );
-//       }
-//     } else {
-//       console.log("No ROTATION overtime changes needed");
-//     }
-//   } else {
-//     // FIXED_WEEKLY shift - delete all and recreate (existing logic)
-//     console.log("📅 Reprocessing FIXED_WEEKLY shift overtime");
-//     await (prisma as any).overtimeTable.deleteMany({
-//       where: { workSessionId: id },
-//     });
-
-//     // FIXED_WEEKLY shift - use existing logic
-//     console.log("📅 Reprocessing FIXED_WEEKLY shift overtime");
-//     if (actualPunchIn && actualPunchOut) {
-//       // Both actual punch times exist - use traditional logic
-//       console.log("Reprocessing overtime with both actual punch times");
-//       await processOvertimeLogic(
-//         id,
-//         workSession.deviceUserId,
-//         workSession.date,
-//         actualPunchIn, // Use actual punch-in time for overtime
-//         actualPunchOut, // Use actual punch-out time for overtime
-//         workSession.shiftId || undefined
-//       );
-//     } else if (actualPunchIn) {
-//       // Only actual punch in exists - process single punch overtime
-//       console.log("Reprocessing overtime with actual punch-in only");
-//       await processSinglePunchOvertime(
-//         id,
-//         workSession.deviceUserId,
-//         workSession.date,
-//         actualPunchIn, // Use actual punch-in time for overtime
-//         true, // isPunchIn
-//         workSession.shiftId || undefined
-//       );
-//     } else if (actualPunchOut) {
-//       // Only actual punch out exists - process single punch overtime
-//       console.log("Reprocessing overtime with actual punch-out only");
-//       await processSinglePunchOvertime(
-//         id,
-//         workSession.deviceUserId,
-//         workSession.date,
-//         actualPunchOut, // Use actual punch-out time for overtime
-//         false, // isPunchIn
-//         workSession.shiftId || undefined
-//       );
-//     }
-//   }
-
-//   return await getWorkSessionById(id);
-// };
+export default { updateWorkSession };

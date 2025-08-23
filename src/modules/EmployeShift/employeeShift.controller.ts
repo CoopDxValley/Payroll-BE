@@ -73,13 +73,45 @@ const getEmployeeShiftById = catchAsync(async (req: Request, res: Response) => {
   res.send({ data: employeeShift });
 });
 
+// // Get all employees assigned to a specific shift
+// const getEmployeesByShiftId = catchAsync(async (req: Request, res: Response) => {
+//   const { shiftId } = req.params;
+//   const authEmployee = req.employee as AuthEmployee;
+//   const companyId = authEmployee.companyId;
+
+//   const result = await employeeShiftService.getEmployeesByShiftId(shiftId, companyId);
+
+//   res.status(httpStatus.OK).send({
+//     success: true,
+//     message: "Employees assigned to shift retrieved successfully",
+//     data: result,
+//     meta: {
+//       shiftId,
+//       totalEmployees: result.totalEmployees,
+//       companyId,
+//     },
+//   });
+// });
+
+
 // Get all employees assigned to a specific shift
 const getEmployeesByShiftId = catchAsync(async (req: Request, res: Response) => {
   const { shiftId } = req.params;
+  const { scheduleId } = req.query; // <-- pick up from query params
   const authEmployee = req.employee as AuthEmployee;
   const companyId = authEmployee.companyId;
 
-  const result = await employeeShiftService.getEmployeesByShiftId(shiftId, companyId);
+  // normalize scheduleId: if missing or "null"/"undefined", treat as null
+  const normalizedScheduleId =
+    !scheduleId || scheduleId === "null" || scheduleId === "undefined"
+      ? null
+      : String(scheduleId);
+
+  const result = await employeeShiftService.getEmployeesByShiftId(
+    shiftId,
+    companyId,
+    normalizedScheduleId // pass it to service
+  );
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -87,6 +119,7 @@ const getEmployeesByShiftId = catchAsync(async (req: Request, res: Response) => 
     data: result,
     meta: {
       shiftId,
+      scheduleId: normalizedScheduleId,
       totalEmployees: result.totalEmployees,
       companyId,
     },
