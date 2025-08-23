@@ -74,9 +74,58 @@ const getNonPayrollEmployee = catchAsync<
   }
 );
 
+const getPayrollSetup = catchAsync<CustomRequest<never, never, never>>(
+  async (req: CustomRequest<never, never, never>, res: Response) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const payrollSetup = await payrollService.getPayrollSetup(
+      authEmployee.companyId
+    );
+    res.status(httpStatus.OK).send({
+      data: payrollSetup,
+      message: "Payroll setup retrieved successfully",
+    });
+  }
+);
+
+const getPayrollProcess = catchAsync<
+  CustomRequest<getPayrollByPayrollDefinitionId, never, never>
+>(
+  async (
+    req: CustomRequest<getPayrollByPayrollDefinitionId, never, never>,
+    res: Response
+  ) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const { id } = req.params;
+    const payrollProcess = await payrollService.getPayrollProcess(
+      authEmployee.companyId,
+      id
+    );
+    res.status(httpStatus.OK).send({
+      data: payrollProcess,
+      message: "Payroll process retrieved successfully",
+    });
+  }
+);
+
+const payrollPayment = catchAsync<CustomRequest<never, never, never>>(
+  async (req: CustomRequest<never, never, never>, res: Response) => {
+    const authEmployee = req.employee as AuthEmployee;
+    const payrollPayments = await payrollService.payrollPayment(
+      authEmployee.companyId
+    );
+    res.status(httpStatus.OK).send({
+      data: payrollPayments,
+      message: "Payroll payments retrieved successfully",
+    });
+  }
+);
+
 export default {
   createPayroll,
   getCurrentMonthPayroll,
   getPayrollByPayrollDefinitionId,
   getNonPayrollEmployee,
+  getPayrollSetup,
+  getPayrollProcess,
+  payrollPayment,
 };
