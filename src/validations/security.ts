@@ -22,6 +22,13 @@ export const safeName = z
   .max(100, "Name too long")
   .regex(safeNameRegex, "Invalid characters");
 
+export const safeToken = z
+  .string()
+  .trim()
+  .min(1, "Token is required")
+  .max(400, "Token too long")
+  .regex(safeNameRegex, "Invalid characters");
+
 export const safeUsername = z
   .string()
   .trim()

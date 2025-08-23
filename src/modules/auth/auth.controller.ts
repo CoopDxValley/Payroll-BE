@@ -9,6 +9,7 @@ import {
   LogoutEmployeeInput,
 } from "./auth.type";
 import ApiError from "../../utils/api-error";
+import { CustomRequest } from "../../middlewares/validate";
 
 export const login = catchAsync(async (req, res) => {
   const input: LoginEmployeeInput = req.body;
@@ -45,4 +46,12 @@ export const forgotPassword = catchAsync(async (req, res) => {
   const input: ForgotPasswordInput = req.body;
   await authService.forgotPassword(input.username);
   res.status(httpStatus.NO_CONTENT).send();
+});
+
+export const refreshTokens = catchAsync<
+  CustomRequest<never, never, LogoutEmployeeInput>
+>(async (req: CustomRequest<never, never, LogoutEmployeeInput>, res) => {
+  const data = req.body;
+  const tokens = await authService.refreshAuth(data.refreshToken);
+  res.send({ ...tokens });
 });

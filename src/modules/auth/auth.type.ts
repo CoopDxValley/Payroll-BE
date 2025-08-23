@@ -4,11 +4,11 @@ import {
   logoutSchema,
   forgotPasswordSchema,
 } from "./auth.validation";
+import { JwtPayload } from "jsonwebtoken";
 
 export type LoginEmployeeInput = z.infer<typeof loginSchema>;
 export type LogoutEmployeeInput = z.infer<typeof logoutSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
-console.log("authtype");
 export interface AuthEmployee {
   id: string;
   name: string;
@@ -44,3 +44,11 @@ export interface AuthTokensResponse {
   access: TokenResponse;
   refresh?: TokenResponse;
 }
+
+export type TokenPayload = JwtPayload & {
+  sub: {
+    employeeId: string;
+    companyId: string;
+    departmentId: string | null;
+  };
+};
