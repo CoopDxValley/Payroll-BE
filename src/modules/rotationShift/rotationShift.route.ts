@@ -127,6 +127,15 @@ router
     rotationShiftController.bulkCreateAssignments
   );
 
+// Bulk update assignments
+router
+  .route("/assignments/update/bulk")
+  .post(
+    auth(),
+    validate(rotationShiftValidation.bulkUpdateAssignments),
+    rotationShiftController.bulkUpdateAssignments
+  );
+
 // // Get employee rotation summary
 // router
 //   .route("/employees/summary/:employeeId")

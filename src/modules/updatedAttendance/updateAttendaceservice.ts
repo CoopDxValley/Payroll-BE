@@ -195,6 +195,7 @@ const processOvertimeLogic = async (
         date,
         punchIn,
         punchOut: shiftStartTime,
+        duration: overtimeMinutes,
         type: "EARLY_ARRIVAL",
         status: "PENDING",
         punchInSource: "manual",
@@ -223,6 +224,7 @@ const processOvertimeLogic = async (
         date,
         punchIn: shiftEndTime,
         punchOut,
+        duration: overtimeMinutes,
         type: "LATE_DEPARTURE",
         status: "PENDING",
         punchInSource: "manual",
@@ -334,17 +336,7 @@ const updateWorkSession = async (
     updateData.shiftId = data.shiftId;
   }
 
-  // Calculate duration using ACTUAL times (not normalized)
-  if (actualPunchInForCalculations && actualPunchOutForCalculations) {
-    updateData.duration = calculateDuration(
-      actualPunchInForCalculations,
-      actualPunchOutForCalculations
-    );
-    console.log("=== Duration Calculation (ACTUAL TIMES) ===");
-    console.log("Actual punch in:", formatTime(actualPunchInForCalculations));
-    console.log("Actual punch out:", formatTime(actualPunchOutForCalculations));
-    console.log("Actual duration (minutes):", updateData.duration);
-  }
+  // Duration will be calculated after normalization using normalized times
 
   // Calculate early/late minutes using ACTUAL times vs shift times
   if (actualPunchInForCalculations && actualPunchOutForCalculations) {
@@ -609,6 +601,21 @@ const updateWorkSession = async (
         "Normalized punch out for display:",
         formatTime(updateData.punchOut)
       );
+
+      // Calculate duration using NORMALIZED times (for display/work session)
+      const finalNormalizedPunchIn = updateData.punchIn || workSession.punchIn;
+      const finalNormalizedPunchOut = updateData.punchOut || workSession.punchOut;
+      
+      if (finalNormalizedPunchIn && finalNormalizedPunchOut) {
+        updateData.duration = calculateDuration(
+          finalNormalizedPunchIn,
+          finalNormalizedPunchOut
+        );
+        console.log("=== Duration Calculation (NORMALIZED TIMES) ===");
+        console.log("Final normalized punch in:", formatTime(finalNormalizedPunchIn));
+        console.log("Final normalized punch out:", formatTime(finalNormalizedPunchOut));
+        console.log("Normalized duration (minutes):", updateData.duration);
+      }
     }
   }
 
@@ -636,9 +643,14 @@ const updateWorkSession = async (
     ...result,
     punchIn: result.punchIn ? formatTime(result.punchIn) : null,
     punchOut: result.punchOut ? formatTime(result.punchOut) : null,
+    OvertimeTable: result.OvertimeTable?.map(overtime => ({
+      ...overtime,
+      punchIn: overtime.punchIn ? formatTime(overtime.punchIn) : null,
+      punchOut: overtime.punchOut ? formatTime(overtime.punchOut) : null,
+    })) || [],
   };
 
-  return transformedResult as IWorkSessionWithRelations;
+  return transformedResult as unknown as IWorkSessionWithRelations;
 };
 
 export default { updateWorkSession };

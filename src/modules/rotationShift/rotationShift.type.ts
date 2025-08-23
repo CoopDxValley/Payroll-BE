@@ -64,6 +64,25 @@ export interface BulkCreateAssignmentsRequest {
   }>;
 }
 
+export interface BulkUpdateAssignmentsRequest {
+  scheduleId: string;
+  assignments: Array<{
+    employeeId: string;
+    date: string; // Format: "YYYY-MM-DD"
+    shiftTypeId?: string | null; // null = OFF day, uuid = actual shift type
+  }>;
+}
+
+export interface BulkUpdateAssignmentsResult {
+  scheduleId: string;
+  totalAssignments: number;
+  updatedAssignments: number;
+  createdAssignments: number;
+  deletedAssignments: number;
+  message: string;
+  assignments: EmployeeShiftAssignmentWithRelations[];
+}
+
 // ==================== RESPONSE TYPES ====================
 
 export interface ShiftScheduleWithRelations extends ShiftSchedule {
@@ -167,6 +186,7 @@ export interface IRotationShiftService {
 
   // Bulk operations
   bulkCreateAssignments(data: BulkCreateAssignmentsRequest & { companyId: string }): Promise<BulkCreateAssignmentsResult>;
+  bulkUpdateAssignments(data: BulkUpdateAssignmentsRequest & { companyId: string }): Promise<BulkUpdateAssignmentsResult>;
   getEmployeeRotationSummary(employeeId: string, companyId: string, startDate: Date, endDate: Date): Promise<EmployeeRotationSummary>;
 }
 

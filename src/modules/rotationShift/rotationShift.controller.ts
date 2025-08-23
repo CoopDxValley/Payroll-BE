@@ -257,6 +257,25 @@ const bulkCreateAssignments = catchAsync(async (req: Request, res: Response) => 
   });
 });
 
+const bulkUpdateAssignments = catchAsync(async (req: Request, res: Response) => {
+  const user = req.employee as AuthEmployee;
+  
+  if (!user.companyId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Company context missing.");
+  }
+
+  const result = await rotationShiftService.bulkUpdateAssignments({
+    ...req.body,
+    companyId: user.companyId,
+  });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
 const getEmployeeRotationSummary = catchAsync(async (req: Request, res: Response) => {
   const user = req.employee as AuthEmployee;
   const { employeeId } = req.params;
@@ -324,6 +343,7 @@ export default {
 
   // Bulk operation controllers
   bulkCreateAssignments,
+  bulkUpdateAssignments,
   getEmployeeRotationSummary,
   getAllEmployeeRotationSummaries 
 }; 

@@ -116,6 +116,19 @@ const bulkCreateAssignments = {
   }),
 };
 
+const bulkUpdateAssignments = {
+  body: z.object({
+    scheduleId: z.string().uuid("Invalid schedule ID"),
+    assignments: z.array(
+      z.object({
+        employeeId: z.string().uuid("Invalid employee ID"),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+        shiftTypeId: z.string().uuid("Invalid shift type ID").optional().nullable(),
+      })
+    ).min(1, "At least one assignment is required"),
+  }),
+};
+
 const getEmployeeRotationSummary = {
   params: z.object({
     employeeId: z.string().uuid("Invalid employee ID"),
@@ -142,5 +155,6 @@ export default {
 
   // Bulk operation validations
   bulkCreateAssignments,
+  bulkUpdateAssignments,
   getEmployeeRotationSummary,
 };
