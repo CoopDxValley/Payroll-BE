@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { password, safeName } from "../../validations/security";
+import { password, safeName, safeToken } from "../../validations/security";
 
 export const loginSchema = z
   .object({
@@ -10,7 +10,7 @@ export const loginSchema = z
 
 export const logoutSchema = z
   .object({
-    refreshToken: safeName,
+    refreshToken: safeToken,
   })
   .strict();
 

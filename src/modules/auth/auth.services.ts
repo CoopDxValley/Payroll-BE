@@ -1,7 +1,7 @@
 import httpStatus from "http-status";
 import { v4 as uuidv4 } from "uuid";
 import moment, { Moment } from "moment";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { Employee, Token, TokenType } from "@prisma/client";
 import prisma from "../../client";
 import employeeService from "../employee/employee.services";
@@ -12,7 +12,7 @@ import { forgotPasswordMessage } from "../../templates/sms-template";
 import { formatPhoneNumberForSms } from "../../utils/format-phone-number";
 // import { smsQueue } from "../../queues";
 import logger from "../../config/logger";
-import { AuthTokensResponse } from "./auth.type";
+import { AuthTokensResponse, TokenPayload } from "./auth.type";
 import config from "../../config/config";
 
 /**
@@ -55,6 +55,37 @@ export const logout = async (refreshToken: string): Promise<void> => {
     throw new ApiError(httpStatus.NOT_FOUND, "Not found");
   }
   await prisma.token.delete({ where: { id: refreshTokenData.id } });
+};
+
+/**
+ * Refresh auth tokens
+ * @param {string} refreshToken
+ * @returns {Promise<AuthTokensResponse>}
+ */
+export const refreshAuth = async (
+  refreshToken: string
+): Promise<AuthTokensResponse> => {
+  try {
+    const refreshTokenData = await verifyToken(refreshToken, TokenType.REFRESH);
+    const { id } = refreshTokenData;
+    await prisma.token.delete({ where: { id } });
+    const employee = await employeeService.getEmployeeById(
+      refreshTokenData.employeeId
+    );
+
+    if (!employee) {
+      throw new ApiError(
+        httpStatus.NOT_FOUND,
+        "Employee not found for refresh token"
+      );
+    }
+    return generateAuthTokens(employee);
+  } catch (error) {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      "Something went wrong while refreshing tokens"
+    );
+  }
 };
 
 /**
@@ -211,11 +242,12 @@ const saveToken = async (
  * @returns {Promise<Token>}
  */
 const verifyToken = async (token: string, type: TokenType): Promise<Token> => {
-  const payload = jwt.verify(token, config.jwt.secret);
-  const employeeId = payload.sub as string;
+  const payload = jwt.verify(token, config.jwt.secret) as TokenPayload;
+  const { employeeId } = payload.sub;
   const tokenData = await prisma.token.findFirst({
     where: { token, type, employeeId, blacklisted: false },
   });
+
   if (!tokenData) {
     throw new Error("Token not found");
   }

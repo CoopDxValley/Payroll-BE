@@ -3,12 +3,14 @@ import {
   loginValidation,
   logoutValidation,
   forgotPasswordValidation,
+  logoutSchema,
 } from "./auth.validation";
-import { validate } from "../../middlewares/validate";
+import { CustomRequest, validate } from "../../middlewares/validate";
 import * as authController from "./auth.controller";
 // import auth from "../../middlewares/auth";
 import auth from "../../middlewares/auth";
 import { checkPermission } from "../../middlewares/check-permissions";
+import { LogoutEmployeeInput } from "./auth.type";
 
 const router = Router();
 
@@ -27,6 +29,15 @@ router.post(
   checkPermission("create_system_setting"),
   validate(forgotPasswordValidation),
   authController.forgotPassword
+);
+
+router.post(
+  "/refresh/accessToken",
+  // auth(),
+  validate<CustomRequest<never, never, LogoutEmployeeInput>>({
+    body: logoutSchema,
+  }),
+  authController.refreshTokens
 );
 
 export default router;
