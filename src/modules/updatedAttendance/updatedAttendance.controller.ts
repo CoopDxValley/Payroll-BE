@@ -4,17 +4,23 @@ import httpStatus from "http-status";
 import updatedAttendanceService from "./updatedAttendance.service";
 import bulkAttendanceService from "./bulkattendanceservice";
 import prisma from "../../client";
-import { createLocalDateForStorage, createLocalDateTime, createStableDateTime } from "./timeUtils";
+import {
+  createLocalDateForStorage,
+  createLocalDateTime,
+  createStableDateTime,
+} from "./timeUtils";
 import ApiError from "../../utils/api-error";
+
+import updateWorkSessio from "./updateAttendaceservice";
 
 // WorkSession Controllers
 const createWorkSession = catchAsync(async (req: Request, res: Response) => {
   console.log("=== Direct Work Session Creation ===");
   console.log("Request body:", JSON.stringify(req.body, null, 2));
-  
+
   // Check if this is a HOLIDAY or REST_DAY before creating work session
   const { deviceUserId, date } = req.body;
-  
+
   if (deviceUserId && date) {
     // Get employee information
     const employee = await prisma.employee.findFirst({
@@ -28,11 +34,11 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
         },
       },
     });
-    
+
     if (employee && employee.employeeShifts.length > 0) {
       const shiftId = employee.employeeShifts[0].shiftId;
       const requestDate = createLocalDateForStorage(date);
-      
+
       // Check for holiday first
       const holiday = await prisma.workingCalendar.findFirst({
         where: {
@@ -42,11 +48,15 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
           isActive: true,
         },
       });
-      
+
       if (holiday) {
         console.log("HOLIDAY detected in direct work session creation");
-        console.log(`Holiday: ${holiday.description || 'Unnamed Holiday'} on ${requestDate.toDateString()}`);
-        
+        console.log(
+          `Holiday: ${
+            holiday.description || "Unnamed Holiday"
+          } on ${requestDate.toDateString()}`
+        );
+
         // Convert work session data to smart attendance format and use holiday handler
         const smartAttendanceData = {
           deviceUserId,
@@ -56,8 +66,10 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
           punchInSource: req.body.punchInSource || "manual",
           punchOutSource: req.body.punchOutSource || "manual",
         };
-        
-        const result = await updatedAttendanceService.smartAttendance(smartAttendanceData);
+
+        const result = await updatedAttendanceService.smartAttendance(
+          smartAttendanceData
+        );
         res.status(httpStatus.CREATED).json({
           success: true,
           message: "Holiday work recorded successfully (overtime only)",
@@ -65,7 +77,7 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
         });
         return;
       }
-      
+
       // Check for REST_DAY
       const shiftDay = await prisma.shiftDay.findFirst({
         where: {
@@ -73,11 +85,11 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
           dayNumber: requestDate.getDay() === 0 ? 7 : requestDate.getDay(),
         },
       });
-      
+
       if (shiftDay && shiftDay.dayType === "REST_DAY") {
         console.log("REST_DAY detected in direct work session creation");
         console.log(`REST_DAY on ${requestDate.toDateString()}`);
-        
+
         // Convert work session data to smart attendance format and use REST_DAY handler
         const smartAttendanceData = {
           deviceUserId,
@@ -87,8 +99,10 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
           punchInSource: req.body.punchInSource || "manual",
           punchOutSource: req.body.punchOutSource || "manual",
         };
-        
-        const result = await updatedAttendanceService.smartAttendance(smartAttendanceData);
+
+        const result = await updatedAttendanceService.smartAttendance(
+          smartAttendanceData
+        );
         res.status(httpStatus.CREATED).json({
           success: true,
           message: "REST_DAY work recorded successfully (overtime only)",
@@ -98,50 +112,81 @@ const createWorkSession = catchAsync(async (req: Request, res: Response) => {
       }
     }
   }
-  
+
   // Regular work day - convert to smart attendance format for proper overtime processing
-  console.log("Regular work day - processing via smart attendance for proper overtime calculation");
+  console.log(
+    "Regular work day - processing via smart attendance for proper overtime calculation"
+  );
   console.log("Request body received:", JSON.stringify(req.body, null, 2));
-  
+
   // Validate required fields
   if (!req.body.date) {
     throw new ApiError(httpStatus.BAD_REQUEST, "date field is required");
   }
-  
+
   // Convert time-only strings to proper DateTime format if needed
   let processedBody = { ...req.body };
-  
+
   // Handle time-only strings for punchIn
-  if (processedBody.punchIn && typeof processedBody.punchIn === 'string' && processedBody.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)) {
-    console.log(`Converting punchIn time-only string: ${processedBody.punchIn}`);
-    if (!processedBody.date || typeof processedBody.date !== 'string') {
-      throw new ApiError(httpStatus.BAD_REQUEST, "Valid date field is required when using time-only punchIn");
+  if (
+    processedBody.punchIn &&
+    typeof processedBody.punchIn === "string" &&
+    processedBody.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)
+  ) {
+    console.log(
+      `Converting punchIn time-only string: ${processedBody.punchIn}`
+    );
+    if (!processedBody.date || typeof processedBody.date !== "string") {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Valid date field is required when using time-only punchIn"
+      );
     }
-    const punchInDateTime = createStableDateTime(processedBody.date, processedBody.punchIn);
+    const punchInDateTime = createStableDateTime(
+      processedBody.date,
+      processedBody.punchIn
+    );
     processedBody.punchIn = punchInDateTime.toISOString();
     console.log(`Converted punchIn: ${processedBody.punchIn}`);
   }
-  
+
   // Handle time-only strings for punchOut
-  if (processedBody.punchOut && typeof processedBody.punchOut === 'string' && processedBody.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)) {
-    console.log(`Converting punchOut time-only string: ${processedBody.punchOut}`);
-    if (!processedBody.date || typeof processedBody.date !== 'string') {
-      throw new ApiError(httpStatus.BAD_REQUEST, "Valid date field is required when using time-only punchOut");
+  if (
+    processedBody.punchOut &&
+    typeof processedBody.punchOut === "string" &&
+    processedBody.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)
+  ) {
+    console.log(
+      `Converting punchOut time-only string: ${processedBody.punchOut}`
+    );
+    if (!processedBody.date || typeof processedBody.date !== "string") {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Valid date field is required when using time-only punchOut"
+      );
     }
-    const punchOutDateTime = createStableDateTime(processedBody.date, processedBody.punchOut);
+    const punchOutDateTime = createStableDateTime(
+      processedBody.date,
+      processedBody.punchOut
+    );
     processedBody.punchOut = punchOutDateTime.toISOString();
     console.log(`Converted punchOut: ${processedBody.punchOut}`);
   }
-  
+
   // Ensure sources are set
   processedBody.punchInSource = processedBody.punchInSource || "manual";
   processedBody.punchOutSource = processedBody.punchOutSource || "manual";
-  
+
   // Use smart attendance for proper overtime calculation with grace period
-  console.log("Processed body being sent to smartAttendance:", JSON.stringify(processedBody, null, 2));
-  
+  console.log(
+    "Processed body being sent to smartAttendance:",
+    JSON.stringify(processedBody, null, 2)
+  );
+
   try {
-    const result = await updatedAttendanceService.smartAttendance(processedBody);
+    const result = await updatedAttendanceService.smartAttendance(
+      processedBody
+    );
     res.status(httpStatus.CREATED).json({
       success: true,
       message: "Work session created successfully",
@@ -177,7 +222,8 @@ const getWorkSessionById = catchAsync(async (req: Request, res: Response) => {
 
 const updateWorkSession = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await updatedAttendanceService.updateWorkSession(id, req.body);
+  // const result = await updatedAttendanceService.updateWorkSession(id, req.body);
+  const result = await updateWorkSessio.updateWorkSession(id, req.body);
   res.status(httpStatus.OK).json({
     success: true,
     message: "Work session updated successfully",
@@ -208,8 +254,8 @@ const smartAttendance = catchAsync(async (req: Request, res: Response) => {
 const punchIn = catchAsync(async (req: Request, res: Response) => {
   const { deviceUserId, date, punchIn, punchInSource } = req.body;
   const result = await updatedAttendanceService.punchIn(
-    deviceUserId, 
-    date, 
+    deviceUserId,
+    date,
     punchIn, // Optional: if not provided, uses current time
     punchInSource || "manual"
   );
@@ -223,8 +269,8 @@ const punchIn = catchAsync(async (req: Request, res: Response) => {
 const punchOut = catchAsync(async (req: Request, res: Response) => {
   const { deviceUserId, date, punchOut, punchOutSource } = req.body;
   const result = await updatedAttendanceService.punchOut(
-    deviceUserId, 
-    date, 
+    deviceUserId,
+    date,
     punchOut, // Optional: if not provided, uses current time
     punchOutSource || "manual"
   );
@@ -267,7 +313,10 @@ const getOvertimeTableById = catchAsync(async (req: Request, res: Response) => {
 
 const updateOvertimeTable = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await updatedAttendanceService.updateOvertimeTable(id, req.body);
+  const result = await updatedAttendanceService.updateOvertimeTable(
+    id,
+    req.body
+  );
   res.status(httpStatus.OK).json({
     success: true,
     message: "Overtime record updated successfully",
@@ -287,7 +336,10 @@ const deleteOvertimeTable = catchAsync(async (req: Request, res: Response) => {
 const updateOvertimeStatus = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { status } = req.body;
-  const result = await updatedAttendanceService.updateOvertimeStatus(id, status);
+  const result = await updatedAttendanceService.updateOvertimeStatus(
+    id,
+    status
+  );
   res.status(httpStatus.OK).json({
     success: true,
     message: "Overtime status updated successfully",
@@ -298,9 +350,12 @@ const updateOvertimeStatus = catchAsync(async (req: Request, res: Response) => {
 // Bulk Attendance Controller
 const bulkAttendance = catchAsync(async (req: Request, res: Response) => {
   console.log("=== Bulk Attendance API Called ===");
-  
+
   // Validate that attendanceRecords array exists
-  if (!req.body.attendanceRecords || !Array.isArray(req.body.attendanceRecords)) {
+  if (
+    !req.body.attendanceRecords ||
+    !Array.isArray(req.body.attendanceRecords)
+  ) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       "attendanceRecords array is required"
@@ -315,8 +370,9 @@ const bulkAttendance = catchAsync(async (req: Request, res: Response) => {
   }
 
   // Use the transaction-based method for better performance
-  const result = await bulkAttendanceService.processBulkAttendanceWithTransaction(req.body);
-  
+  const result =
+    await bulkAttendanceService.processBulkAttendanceWithTransaction(req.body);
+
   res.status(httpStatus.OK).json({
     success: true,
     message: `Bulk attendance processed: ${result.successfulRecords} successful, ${result.failedRecords} failed`,
@@ -327,21 +383,21 @@ const bulkAttendance = catchAsync(async (req: Request, res: Response) => {
 export default {
   // Smart Attendance (Main API)
   smartAttendance,
-  
+
   // Bulk Attendance API
   bulkAttendance,
-  
+
   // WorkSession
   createWorkSession,
   getWorkSessions,
   getWorkSessionById,
   updateWorkSession,
   deleteWorkSession,
-  
+
   // Punch (Legacy)
   punchIn,
   punchOut,
-  
+
   // OvertimeTable
   createOvertimeTable,
   getOvertimeTables,
@@ -349,4 +405,4 @@ export default {
   updateOvertimeTable,
   deleteOvertimeTable,
   updateOvertimeStatus,
-}; 
+};

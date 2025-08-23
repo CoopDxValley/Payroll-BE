@@ -59,6 +59,9 @@ const getEmployeesByShiftId = {
   params: z.object({
     shiftId: z.string().uuid("Invalid shift ID"),
   }),
+  query: z.object({
+    scheduleId: z.string().uuid("Invalid schedule ID").optional(),
+  }).optional(),
 };
 
 export default {
