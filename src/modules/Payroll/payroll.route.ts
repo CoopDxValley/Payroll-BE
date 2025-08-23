@@ -41,4 +41,26 @@ router
 //   payrollController.getNonPayrollEmployee
 // );
 
+
+
+
+
+router.get("/current-month", auth(), payrollController.getCurrentMonthPayroll);
+
+router.get(
+  "/definition/:id",
+  auth(),
+  validate<getPayrollByPayrollDefinitionId, never, never>(
+    getPayrollByPayrollDefinitionIdSchema
+  ),
+  payrollController.getPayrollByPayrollDefinitionId
+);
+
+router.get(
+  "/non-payroll-employees",
+  auth(),
+  validate<never, getNonPayrollEmployee, never>(getNonPayrollEmployeeSchema),
+  payrollController.getNonPayrollEmployee
+);
+
 export default router;

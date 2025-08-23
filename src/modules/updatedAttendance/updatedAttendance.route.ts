@@ -86,10 +86,7 @@ router
 // Payroll definition summary
 router
   .route("/payroll-summary")
-  .get(
-    auth(),
-    enhancedAttendanceController.getPayrollDefinitionSummary
-  );
+  .get(auth(), enhancedAttendanceController.getPayrollDefinitionSummary);
 // WorkSession Routes
 router
   .route("/")
