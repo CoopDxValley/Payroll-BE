@@ -5,7 +5,7 @@ import prisma from "../../client";
 import { createPayrollInput, employeeForPayrollInclude } from "./payroll.type";
 import payrollUtil from "./payroll.util";
 import { start } from "repl";
-
+import payrolldefinitionService from "../payrolldefinition/payrolldefinition.service";
 // Interface for attendance-based payroll calculation
 interface AttendancePayrollData {
   employeeId: string;
@@ -58,7 +58,7 @@ const calculateExpectedHoursFixedWeekly = async (
       },
     },
   });
-  
+
   if (!employeeShift || employeeShift.shift.shiftType !== "FIXED_WEEKLY") {
     return { expectedHours: 0, shiftDays: [] };
   }
@@ -80,14 +80,14 @@ const calculateExpectedHoursFixedWeekly = async (
   // Create a set of holiday dates for fast lookup
   const holidayDates = new Set(
     workingCalendar
-      .filter(cal => cal.dayType === 'HOLIDAY')
-      .map(cal => cal.date.toDateString())
+      .filter((cal) => cal.dayType === "HOLIDAY")
+      .map((cal) => cal.date.toDateString())
   );
 
   // Count how many of each day of the week occur in the date range (excluding holidays and rest days)
   const dayCounts: { [key: number]: number } = {
     1: 0, // Monday
-    2: 0, // Tuesday  
+    2: 0, // Tuesday
     3: 0, // Wednesday
     4: 0, // Thursday
     5: 0, // Friday
@@ -100,21 +100,23 @@ const calculateExpectedHoursFixedWeekly = async (
   while (currentDate <= endDate) {
     const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const dayNumber = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert to 1-7 format (1 = Monday)
-    
+
     // Check if this date is a holiday
     const isHoliday = holidayDates.has(currentDate.toDateString());
-    
+
     // Check if this day type is REST_DAY in shift pattern
     const shiftDay = shiftDays.find((sd) => sd.dayNumber === dayNumber);
-    const isRestDay = shiftDay?.dayType === 'REST_DAY';
-    
+    const isRestDay = shiftDay?.dayType === "REST_DAY";
+
     // Only count if it's NOT a holiday AND NOT a rest day
     if (!isHoliday && !isRestDay) {
       dayCounts[dayNumber]++;
     } else {
-      console.log(`Excluding ${currentDate.toDateString()}: Holiday=${isHoliday}, RestDay=${isRestDay}`);
+      console.log(
+        `Excluding ${currentDate.toDateString()}: Holiday=${isHoliday}, RestDay=${isRestDay}`
+      );
     }
-    
+
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
@@ -129,24 +131,29 @@ const calculateExpectedHoursFixedWeekly = async (
 
   // Calculate total expected hours
   let totalExpectedHours = 0;
-  
+
   for (const dayNumberStr of Object.keys(dayCounts)) {
     const dayNumber = parseInt(dayNumberStr);
     const dayCount = dayCounts[dayNumber];
     const shiftDay = shiftDays.find((sd) => sd.dayNumber === dayNumber);
-    
+
     if (shiftDay && dayCount > 0) {
       // Calculate hours for this shift day
       const startTime = new Date(shiftDay.startTime);
       const endTime = new Date(shiftDay.endTime);
-      const shiftHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      const shiftHours =
+        (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
       const breakHours = (shiftDay.breakTime || 0) / 60; // Convert minutes to hours
       const workingHours = shiftHours - breakHours;
-      
+
       const totalHoursForThisDay = dayCount * Math.max(0, workingHours);
       totalExpectedHours += totalHoursForThisDay;
-      
-      console.log(`Day ${dayNumber}: ${dayCount} occurrences × ${workingHours.toFixed(2)} hours = ${totalHoursForThisDay.toFixed(2)} hours`);
+
+      console.log(
+        `Day ${dayNumber}: ${dayCount} occurrences × ${workingHours.toFixed(
+          2
+        )} hours = ${totalHoursForThisDay.toFixed(2)} hours`
+      );
     }
   }
 
@@ -346,9 +353,105 @@ export const createPayroll = async (
   };
 };
 
+////////
+
+const getCurrentMonthPayroll = async (companyId: string) => {
+  const currentPayrollDefinition =
+    await payrolldefinitionService.getCurrentMonth(companyId);
+
+  if (!currentPayrollDefinition) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      "Current payroll definition not found"
+    );
+  }
+
+  const payrolls = await prisma.payroll.findMany({
+    where: { payrollDefinitionId: currentPayrollDefinition.id },
+  });
+
+  return payrolls;
+};
+
+const getPayrollByPayrollDefinitionId = async (payrollDefinitionId: string) => {
+  const payrolls = await prisma.payroll.findMany({
+    where: { payrollDefinitionId },
+  });
+  return payrolls;
+};
+
+const getNonPayrollEmployee = async (payrollDefinitionId: string) => {
+  const payrollDefinition = await prisma.payrollDefinition.findUnique({
+    where: { id: payrollDefinitionId },
+  });
+
+  if (!payrollDefinition)
+    throw new ApiError(httpStatus.NOT_FOUND, "Payroll definition not found");
+
+  const nonPayrollEmployees = await prisma.employee.findMany({
+    where: {
+      id: {
+        notIn: await prisma.payroll
+          .findMany({
+            where: { payrollDefinitionId },
+            select: { employeeId: true },
+          })
+          .then((payrolls) => payrolls.map((p) => p.employeeId)),
+      },
+    },
+    select: {
+      name: true,
+      gradeHistory: {
+        where: { toDate: null },
+      },
+      positionHistory: {
+        where: { toDate: null },
+      },
+    },
+  });
+
+  return nonPayrollEmployees;
+};
+
+const payrollSetup = async (companyId: string) => {
+  const currentPayrollDefinition =
+    await payrolldefinitionService.getCurrentMonth(companyId);
+
+  if (!currentPayrollDefinition) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      "Current payroll definition not found"
+    );
+  }
+
+  const request = await prisma.request.findFirst({
+    where: {
+      moduleId: currentPayrollDefinition.id,
+    },
+  });
+
+  if (!request)
+    throw new ApiError(httpStatus.NOT_FOUND, "This month Payroll is not ready");
+
+  const instance = await prisma.approvalInstance.findFirst({
+    where: {
+      requestId: request.id,
+    },
+  });
+
+  // const payrolls = await prisma.payroll.findMany({
+  //   where: { payrollDefinitionId: currentPayrollDefinition.id },
+  // });
+
+  // return payrolls;
+};
+
 export default {
   createPayroll,
   calculateAttendanceBasedPayroll,
   calculateExpectedHoursFixedWeekly,
   calculateActualHoursWorked,
+  getCurrentMonthPayroll,
+  getPayrollByPayrollDefinitionId,
+  getNonPayrollEmployee,
 };
