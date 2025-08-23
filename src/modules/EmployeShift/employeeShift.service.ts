@@ -473,25 +473,33 @@ const getEmployeesForRotatingShift = async (
   });
 
   // Transform to final response format
-  const employees = Array.from(employeeAssignments.values()).map((emp) => ({
-    id: emp.employee.id,
-    name: emp.employee.name,
-    username: emp.employee.username,
-    phoneNumber: emp.employee.phoneNumber,
-    deviceUserId: emp.employee.deviceUserId,
-    employeeIdNumber: emp.employee.employeeIdNumber,
-    gender: emp.employee.gender,
-    currentPosition: emp.employee.positionHistory[0]?.position || null,
-    currentGrade: emp.employee.gradeHistory[0]?.grade || null,
-    // ROTATION-specific data
-    rotationData: {
-      totalDays: emp.totalDays,
-      activeDays: emp.activeDays,
-      offDays: emp.offDays,
-      recentAssignments: emp.assignments.slice(0, 7), // Last 7 days
-      // allAssignments: emp.assignments,
-    },
-  }));
+  const employees = Array.from(employeeAssignments.values()).map((emp) => {
+    // Only show assignments if scheduleId is provided and matches
+    // If no scheduleId provided, show empty assignments
+    const filteredAssignments = scheduleId 
+      ? emp.assignments.filter((assignment: any) => assignment.schedule?.id === scheduleId)
+      : []; // Empty array when no scheduleId provided
+
+    return {
+      id: emp.employee.id,
+      name: emp.employee.name,
+      username: emp.employee.username,
+      phoneNumber: emp.employee.phoneNumber,
+      deviceUserId: emp.employee.deviceUserId,
+      employeeIdNumber: emp.employee.employeeIdNumber,
+      gender: emp.employee.gender,
+      currentPosition: emp.employee.positionHistory[0]?.position || null,
+      currentGrade: emp.employee.gradeHistory[0]?.grade || null,
+      // ROTATION-specific data
+      rotationData: {
+        totalDays: emp.totalDays,
+        activeDays: emp.activeDays,
+        offDays: emp.offDays,
+        recentAssignments: filteredAssignments.slice(0, 7), // Last 7 days from filtered assignments
+        // allAssignments: emp.assignments,
+      },
+    };
+  });
 
   // Always check for additional employees in EmployeeShift table who might not be in the schedule
   console.log("Checking for additional employees in EmployeeShift table...");
