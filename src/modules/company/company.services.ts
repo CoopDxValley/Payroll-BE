@@ -18,6 +18,22 @@ export const createCompany = async (
     throw new ApiError(httpStatus.BAD_REQUEST, "Email already taken");
   }
 
+  const existingCompany = await getCompanyByKey("companyCode", companyCode);
+  if (existingCompany) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Company code already taken");
+  }
+
+  const existingCompanyByOrganizationName = await getCompanyByKey(
+    "organizationName",
+    organizationName
+  );
+  if (existingCompanyByOrganizationName) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Organization name already taken"
+    );
+  }
+
   const company = await prisma.company.create({
     data: {
       organizationName,
@@ -53,6 +69,30 @@ export const getCompanyByEmail = async <Key extends keyof Company>(
   return prisma.company.findFirst({
     where: { email },
     select: keys.reduce((obj, k) => ({ ...obj, [k]: true }), {}),
+  }) as Promise<Pick<Company, Key> | null>;
+};
+
+/**
+ * Get company by key
+ * @param {Array<Key>} key
+ * @returns {Promise<Pick<Company, Key> | null>}
+ */
+export const getCompanyByKey = async <Key extends keyof Company>(
+  key: Key,
+  value: Company[Key],
+  selectKeys: Key[] = [
+    "id",
+    "email",
+    "organizationName",
+    "phoneNumber",
+    "companyCode",
+    "createdAt",
+    "updatedAt",
+  ] as Key[]
+): Promise<Pick<Company, Key> | null> => {
+  return prisma.company.findFirst({
+    where: { [key]: value },
+    select: selectKeys.reduce((obj, k) => ({ ...obj, [k]: true }), {}),
   }) as Promise<Pick<Company, Key> | null>;
 };
 

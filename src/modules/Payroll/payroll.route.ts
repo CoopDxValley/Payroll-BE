@@ -63,4 +63,17 @@ router.get(
   payrollController.getNonPayrollEmployee
 );
 
+router.get("/payroll-setup", auth(), payrollController.getPayrollSetup);
+
+router.get(
+  "/process/payment/:id",
+  auth(),
+  validate<getPayrollByPayrollDefinitionId, never, never>(
+    getPayrollByPayrollDefinitionIdSchema
+  ),
+  payrollController.getPayrollProcess
+);
+
+router.get("/process/payments", auth(), payrollController.payrollPayment);
+
 export default router;

@@ -197,3 +197,133 @@
  *       404:
  *         description: Payroll records not found for the current month
  */
+
+/**
+ * @swagger
+ * /api/v1/payroll/payroll-setup:
+ *   get:
+ *     summary: Get payroll setup summary
+ *     tags: [Payroll]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payroll setup summary retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 processed:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ *                       example: 15
+ *                       description: Number of processed payrolls
+ *                     totalAmount:
+ *                       type: number
+ *                       format: float
+ *                       example: 150000.50
+ *                       description: Total processed payroll amount
+ *                 unprocessed:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ *                       example: 5
+ *                       description: Number of unprocessed payrolls
+ *                     totalAmount:
+ *                       type: number
+ *                       format: float
+ *                       example: 50000.00
+ *                       description: Total unprocessed payroll amount
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       404:
+ *         description: Payroll setup data not found
+ */
+
+/**
+ * @swagger
+ * /api/v1/payroll/process/payments:
+ *   get:
+ *     summary: Get payroll payment details for employees
+ *     tags: [Payroll]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payroll payments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   employee:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+ *                         description: Employee ID
+ *                       name:
+ *                         type: string
+ *                         example: "John Doe"
+ *                         description: Employee full name
+ *                       payrollInfo:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           basicSalary:
+ *                             type: number
+ *                             format: float
+ *                             example: 12000.75
+ *                             description: Basic salary of employee
+ *                           tinNumber:
+ *                             type: string
+ *                             example: "TIN1234567"
+ *                             description: Tax Identification Number
+ *                           employmentType:
+ *                             type: string
+ *                             enum: [FULL_TIME, PART_TIME, CONTRACT, INTERN]
+ *                             example: FULL_TIME
+ *                       gradeHistory:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             grade:
+ *                               type: object
+ *                               properties:
+ *                                 name:
+ *                                   type: string
+ *                                   example: "Grade A"
+ *                   grossSalary:
+ *                     type: number
+ *                     format: float
+ *                     example: 15000.00
+ *                   taxableIncome:
+ *                     type: number
+ *                     format: float
+ *                     example: 12000.00
+ *                   totalDeduction:
+ *                     type: number
+ *                     format: float
+ *                     example: 2000.00
+ *                   totalAllowance:
+ *                     type: number
+ *                     format: float
+ *                     example: 1000.00
+ *                   netSalary:
+ *                     type: number
+ *                     format: float
+ *                     example: 13000.00
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       404:
+ *         description: No payroll payments found for employees
+ */

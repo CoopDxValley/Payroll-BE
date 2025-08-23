@@ -118,6 +118,58 @@
 
 /**
  * @swagger
+ * /api/v1/auth/refresh/accessToken:
+ *   post:
+ *     summary: Refresh access token using refresh token
+ *     tags: [Authorization]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 example: your-refresh-token-here
+ *     responses:
+ *       200:
+ *         description: Successfully refreshed tokens
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 access:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                     expires:
+ *                       type: string
+ *                       format: date-time
+ *                       example: 2023-01-01T00:00:00Z
+ *                 refresh:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                     expires:
+ *                       type: string
+ *                       format: date-time
+ *                       example: 2023-01-01T00:00:00Z
+ *       400:
+ *         description: Refresh token is missing or invalid
+ */
+
+/**
+ * @swagger
  * /api/v1/auth/forgotPassword:
  *   post:
  *     summary: Send password reset instructions to the user
