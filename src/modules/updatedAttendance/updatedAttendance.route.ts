@@ -114,6 +114,24 @@ router
 router
   .route("/payroll-summary")
   .get(auth(), enhancedAttendanceController.getPayrollDefinitionSummary);
+
+// Payroll definition summary by ID
+router
+  .route("/payroll-summary/:payrollDefinitionId")
+  .get(
+    auth(),
+    validate(enhancedAttendanceValidation.getPayrollDefinitionSummaryById),
+    enhancedAttendanceController.getPayrollDefinitionSummaryById
+  );
+
+// Payroll definition summary by ID
+router
+  .route("/payroll-summary/:payrollDefinitionId")
+  .get(
+    auth(),
+    validate(enhancedAttendanceValidation.getPayrollDefinitionSummaryById),
+    enhancedAttendanceController.getPayrollDefinitionSummaryById
+  );
 // WorkSession Routes
 router
   .route("/")
