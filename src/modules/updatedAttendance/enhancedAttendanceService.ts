@@ -1474,7 +1474,7 @@ const getAttendanceByPayrollDefinition = async (query: {
   shiftId?: string;
   departmentId?: string;
   companyId?: string;
-}): Promise<EnhancedSession[]> => {
+}) => {
   console.log("=== Getting Attendance by Payroll Definition ===");
 
   // Fetch the specific payroll definition
@@ -1492,19 +1492,147 @@ const getAttendanceByPayrollDefinition = async (query: {
   console.log(`Using payroll definition: ${payrollDef.payrollName}`);
   console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
 
-  // Get basic attendance data for the payroll definition's date range
-  const sessions = await getAttendanceByDateRange({
-    startDate: payrollDef.startDate.toISOString().split("T")[0],
-    endDate: payrollDef.endDate.toISOString().split("T")[0],
-    deviceUserId: query.deviceUserId,
-    shiftId: query.shiftId,
-    companyId: query.companyId,
-    departmentId: query.departmentId,
+  // Get all employees for the company with department and position info
+  const employees = await prisma.employee.findMany({
+    where: {
+      companyId: query.companyId,
+      ...(query.deviceUserId && { deviceUserId: query.deviceUserId }),
+      ...(query.departmentId && {
+        departmentHistory: {
+          some: {
+            departmentId: query.departmentId,
+            toDate: null, // Active department
+          },
+        },
+      }),
+    },
+    include: {
+      departmentHistory: {
+        where: { toDate: null }, // Only active department
+        include: {
+          department: true,
+        },
+        take: 1,
+      },
+      positionHistory: {
+        where: { toDate: null }, // Only active position
+        include: {
+          position: true,
+        },
+        take: 1,
+      },
+      employeeShifts: {
+        where: { isActive: true },
+        include: {
+          shift: {
+            select: {
+              id: true,
+              name: true,
+              shiftType: true,
+            },
+          },
+        },
+        take: 1,
+      },
+    },
   });
 
-  // Add payroll definition info to each session
-  const enhancedSessions = sessions.map((session) => ({
-    ...session,
+  // Generate all dates in the payroll period
+  const dates: Date[] = [];
+  const currentDate = new Date(payrollDef.startDate);
+  const endDate = new Date(payrollDef.endDate);
+  
+  while (currentDate <= endDate) {
+    dates.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Get all work sessions for the payroll period
+  const workSessions = await prisma.workSession.findMany({
+    where: {
+      deviceUserId: { in: employees.map(emp => emp.deviceUserId).filter((id): id is string => id !== null) },
+      date: {
+        gte: payrollDef.startDate,
+        lte: payrollDef.endDate,
+      },
+    },
+    include: {
+      shift: {
+        select: {
+          id: true,
+          name: true,
+          shiftType: true,
+        },
+      },
+      OvertimeTable: true,
+    },
+  });
+
+  // Create a map of work sessions by employee and date
+  const sessionMap = new Map();
+  workSessions.forEach(session => {
+    const key = `${session.deviceUserId}_${session.date.toISOString().split('T')[0]}`;
+    sessionMap.set(key, session);
+  });
+
+  // Build the response structure
+  const employeesData = employees.map(employee => {
+    const attendanceInfo = dates.map(date => {
+      const dateKey = date.toISOString().split('T')[0];
+      const sessionKey = `${employee.deviceUserId}_${dateKey}`;
+      const session = sessionMap.get(sessionKey);
+
+      if (session) {
+        // Calculate duration
+        let durationMinutes = 0;
+        let durationHours = 0;
+        let durationFormatted = "";
+
+        if (session.punchIn && session.punchOut) {
+          const punchIn = new Date(session.punchIn);
+          const punchOut = new Date(session.punchOut);
+          durationMinutes = Math.round((punchOut.getTime() - punchIn.getTime()) / (1000 * 60));
+          durationHours = +(durationMinutes / 60).toFixed(2);
+          durationFormatted = formatDuration(durationMinutes);
+        }
+
+        return {
+          date: date.toISOString(),
+          punchIn: session.punchIn ? formatTime(session.punchIn) : "",
+          punchOut: session.punchOut ? formatTime(session.punchOut) : "",
+          punchInSource: session.punchInSource || "",
+          punchOutSource: session.punchOutSource || "",
+          durationMinutes: durationMinutes || "",
+          durationHours: durationHours || "",
+          durationFormatted: durationFormatted || "",
+        };
+      } else {
+        // No attendance data for this date
+        return {
+          date: date.toISOString(),
+          punchIn: "",
+          punchOut: "",
+          punchInSource: "",
+          punchOutSource: "",
+          durationMinutes: "",
+          durationHours: "",
+          durationFormatted: "",
+        };
+      }
+    });
+
+    return {
+      employeeName: employee.name,
+      departmentName: employee.departmentHistory[0]?.department?.deptName || "Unassigned",
+      positionName: employee.positionHistory[0]?.position?.positionName || "Unassigned",
+      phoneNumber: employee.phoneNumber || "",
+      shiftType: employee.employeeShifts[0]?.shift?.shiftType || "Unassigned",
+      employeeID: employee.id,
+      attendanceInfo,
+    };
+  });
+
+  return {
     payrollDefinition: {
       id: payrollDef.id,
       name: payrollDef.payrollName,
@@ -1512,10 +1640,363 @@ const getAttendanceByPayrollDefinition = async (query: {
       endDate: payrollDef.endDate,
       payPeriod: payrollDef.payPeriod,
     },
-  }));
+    Employees: employeesData,
+  };
+};
 
-  console.log(`Enhanced ${enhancedSessions.length} sessions with payroll definition data`);
-  return enhancedSessions;
+// Get recent attendance (last 5 days from current month payroll)
+const getRecentAttendance = async (query: {
+  deviceUserId?: string;
+  shiftId?: string;
+  departmentId?: string;
+  companyId?: string;
+}) => {
+  console.log("=== Getting Recent Attendance (Last 5 Days) ===");
+
+  // Get current month's payroll definition
+  const payrollDef = await prisma.payrollDefinition.findFirst({
+    where: {
+      companyId: query.companyId,
+    },
+    orderBy: { startDate: "desc" },
+  });
+
+  if (!payrollDef) {
+    throw new Error("No payroll definition found for the company");
+  }
+
+  console.log(`Using payroll definition: ${payrollDef.payrollName}`);
+  console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
+
+  // Calculate the last 5 days from today
+  const today = new Date();
+  const fiveDaysAgo = new Date(today);
+  fiveDaysAgo.setDate(today.getDate() - 4); // 5 days including today
+
+  // Get all employees for the company with department and position info
+  const employees = await prisma.employee.findMany({
+    where: {
+      companyId: query.companyId,
+      ...(query.deviceUserId && { deviceUserId: query.deviceUserId }),
+      ...(query.departmentId && {
+        departmentHistory: {
+          some: {
+            departmentId: query.departmentId,
+            toDate: null, // Active department
+          },
+        },
+      }),
+    },
+    include: {
+      departmentHistory: {
+        where: { toDate: null }, // Only active department
+        include: {
+          department: true,
+        },
+        take: 1,
+      },
+      positionHistory: {
+        where: { toDate: null }, // Only active position
+        include: {
+          position: true,
+        },
+        take: 1,
+      },
+      employeeShifts: {
+        where: { isActive: true },
+        include: {
+          shift: {
+            select: {
+              id: true,
+              name: true,
+              shiftType: true,
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+  });
+
+  // Generate last 5 days
+  const dates: Date[] = [];
+  const currentDate = new Date(fiveDaysAgo);
+  
+  for (let i = 0; i < 5; i++) {
+    dates.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Get all work sessions for the last 5 days
+  const workSessions = await prisma.workSession.findMany({
+    where: {
+      deviceUserId: { in: employees.map(emp => emp.deviceUserId).filter((id): id is string => id !== null) },
+      date: {
+        gte: fiveDaysAgo,
+        lte: today,
+      },
+    },
+    include: {
+      shift: {
+        select: {
+          id: true,
+          name: true,
+          shiftType: true,
+        },
+      },
+      OvertimeTable: true,
+    },
+  });
+
+  // Create a map of work sessions by employee and date
+  const sessionMap = new Map();
+  workSessions.forEach(session => {
+    const key = `${session.deviceUserId}_${session.date.toISOString().split('T')[0]}`;
+    sessionMap.set(key, session);
+  });
+
+  // Build the response structure
+  const employeesData = employees.map(employee => {
+    const attendanceInfo = dates.map(date => {
+      const dateKey = date.toISOString().split('T')[0];
+      const sessionKey = `${employee.deviceUserId}_${dateKey}`;
+      const session = sessionMap.get(sessionKey);
+
+      if (session) {
+        // Calculate duration
+        let durationMinutes = 0;
+        let durationHours = 0;
+        let durationFormatted = "";
+
+        if (session.punchIn && session.punchOut) {
+          const punchIn = new Date(session.punchIn);
+          const punchOut = new Date(session.punchOut);
+          durationMinutes = Math.round((punchOut.getTime() - punchIn.getTime()) / (1000 * 60));
+          durationHours = +(durationMinutes / 60).toFixed(2);
+          durationFormatted = formatDuration(durationMinutes);
+        }
+
+        return {
+          id: session.id|| "",
+          date: date.toISOString(),
+          punchIn: session.punchIn ? formatTime(session.punchIn) : "",
+          punchOut: session.punchOut ? formatTime(session.punchOut) : "",
+          punchInSource: session.punchInSource || "",
+          punchOutSource: session.punchOutSource || "",
+          durationMinutes: durationMinutes || "",
+          durationHours: durationHours || "",
+          durationFormatted: durationFormatted || "",
+        };
+      } else {
+        // No attendance data for this date
+        return {
+          date: date.toISOString(),
+          punchIn: "",
+          punchOut: "",
+          punchInSource: "",
+          punchOutSource: "",
+          durationMinutes: "",
+          durationHours: "",
+          durationFormatted: "",
+        };
+      }
+    });
+
+    return {
+      employeeName: employee.name,
+      departmentName: employee.departmentHistory[0]?.department?.deptName || "Unassigned",
+      positionName: employee.positionHistory[0]?.position?.positionName || "Unassigned",
+      phoneNumber: employee.phoneNumber || "",
+      shiftType: employee.employeeShifts[0]?.shift?.shiftType || "Unassigned",
+      employeeID: employee.id,
+      attendanceInfo,
+    };
+  });
+
+  return {
+    payrollDefinition: {
+      id: payrollDef.id,
+      name: payrollDef.payrollName,
+      startDate: payrollDef.startDate,
+      endDate: payrollDef.endDate,
+      payPeriod: payrollDef.payPeriod,
+    },
+    Employees: employeesData,
+  };
+};
+
+// Get employee attendance by current month payroll definition
+const getEmployeeAttendanceByDateRange = async (query: {
+  employeeId: string;
+  companyId?: string;
+}) => {
+  console.log("=== Getting Employee Attendance by Current Month Payroll Definition ===");
+
+  // Get current month's payroll definition
+  const payrollDef = await prisma.payrollDefinition.findFirst({
+    where: {
+      companyId: query.companyId,
+    },
+    orderBy: { startDate: "desc" },
+  });
+
+  if (!payrollDef) {
+    throw new Error("No payroll definition found for the company");
+  }
+
+  console.log(`Using payroll definition: ${payrollDef.payrollName}`);
+  console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
+
+  // Get employee details
+  const employee = await prisma.employee.findFirst({
+    where: {
+      id: query.employeeId,
+      companyId: query.companyId,
+    },
+    include: {
+      departmentHistory: {
+        where: { toDate: null }, // Only active department
+        include: {
+          department: true,
+        },
+        take: 1,
+      },
+      positionHistory: {
+        where: { toDate: null }, // Only active position
+        include: {
+          position: true,
+        },
+        take: 1,
+      },
+      employeeShifts: {
+        where: { isActive: true },
+        include: {
+          shift: {
+            select: {
+              id: true,
+              name: true,
+              shiftType: true,
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+  });
+
+  if (!employee) {
+    throw new Error(`Employee with ID ${query.employeeId} not found for the company`);
+  }
+
+  console.log(`Getting attendance for employee: ${employee.name}`);
+  console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
+
+  // Generate all dates in the range
+  const dates: Date[] = [];
+  const currentDate = new Date(payrollDef.startDate);
+  const endDate = new Date(payrollDef.endDate);
+  
+  while (currentDate <= endDate) {
+    dates.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Get all work sessions for the employee in the date range
+  const workSessions = await prisma.workSession.findMany({
+    where: {
+      deviceUserId: employee.deviceUserId || "",
+      date: {
+        gte: payrollDef.startDate,
+        lte: payrollDef.endDate,
+      },
+    },
+    include: {
+      shift: {
+        select: {
+          id: true,
+          name: true,
+          shiftType: true,
+        },
+      },
+      OvertimeTable: true,
+    },
+    orderBy: {
+      date: "asc",
+    },
+  });
+
+  // Create a map of work sessions by date
+  const sessionMap = new Map();
+  workSessions.forEach(session => {
+    const dateKey = session.date.toISOString().split('T')[0];
+    sessionMap.set(dateKey, session);
+  });
+
+  // Build the attendance info for each date
+  const attendanceInfo = dates.map(date => {
+    const dateKey = date.toISOString().split('T')[0];
+    const session = sessionMap.get(dateKey);
+
+    if (session) {
+      // Calculate duration
+      let durationMinutes = 0;
+      let durationHours = 0;
+      let durationFormatted = "";
+
+      if (session.punchIn && session.punchOut) {
+        const punchIn = new Date(session.punchIn);
+        const punchOut = new Date(session.punchOut);
+        durationMinutes = Math.round((punchOut.getTime() - punchIn.getTime()) / (1000 * 60));
+        durationHours = +(durationMinutes / 60).toFixed(2);
+        durationFormatted = formatDuration(durationMinutes);
+      }
+
+      return {
+        id: session.id || "",
+        date: date.toISOString(),
+        punchIn: session.punchIn ? formatTime(session.punchIn) : "",
+        punchOut: session.punchOut ? formatTime(session.punchOut) : "",
+        punchInSource: session.punchInSource || "",
+        punchOutSource: session.punchOutSource || "",
+        durationMinutes: durationMinutes || "",
+        durationHours: durationHours || "",
+        durationFormatted: durationFormatted || "",
+      };
+    } else {
+      // No attendance data for this date
+      return {
+        id: "",
+        date: date.toISOString(),
+        punchIn: "",
+        punchOut: "",
+        punchInSource: "",
+        punchOutSource: "",
+        durationMinutes: "",
+        durationHours: "",
+        durationFormatted: "",
+      };
+    }
+  });
+
+  return {
+    employee: {
+      id: employee.id,
+      name: employee.name,
+      deviceUserId: employee.deviceUserId,
+      phoneNumber: employee.phoneNumber || "",
+      departmentName: employee.departmentHistory[0]?.department?.deptName || "Unassigned",
+      positionName: employee.positionHistory[0]?.position?.positionName || "Unassigned",
+      shiftType: employee.employeeShifts[0]?.shift?.shiftType || "Unassigned",
+    },
+    payrollDefinition: {
+      id: payrollDef.id,
+      name: payrollDef.payrollName,
+      startDate: payrollDef.startDate,
+      endDate: payrollDef.endDate,
+      payPeriod: payrollDef.payPeriod,
+    },
+    attendanceInfo,
+  };
 };
 
 const enhancedAttendanceService = {
@@ -1528,6 +2009,8 @@ const enhancedAttendanceService = {
   getAttendanceSummary,
   getPayrollDefinitionSummary,
   getAttendanceByPayrollDefinition,
+  getRecentAttendance,
+  getEmployeeAttendanceByDateRange,
 };
 
 export default enhancedAttendanceService;

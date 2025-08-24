@@ -116,6 +116,23 @@ const getAttendanceByPayrollDefinitionValidation = {
   }),
 };
 
+// Validation for getting recent attendance (last 5 days)
+const getRecentAttendanceValidation = {
+  query: z.object({
+    deviceUserId: z.string().optional(),
+    shiftId: z.string().uuid("Invalid shift ID").optional(),
+    departmentId: z.string().uuid("Invalid department ID").optional(),
+  }),
+};
+
+// Validation for getting employee attendance by current month payroll definition
+const getEmployeeAttendanceByDateRangeValidation = {
+  params: z.object({
+    employeeId: z.string().uuid("Invalid employee ID"),
+  }),
+  query: z.object({}), // No query parameters needed
+};
+
 // Export all validation schemas
 export default {
   // Enhanced Attendance Endpoints
@@ -127,4 +144,6 @@ export default {
   getAttendanceByDate: getAttendanceByDateValidation,
   getAttendanceSummary: getAttendanceSummaryValidation,
   getAttendanceByPayrollDefinition: getAttendanceByPayrollDefinitionValidation,
+  getRecentAttendance: getRecentAttendanceValidation,
+  getEmployeeAttendanceByDateRange: getEmployeeAttendanceByDateRangeValidation,
 };

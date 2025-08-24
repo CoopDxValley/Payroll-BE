@@ -44,6 +44,15 @@ router
     overtimeManagementController.getMonthlyOvertime
   );
 
+// Overtime by payroll definition
+router
+  .route("/payroll-definition/:payrollDefinitionId")
+  .get(
+    auth(),
+    validate(overtimeManagementValidation.getOvertimeByPayrollDefinition),
+    overtimeManagementController.getOvertimeByPayrollDefinition
+  );
+
 // Yearly overtime
 router
   .route("/current-year")
@@ -91,7 +100,8 @@ router
     validate(overtimeManagementValidation.getOvertimeTableById),
     overtimeManagementController.getOvertimeTableById
   )
-  .post(
+router
+  .route("/update/:id")  .post(
     auth(),
     validate(overtimeManagementValidation.updateOvertimeTable),
     overtimeManagementController.updateOvertimeTable

@@ -297,6 +297,66 @@ const overtimeManagementService = {
     );
   },
 
+  // Get overtime by payroll definition
+  async getOvertimeByPayrollDefinition(
+    filters: {
+      payrollDefinitionId: string;
+      deviceUserId?: string;
+      shiftId?: string;
+      departmentId?: string;
+      overtimeType?: any;
+      overtimeStatus?: any;
+    },
+    companyId: string
+  ): Promise<EnhancedOvertimeSession[]> {
+    console.log("=== Overtime Management Service: By Payroll Definition ===");
+
+    // Fetch the specific payroll definition
+    const payrollDef = await prisma.payrollDefinition.findFirst({
+      where: {
+        id: filters.payrollDefinitionId,
+        companyId: companyId,
+      },
+    });
+
+    if (!payrollDef) {
+      throw new Error(`Payroll definition with ID ${filters.payrollDefinitionId} not found for the company`);
+    }
+
+    console.log(`Using payroll definition: ${payrollDef.payrollName}`);
+    console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
+
+    // Get overtime data for the payroll definition's date range
+    const overtimeData = await this.getOvertimeByDateRange(
+      {
+        startDate: payrollDef.startDate.toISOString().split("T")[0],
+        endDate: payrollDef.endDate.toISOString().split("T")[0],
+        deviceUserId: filters.deviceUserId,
+        shiftId: filters.shiftId,
+        overtimeType: filters.overtimeType,
+        overtimeStatus: filters.overtimeStatus,
+      },
+      companyId
+    );
+
+    // Filter by department if specified
+    if (filters.departmentId) {
+      // Get department name for filtering
+      const department = await prisma.department.findUnique({
+        where: { id: filters.departmentId },
+        select: { deptName: true },
+      });
+      
+      if (department) {
+        return overtimeData.filter(session => 
+          session.departmentName === department.deptName
+        );
+      }
+    }
+
+    return overtimeData;
+  },
+
   // Get yearly overtime
   async getYearlyOvertime(
     filters: any,

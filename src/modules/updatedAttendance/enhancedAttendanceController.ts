@@ -415,6 +415,58 @@ const getAttendanceByPayrollDefinition = catchAsync(async (req: Request, res: Re
   });
 });
 
+// Get recent attendance (last 5 days from current month payroll)
+const getRecentAttendance = catchAsync(async (req: Request, res: Response) => {
+  console.log("=== Enhanced Attendance Controller: Recent Attendance ===");
+
+  const authEmployee = req.employee as AuthEmployee;
+  const companyId = authEmployee.companyId;
+  const { deviceUserId, shiftId, departmentId } = req.query;
+
+  const result = await enhancedAttendanceService.getRecentAttendance({
+    deviceUserId: deviceUserId as string,
+    shiftId: shiftId as string,
+    departmentId: departmentId as string,
+    companyId: companyId,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Recent attendance retrieved successfully",
+    data: result,
+    meta: {
+      deviceUserId,
+      shiftId,
+      departmentId,
+      companyId,
+    },
+  });
+});
+
+// Get employee attendance by current month payroll definition
+const getEmployeeAttendanceByDateRange = catchAsync(async (req: Request, res: Response) => {
+  console.log("=== Enhanced Attendance Controller: Employee Attendance by Current Month ===");
+
+  const authEmployee = req.employee as AuthEmployee;
+  const companyId = authEmployee.companyId;
+  const { employeeId } = req.params;
+
+  const result = await enhancedAttendanceService.getEmployeeAttendanceByDateRange({
+    employeeId: employeeId as string,
+    companyId: companyId,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Employee attendance retrieved successfully for current month",
+    data: result,
+    meta: {
+      employeeId,
+      companyId,
+    },
+  });
+});
+
 // Enhanced attendance controller object
 const enhancedAttendanceController = {
   getAttendanceByDateRange,
@@ -426,6 +478,8 @@ const enhancedAttendanceController = {
   getAttendanceSummary,
   getPayrollDefinitionSummary,
   getAttendanceByPayrollDefinition,
+  getRecentAttendance,
+  getEmployeeAttendanceByDateRange,
 };
 
 export default enhancedAttendanceController;
