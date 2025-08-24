@@ -107,16 +107,32 @@ const getPayrollProcess = catchAsync<
   }
 );
 
-const payrollPayment = catchAsync<CustomRequest<never, never, never>>(
+const getPayrollPayment = catchAsync<CustomRequest<never, never, never>>(
   async (req: CustomRequest<never, never, never>, res: Response) => {
     const authEmployee = req.employee as AuthEmployee;
-    const payrollPayments = await payrollService.payrollPayment(
+    const payrollPayments = await payrollService.getPayrollPayment(
       authEmployee.companyId
     );
     res.status(httpStatus.OK).send({
       data: payrollPayments,
       message: "Payroll payments retrieved successfully",
     });
+  }
+);
+
+const makePayrollPayment = catchAsync<
+  CustomRequest<getPayrollByPayrollDefinitionId, never, never>
+>(
+  async (
+    req: CustomRequest<getPayrollByPayrollDefinitionId, never, never>,
+    res: Response
+  ) => {
+    const { id } = req.params;
+    // const result = await payrollService.makePayrollPayment(id);
+    // res.status(httpStatus.OK).send({
+    //   data: result,
+    //   message: "Payment processed successfully",
+    // });
   }
 );
 
@@ -127,5 +143,6 @@ export default {
   getNonPayrollEmployee,
   getPayrollSetup,
   getPayrollProcess,
-  payrollPayment,
+  getPayrollPayment,
+  makePayrollPayment,
 };

@@ -1486,7 +1486,9 @@ const getAttendanceByPayrollDefinition = async (query: {
   });
 
   if (!payrollDef) {
-    throw new Error(`Payroll definition with ID ${query.payrollDefinitionId} not found for the company`);
+    throw new Error(
+      `Payroll definition with ID ${query.payrollDefinitionId} not found for the company`
+    );
   }
 
   console.log(`Using payroll definition: ${payrollDef.payrollName}`);
@@ -1514,7 +1516,9 @@ const getAttendanceByPayrollDefinition = async (query: {
     },
   }));
 
-  console.log(`Enhanced ${enhancedSessions.length} sessions with payroll definition data`);
+  console.log(
+    `Enhanced ${enhancedSessions.length} sessions with payroll definition data`
+  );
   return enhancedSessions;
 };
 

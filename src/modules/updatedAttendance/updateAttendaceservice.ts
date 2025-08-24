@@ -604,16 +604,23 @@ const updateWorkSession = async (
 
       // Calculate duration using NORMALIZED times (for display/work session)
       const finalNormalizedPunchIn = updateData.punchIn || workSession.punchIn;
-      const finalNormalizedPunchOut = updateData.punchOut || workSession.punchOut;
-      
+      const finalNormalizedPunchOut =
+        updateData.punchOut || workSession.punchOut;
+
       if (finalNormalizedPunchIn && finalNormalizedPunchOut) {
         updateData.duration = calculateDuration(
           finalNormalizedPunchIn,
           finalNormalizedPunchOut
         );
         console.log("=== Duration Calculation (NORMALIZED TIMES) ===");
-        console.log("Final normalized punch in:", formatTime(finalNormalizedPunchIn));
-        console.log("Final normalized punch out:", formatTime(finalNormalizedPunchOut));
+        console.log(
+          "Final normalized punch in:",
+          formatTime(finalNormalizedPunchIn)
+        );
+        console.log(
+          "Final normalized punch out:",
+          formatTime(finalNormalizedPunchOut)
+        );
         console.log("Normalized duration (minutes):", updateData.duration);
       }
     }
@@ -643,11 +650,12 @@ const updateWorkSession = async (
     ...result,
     punchIn: result.punchIn ? formatTime(result.punchIn) : null,
     punchOut: result.punchOut ? formatTime(result.punchOut) : null,
-    OvertimeTable: result.OvertimeTable?.map(overtime => ({
-      ...overtime,
-      punchIn: overtime.punchIn ? formatTime(overtime.punchIn) : null,
-      punchOut: overtime.punchOut ? formatTime(overtime.punchOut) : null,
-    })) || [],
+    OvertimeTable:
+      result.OvertimeTable?.map((overtime) => ({
+        ...overtime,
+        punchIn: overtime.punchIn ? formatTime(overtime.punchIn) : null,
+        punchOut: overtime.punchOut ? formatTime(overtime.punchOut) : null,
+      })) || [],
   };
 
   return transformedResult as unknown as IWorkSessionWithRelations;

@@ -50,7 +50,7 @@ export interface BulkAssignShiftRequest {
   shiftId: string;
   employeeIds: string[];
   startDate?: string; // Optional - defaults to today if not provided
-  endDate?: string;   // Optional - not used in bulk operations (set to null)
+  endDate?: string; // Optional - not used in bulk operations (set to null)
 }
 
 export interface BulkUnassignShiftRequest {
@@ -169,4 +169,4 @@ export interface GetEmployeesByShiftResponse {
   totalEmployees: number;
   totalAssignments?: number; // Only for ROTATION shifts
   employees: EmployeeWithShiftData[];
-} 
+}

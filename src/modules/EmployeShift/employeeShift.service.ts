@@ -308,7 +308,9 @@ const getEmployeesForRotatingShift = async (
   companyId?: string,
   scheduleId?: string | null
 ) => {
-  console.log("=== Fetching ROTATION shift employees from EmployeeShiftAssignment ===");
+  console.log(
+    "=== Fetching ROTATION shift employees from EmployeeShiftAssignment ==="
+  );
 
   const where: any = {
     // isApproved: true, // Only approved assignments
@@ -319,7 +321,7 @@ const getEmployeesForRotatingShift = async (
     where.employee = {
       companyId,
     };
-    
+
     // Note: Not filtering by RotatingShiftType.companyId because:
     // 1. OFF days might have null shiftTypeId (no RotatingShiftType)
     // 2. We want to include all assignments for employees in this company
@@ -333,8 +335,10 @@ const getEmployeesForRotatingShift = async (
   } else {
     // If no scheduleId provided, get all assignments regardless of schedule
     // This will include assignments with scheduleId and without scheduleId
-    console.log("No scheduleId provided - fetching all rotation assignments for company");
-    
+    console.log(
+      "No scheduleId provided - fetching all rotation assignments for company"
+    );
+
     // We don't add any scheduleId filter here, so it will get all assignments
     // The company filter (added above) will ensure we only get assignments for the right company
   }
@@ -402,7 +406,7 @@ const getEmployeesForRotatingShift = async (
   });
 
   console.log(`Found ${assignments.length} rotation assignments`);
-  
+
   // Also let's check if there are any assignments at all for this company
   const totalAssignments = await prisma.employeeShiftAssignment.count({
     where: {
@@ -423,27 +427,32 @@ const getEmployeesForRotatingShift = async (
         },
       },
     });
-    console.log(`Assignments with scheduleId ${scheduleId}: ${scheduleAssignments}`);
+    console.log(
+      `Assignments with scheduleId ${scheduleId}: ${scheduleAssignments}`
+    );
   }
 
   // Check if there are assignments without the RotatingShiftType filter
-  const assignmentsWithoutShiftTypeFilter = await prisma.employeeShiftAssignment.count({
-    where: {
-      employee: {
-        companyId: companyId,
+  const assignmentsWithoutShiftTypeFilter =
+    await prisma.employeeShiftAssignment.count({
+      where: {
+        employee: {
+          companyId: companyId,
+        },
+        scheduleId: scheduleId || undefined,
+        isApproved: true,
       },
-      scheduleId: scheduleId || undefined,
-      isApproved: true,
-    },
-  });
-  console.log(`Assignments without RotatingShiftType filter: ${assignmentsWithoutShiftTypeFilter}`);
+    });
+  console.log(
+    `Assignments without RotatingShiftType filter: ${assignmentsWithoutShiftTypeFilter}`
+  );
 
   // Group assignments by employee to get unique employees with their assignments
   const employeeAssignments = new Map();
 
   assignments.forEach((assignment) => {
     const employeeId = assignment.employee.id;
-    
+
     if (!employeeAssignments.has(employeeId)) {
       employeeAssignments.set(employeeId, {
         employee: assignment.employee,
@@ -476,8 +485,10 @@ const getEmployeesForRotatingShift = async (
   const employees = Array.from(employeeAssignments.values()).map((emp) => {
     // Only show assignments if scheduleId is provided and matches
     // If no scheduleId provided, show empty assignments
-    const filteredAssignments = scheduleId 
-      ? emp.assignments.filter((assignment: any) => assignment.schedule?.id === scheduleId)
+    const filteredAssignments = scheduleId
+      ? emp.assignments.filter(
+          (assignment: any) => assignment.schedule?.id === scheduleId
+        )
       : []; // Empty array when no scheduleId provided
 
     return {
@@ -503,7 +514,7 @@ const getEmployeesForRotatingShift = async (
 
   // Always check for additional employees in EmployeeShift table who might not be in the schedule
   console.log("Checking for additional employees in EmployeeShift table...");
-  
+
   const employeeShifts = await prisma.employeeShift.findMany({
     where: {
       shiftId,
@@ -547,14 +558,16 @@ const getEmployeesForRotatingShift = async (
     },
   });
 
-  console.log(`Found ${employeeShifts.length} employees in EmployeeShift table`);
+  console.log(
+    `Found ${employeeShifts.length} employees in EmployeeShift table`
+  );
 
   // Get employee IDs who already have rotation assignments in the schedule
-  const employeesWithAssignments = new Set(employees.map(emp => emp.id));
-  
+  const employeesWithAssignments = new Set(employees.map((emp) => emp.id));
+
   // Add employees from EmployeeShift who don't already have assignments in the schedule
   const additionalEmployees = employeeShifts
-    .filter(es => !employeesWithAssignments.has(es.employee.id))
+    .filter((es) => !employeesWithAssignments.has(es.employee.id))
     .map((es) => ({
       id: es.employee.id,
       name: es.employee.name,
@@ -572,7 +585,7 @@ const getEmployeesForRotatingShift = async (
         offDays: 0,
         recentAssignments: [],
         allAssignments: [],
-        note: scheduleId 
+        note: scheduleId
           ? `Employee is assigned to rotation shift but not included in schedule ${scheduleId}`
           : "Employee is assigned to rotation shift but has no schedule assignments",
       },
@@ -582,17 +595,19 @@ const getEmployeesForRotatingShift = async (
         endDate: es.endDate,
         isActive: es.isActive,
         assignmentType: "ROTATION_SHIFT_ASSIGNMENT",
-        note: scheduleId 
+        note: scheduleId
           ? "Employee assigned to rotation shift but not in this specific schedule"
           : "Employee assigned to rotation shift with no schedule assignments",
       },
     }));
 
-  console.log(`Found ${additionalEmployees.length} additional employees not in the schedule`);
+  console.log(
+    `Found ${additionalEmployees.length} additional employees not in the schedule`
+  );
 
   // Combine employees with schedule assignments and those without
   const allEmployees = [...employees, ...additionalEmployees];
-  
+
   // Sort by name for consistent ordering
   allEmployees.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -614,12 +629,16 @@ const getEmployeesForFixedWeeklyShift = async (
   companyId?: string,
   scheduleId?: string | null
 ) => {
-  console.log("=== Fetching FIXED_WEEKLY shift employees from EmployeeShift ===");
-  
+  console.log(
+    "=== Fetching FIXED_WEEKLY shift employees from EmployeeShift ==="
+  );
+
   // Note: EmployeeShift model doesn't have scheduleId field
   // For FIXED_WEEKLY shifts, scheduleId parameter will be ignored
   if (scheduleId) {
-    console.log(`Warning: scheduleId ${scheduleId} provided for FIXED_WEEKLY shift, but this field doesn't exist in EmployeeShift model. Ignoring scheduleId.`);
+    console.log(
+      `Warning: scheduleId ${scheduleId} provided for FIXED_WEEKLY shift, but this field doesn't exist in EmployeeShift model. Ignoring scheduleId.`
+    );
   }
 
   const where: any = {
@@ -693,7 +712,9 @@ const getEmployeesForFixedWeeklyShift = async (
   });
 
   console.log(
-    `Found ${employeeShifts.length} employees assigned to FIXED_WEEKLY shift ${shiftId} ${
+    `Found ${
+      employeeShifts.length
+    } employees assigned to FIXED_WEEKLY shift ${shiftId} ${
       scheduleId ? `with scheduleId ${scheduleId}` : ""
     }`
   );

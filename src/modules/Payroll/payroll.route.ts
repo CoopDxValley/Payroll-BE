@@ -74,6 +74,6 @@ router.get(
   payrollController.getPayrollProcess
 );
 
-router.get("/process/payments", auth(), payrollController.payrollPayment);
+router.get("/process/payments", auth(), payrollController.getPayrollPayment);
 
 export default router;
