@@ -81,15 +81,20 @@ interface PayrollSummaryEmployee {
   deductibleHours: number;
   netHoursWorked: number;
 }
-
 // Get attendance by date range
+// const getAttendanceByDateRange = async (
+//   query: DateRangeQuery
+// ): Promise<EnhancedSession[]> => {
+//   console.log("=== Getting Attendance by Date Range ===");
+//   console.log("Query:", query);
 const getAttendanceByDateRange = async (
-  query: DateRangeQuery
+  query: DateRangeQuery & { departmentId?: string } // 👈 extended type
 ): Promise<EnhancedSession[]> => {
   console.log("=== Getting Attendance by Date Range ===");
   console.log("Query:", query);
 
-  const { startDate, endDate, deviceUserId, shiftId, companyId } = query;
+  const { startDate, endDate, deviceUserId, shiftId, companyId, departmentId } =
+    query;
 
   // Parse dates
   const start = new Date(startDate);
@@ -106,7 +111,7 @@ const getAttendanceByDateRange = async (
     );
   }
 
-  // Build where clause
+  // Build where clause for work sessions
   const where: any = {
     date: {
       gte: start,
@@ -122,23 +127,46 @@ const getAttendanceByDateRange = async (
     where.shiftId = shiftId;
   }
 
-  // Get all employees with deviceUserId for the company
+  // 🔑 Filter employees at DB level
   const employees = await prisma.employee.findMany({
+    where: {
+      deviceUserId: { not: null },
+      ...(companyId && { companyId }),
+      ...(departmentId && {
+        departmentHistory: {
+          some: {
+            departmentId,
+            toDate: null, // only active department
+          },
+        },
+      }),
+    },
     select: {
       id: true,
       name: true,
       deviceUserId: true,
       phoneNumber: true,
-    },
-    where: {
-      deviceUserId: { not: null },
-      ...(companyId && { companyId: companyId }),
+      departmentHistory: {
+        where: { toDate: null },
+        include: { department: true },
+      },
+      positionHistory: {
+        where: { toDate: null },
+        include: { position: true },
+      },
     },
   });
 
+  // Build a lookup map for deviceUserIds
   const deviceUserIdMap: Record<
     string,
-    { id: string; name: string; phoneNumber: string }
+    {
+      id: string;
+      name: string;
+      phoneNumber: string;
+      departmentName: string | null;
+      positionName: string | null;
+    }
   > = {};
   const companyDeviceUserIds: string[] = [];
 
@@ -148,14 +176,19 @@ const getAttendanceByDateRange = async (
         id: emp.id,
         name: emp.name,
         phoneNumber: emp.phoneNumber,
+        departmentName: emp.departmentHistory[0]?.department?.deptName || null,
+        positionName: emp.positionHistory[0]?.position?.positionName || null,
       };
       companyDeviceUserIds.push(emp.deviceUserId);
     }
   }
 
-  // If companyId is provided, filter work sessions by deviceUserIds that belong to the company
-  if (companyId && companyDeviceUserIds.length > 0) {
+  // 🔑 Ensure we only pull sessions of employees in filtered department/company
+  if (companyDeviceUserIds.length > 0) {
     where.deviceUserId = { in: companyDeviceUserIds };
+  } else {
+    // If no employees matched filter, return empty
+    return [];
   }
 
   // Get work sessions
@@ -199,12 +232,16 @@ const getAttendanceByDateRange = async (
       id: "unknown",
       name: "Unknown Employee",
       phoneNumber: "N/A",
+      departmentName: null,
+      positionName: null,
     };
 
     return {
       id: ws.id,
       date: ws.date,
       employeeName: employeeInfo.name,
+      departmentName: employeeInfo.departmentName || "Unassigned",
+      positionName: employeeInfo.positionName || "Unassigned",
       phoneNumber: employeeInfo.phoneNumber,
       punchIn: formatTime(ws.punchIn),
       punchOut: formatTime(ws.punchOut),
@@ -213,13 +250,339 @@ const getAttendanceByDateRange = async (
       durationMinutes,
       durationHours: +(durationMinutes / 60).toFixed(2),
       durationFormatted,
-      // deductedMinutes:ws.d
       shiftType: ws.shift?.shiftType || "N/A",
     };
   });
 
   return enhancedSessions;
 };
+
+// const getAttendanceByDateRange = async (
+//   query: DateRangeQuery & { departmentId?: string } // 👈 extend type
+// ): Promise<EnhancedSession[]> => {
+//   console.log("=== Getting Attendance by Date Range ===");
+//   console.log("Query:", query);
+//   const { startDate, endDate, deviceUserId, shiftId, companyId, departmentId } =
+//     query;
+
+//   // Parse dates
+//   const start = new Date(startDate);
+//   const end = new Date(endDate);
+
+//   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+//     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid date format");
+//   }
+
+//   if (start > end) {
+//     throw new ApiError(
+//       httpStatus.BAD_REQUEST,
+//       "Start date must be before end date"
+//     );
+//   }
+
+//   // Build where clause
+//   const where: any = {
+//     date: {
+//       gte: start,
+//       lte: end,
+//     },
+//   };
+
+//   if (deviceUserId) {
+//     where.deviceUserId = deviceUserId;
+//   }
+
+//   if (shiftId) {
+//     where.shiftId = shiftId;
+//   }
+
+//   // Get all employees with deviceUserId for the company + active department + active position
+//   // const employees = await prisma.employee.findMany({
+//   //   where: {
+//   //     deviceUserId: { not: null },
+//   //     ...(companyId && { companyId: companyId }),
+//   //   },
+//   //   select: {
+//   //     id: true,
+//   //     name: true,
+//   //     deviceUserId: true,
+//   //     phoneNumber: true,
+//   //     departmentHistory: {
+//   //       where: { toDate: null },
+//   //       include: { department: true },
+//   //     },
+//   //     positionHistory: {
+//   //       where: { toDate: null },
+//   //       include: { position: true },
+//   //     },
+//   //   },
+//   // });
+//   const employees = await prisma.employee.findMany({
+//     where: {
+//       deviceUserId: { not: null },
+//       ...(companyId && { companyId }),
+//       ...(departmentId && {
+//         departmentHistory: {
+//           some: {
+//             departmentId: departmentId,
+//             toDate: null, // 👈 only active department
+//           },
+//         },
+//       }),
+//     },
+//     select: {
+//       id: true,
+//       name: true,
+//       deviceUserId: true,
+//       phoneNumber: true,
+//       departmentHistory: {
+//         where: { toDate: null },
+//         include: { department: true },
+//       },
+//       positionHistory: {
+//         where: { toDate: null },
+//         include: { position: true },
+//       },
+//     },
+//   });
+
+//   const deviceUserIdMap: Record<
+//     string,
+//     {
+//       id: string;
+//       name: string;
+//       phoneNumber: string;
+//       departmentName: string | null;
+//       positionName: string | null;
+//     }
+//   > = {};
+//   const companyDeviceUserIds: string[] = [];
+
+//   for (const emp of employees) {
+//     if (emp.deviceUserId) {
+//       deviceUserIdMap[emp.deviceUserId] = {
+//         id: emp.id,
+//         name: emp.name,
+//         phoneNumber: emp.phoneNumber,
+//         departmentName: emp.departmentHistory[0]?.department?.deptName || null,
+//         positionName: emp.positionHistory[0]?.position?.positionName || null,
+//       };
+//       companyDeviceUserIds.push(emp.deviceUserId);
+//     }
+//   }
+
+//   // If companyId is provided, filter work sessions by deviceUserIds that belong to the company
+//   if (companyId && companyDeviceUserIds.length > 0) {
+//     where.deviceUserId = { in: companyDeviceUserIds };
+//   }
+
+//   // Get work sessions
+//   const workSessions = await prisma.workSession.findMany({
+//     where,
+//     include: {
+//       shift: { select: { id: true, name: true, shiftType: true } },
+//     },
+//     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+//   });
+
+//   console.log(`Found ${workSessions.length} work sessions in date range`);
+
+//   // Helper function to format time as HH:mm:ss
+//   const formatTime = (date: Date | null): string | null => {
+//     if (!date) return null;
+//     const d = new Date(date);
+//     return d.toTimeString().split(" ")[0]; // "HH:mm:ss"
+//   };
+
+//   // Transform sessions and calculate duration
+//   const enhancedSessions = workSessions.map((ws: any) => {
+//     let durationMinutes = 0;
+//     let durationFormatted = "00:00:00";
+
+//     if (ws.punchIn && ws.punchOut) {
+//       durationMinutes = Math.floor(
+//         (new Date(ws.punchOut).getTime() - new Date(ws.punchIn).getTime()) /
+//           (1000 * 60)
+//       );
+
+//       const hours = Math.floor(durationMinutes / 60)
+//         .toString()
+//         .padStart(2, "0");
+//       const minutes = (durationMinutes % 60).toString().padStart(2, "0");
+//       const seconds = "00";
+//       durationFormatted = `${hours}:${minutes}:${seconds}`;
+//     }
+
+//     const employeeInfo = deviceUserIdMap[ws.deviceUserId] || {
+//       id: "unknown",
+//       name: "Unknown Employee",
+//       phoneNumber: "N/A",
+//       departmentName: null,
+//       positionName: null,
+//     };
+
+//     return {
+//       id: ws.id,
+//       date: ws.date,
+//       employeeName: employeeInfo.name,
+//       departmentName: employeeInfo.departmentName || "Unassigned",
+//       positionName: employeeInfo.positionName || "Unassigned",
+//       phoneNumber: employeeInfo.phoneNumber,
+//       punchIn: formatTime(ws.punchIn),
+//       punchOut: formatTime(ws.punchOut),
+//       punchInSource: ws.punchInSource,
+//       punchOutSource: ws.punchOutSource,
+//       durationMinutes,
+//       durationHours: +(durationMinutes / 60).toFixed(2),
+//       durationFormatted,
+//       shiftType: ws.shift?.shiftType || "N/A",
+//     };
+//   });
+
+//   return enhancedSessions;
+// };
+
+// // Get attendance by date range
+// const getAttendanceByDateRange = async (
+//   query: DateRangeQuery
+// ): Promise<EnhancedSession[]> => {
+//   console.log("=== Getting Attendance by Date Range ===");
+//   console.log("Query:", query);
+
+//   const { startDate, endDate, deviceUserId, shiftId, companyId } = query;
+
+//   // Parse dates
+//   const start = new Date(startDate);
+//   const end = new Date(endDate);
+
+//   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+//     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid date format");
+//   }
+
+//   if (start > end) {
+//     throw new ApiError(
+//       httpStatus.BAD_REQUEST,
+//       "Start date must be before end date"
+//     );
+//   }
+
+//   // Build where clause
+//   const where: any = {
+//     date: {
+//       gte: start,
+//       lte: end,
+//     },
+//   };
+
+//   if (deviceUserId) {
+//     where.deviceUserId = deviceUserId;
+//   }
+
+//   if (shiftId) {
+//     where.shiftId = shiftId;
+//   }
+
+//   // Get all employees with deviceUserId for the company
+//   const employees = await prisma.employee.findMany({
+//     select: {
+//       id: true,
+//       name: true,
+//       deviceUserId: true,
+//       phoneNumber: true,
+//     },
+//     where: {
+//       deviceUserId: { not: null },
+//       ...(companyId && { companyId: companyId }),
+//     },
+//   });
+
+//   const deviceUserIdMap: Record<
+//     string,
+//     { id: string; name: string; phoneNumber: string }
+//   > = {};
+//   const companyDeviceUserIds: string[] = [];
+
+//   for (const emp of employees) {
+//     if (emp.deviceUserId) {
+//       deviceUserIdMap[emp.deviceUserId] = {
+//         id: emp.id,
+//         name: emp.name,
+//         phoneNumber: emp.phoneNumber,
+//       };
+//       companyDeviceUserIds.push(emp.deviceUserId);
+//     }
+//   }
+
+//   // If companyId is provided, filter work sessions by deviceUserIds that belong to the company
+//   if (companyId && companyDeviceUserIds.length > 0) {
+//     where.deviceUserId = { in: companyDeviceUserIds };
+//   }
+
+//   // Get work sessions
+//   const workSessions = await prisma.workSession.findMany({
+//     where,
+//     include: {
+//       shift: { select: { id: true, name: true, shiftType: true } },
+//     },
+//     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+//   });
+
+//   console.log(`Found ${workSessions.length} work sessions in date range`);
+
+//   // Helper function to format time as HH:mm:ss
+//   const formatTime = (date: Date | null): string | null => {
+//     if (!date) return null;
+//     const d = new Date(date);
+//     return d.toTimeString().split(" ")[0]; // "HH:mm:ss"
+//   };
+
+//   // Transform sessions and calculate duration
+//   const enhancedSessions = workSessions.map((ws: any) => {
+//     let durationMinutes = 0;
+//     let durationFormatted = "00:00:00";
+
+//     if (ws.punchIn && ws.punchOut) {
+//       durationMinutes = Math.floor(
+//         (new Date(ws.punchOut).getTime() - new Date(ws.punchIn).getTime()) /
+//           (1000 * 60)
+//       );
+
+//       const hours = Math.floor(durationMinutes / 60)
+//         .toString()
+//         .padStart(2, "0");
+//       const minutes = (durationMinutes % 60).toString().padStart(2, "0");
+//       const seconds = "00";
+//       durationFormatted = `${hours}:${minutes}:${seconds}`;
+//     }
+
+//     const employeeInfo = deviceUserIdMap[ws.deviceUserId] || {
+//       id: "unknown",
+//       name: "Unknown Employee",
+//       phoneNumber: "N/A",
+//     };
+
+//     return {
+//       id: ws.id,
+//       date: ws.date,
+//       employeeName: employeeInfo.name,
+
+//       departmentName: employeeInfo?.departmentName || "Unassigned",
+//       positionName: employeeInfo?.positionName || "Unassigned",
+//       phoneNumber: employeeInfo.phoneNumber,
+//       punchIn: formatTime(ws.punchIn),
+//       punchOut: formatTime(ws.punchOut),
+//       punchInSource: ws.punchInSource,
+//       punchOutSource: ws.punchOutSource,
+//       durationMinutes,
+//       durationHours: +(durationMinutes / 60).toFixed(2),
+//       durationFormatted,
+//       // deductedMinutes:ws.d
+//       shiftType: ws.shift?.shiftType || "N/A",
+//     };
+//   });
+
+//   return enhancedSessions;
+// };
 
 const getTodaysAttendance = async (filters: {
   deviceUserId?: string;
@@ -399,21 +762,35 @@ const getMonthlyAttendance = async (query: {
   deviceUserId?: string;
   shiftId?: string;
   companyId?: string;
+  departmentId?: string;
 }): Promise<EnhancedSession[]> => {
   console.log("=== Getting Monthly Attendance with Deductible & Overtime ===");
 
-  const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    0,
-    23,
-    59,
-    59,
-    999
-  );
+  // const today = new Date();
+  // const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  // const endOfMonth = new Date(
+  //   today.getFullYear(),
+  //   today.getMonth() + 1,
+  //   0,
+  //   23,
+  //   59,
+  //   59,
+  //   999
+  // );
+  // Fetch the current payroll definition for the company
+  const payrollDef = await prisma.payrollDefinition.findFirst({
+    where: {
+      companyId: query.companyId,
+    },
+    orderBy: { startDate: "desc" },
+  });
 
+  if (!payrollDef) {
+    throw new Error("No payroll definition found for the company");
+  }
+
+  const startOfMonth = payrollDef.startDate;
+  const endOfMonth = payrollDef.endDate;
   // Get basic attendance data
   const sessions = await getAttendanceByDateRange({
     startDate: startOfMonth.toISOString().split("T")[0],
@@ -421,6 +798,7 @@ const getMonthlyAttendance = async (query: {
     deviceUserId: query.deviceUserId,
     shiftId: query.shiftId,
     companyId: query.companyId,
+    departmentId: query.departmentId,
   });
 
   // Get work sessions with deductible minutes
@@ -1027,7 +1405,7 @@ const getAttendanceSummary = async (
       id: ws.id,
       date: ws.date,
       employeeName: employeeInfo.name,
-      
+
       phoneNumber: employeeInfo.phoneNumber,
       punchIn: formatTime(ws.punchIn),
       punchOut: formatTime(ws.punchOut),

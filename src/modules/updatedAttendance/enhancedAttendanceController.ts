@@ -171,12 +171,13 @@ const getMonthlyAttendance = catchAsync(async (req: Request, res: Response) => {
 
   const authEmployee = req.employee as AuthEmployee;
   const companyId = authEmployee.companyId;
-  const { deviceUserId, shiftId } = req.query;
+  const { deviceUserId, shiftId, departmentId } = req.query;
 
   const result = await enhancedAttendanceService.getMonthlyAttendance({
     deviceUserId: deviceUserId as string,
     shiftId: shiftId as string,
     companyId: companyId,
+    departmentId: departmentId as string,
   });
 
   // get payroll-defined month range

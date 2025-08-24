@@ -287,12 +287,14 @@ export const queryEmployee = async (
           },
         },
         employeeShifts: {
+          where: { isActive: true },
           select: {
             shift: {
               select: {
                 id: true,
                 name: true,
                 shiftType: true,
+                // isActive: true,
               },
             },
           },
