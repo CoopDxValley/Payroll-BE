@@ -6,6 +6,8 @@ export interface EnhancedOvertimeSession {
   id: string;
   employeeName: string;
   phoneNumber: string;
+  departmentName: string;
+  positionName: string;
   date: Date;
   punchIn: string | null;
   punchOut: string | null;

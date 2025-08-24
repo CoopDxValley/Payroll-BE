@@ -485,6 +485,43 @@ const updateOvertimeStatus = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get overtime by payroll definition
+const getOvertimeByPayrollDefinition = catchAsync(async (req: Request, res: Response) => {
+  console.log("=== Overtime Management Controller: By Payroll Definition ===");
+
+  const authEmployee = req.employee as AuthEmployee;
+  const companyId = authEmployee.companyId;
+  const { payrollDefinitionId } = req.params;
+  const { deviceUserId, shiftId, departmentId, overtimeType, overtimeStatus } = req.query;
+
+  const result = await overtimeManagementService.getOvertimeByPayrollDefinition(
+    {
+      payrollDefinitionId: payrollDefinitionId as string,
+      deviceUserId: deviceUserId as string,
+      shiftId: shiftId as string,
+      departmentId: departmentId as string,
+      overtimeType: overtimeType as any,
+      overtimeStatus: overtimeStatus as any,
+    },
+    companyId
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Overtime retrieved successfully by payroll definition",
+    data: result,
+    meta: {
+      payrollDefinitionId,
+      deviceUserId,
+      shiftId,
+      departmentId,
+      overtimeType,
+      overtimeStatus,
+      companyId,
+    },
+  });
+});
+
 // Overtime management controller object
 const overtimeManagementController = {
   // Enhanced Overtime Endpoints
@@ -492,6 +529,7 @@ const overtimeManagementController = {
   getTodaysOvertime,
   getWeeklyOvertime,
   getMonthlyOvertime,
+  getOvertimeByPayrollDefinition,
   getYearlyOvertime,
   getOvertimeByDate,
   getOvertimeSummary,

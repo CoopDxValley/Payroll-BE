@@ -51,6 +51,20 @@ export const getMonthlyOvertimeValidation = {
   }),
 };
 
+// Overtime by payroll definition validation
+export const getOvertimeByPayrollDefinitionValidation = {
+  params: z.object({
+    payrollDefinitionId: z.string().uuid("Invalid payroll definition ID"),
+  }),
+  query: z.object({
+    deviceUserId: z.string().optional(),
+    shiftId: z.string().uuid("Invalid shift ID").optional(),
+    departmentId: z.string().uuid("Invalid department ID").optional(),
+    overtimeType: z.nativeEnum(OvertimeType).optional(),
+    overtimeStatus: z.nativeEnum(OvertimeStatus).optional(),
+  }),
+};
+
 // Yearly overtime validation
 export const getYearlyOvertimeValidation = {
   query: z.object({
@@ -159,6 +173,7 @@ export default {
   getOvertimeByDateRange: getOvertimeByDateRangeValidation,
   getWeeklyOvertime: getWeeklyOvertimeValidation,
   getMonthlyOvertime: getMonthlyOvertimeValidation,
+  getOvertimeByPayrollDefinition: getOvertimeByPayrollDefinitionValidation,
   getYearlyOvertime: getYearlyOvertimeValidation,
   getOvertimeByDate: getOvertimeByDateValidation,
   getOvertimeSummary: getOvertimeSummaryValidation,

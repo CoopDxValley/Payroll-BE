@@ -65,6 +65,24 @@ router
     enhancedAttendanceController.getAttendanceByPayrollDefinition
   );
 
+// Recent attendance (last 5 days from current month payroll)
+router
+  .route("/recent-attendance")
+  .get(
+    auth(),
+    validate(enhancedAttendanceValidation.getRecentAttendance),
+    enhancedAttendanceController.getRecentAttendance
+  );
+
+// Employee attendance by current month payroll definition
+router
+  .route("/current-month/employee/:employeeId")
+  .get(
+    auth(),
+    validate(enhancedAttendanceValidation.getEmployeeAttendanceByDateRange),
+    enhancedAttendanceController.getEmployeeAttendanceByDateRange
+  );
+
 // Yearly attendance
 router
   .route("/current-year")
