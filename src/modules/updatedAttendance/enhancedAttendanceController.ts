@@ -472,6 +472,30 @@ const getEmployeeAttendanceByDateRange = catchAsync(async (req: Request, res: Re
   });
 });
 
+// Get payroll definition summary by ID
+const getPayrollDefinitionSummaryById = catchAsync(async (req: Request, res: Response) => {
+  console.log("=== Enhanced Attendance Controller: Payroll Definition Summary by ID ===");
+
+  const authEmployee = req.employee as AuthEmployee;
+  const companyId = authEmployee.companyId;
+  const { payrollDefinitionId } = req.params;
+
+  const result = await enhancedAttendanceService.getPayrollDefinitionSummaryById({
+    payrollDefinitionId: payrollDefinitionId as string,
+    companyId: companyId,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Payroll definition summary retrieved successfully",
+    data: result,
+    meta: {
+      payrollDefinitionId,
+      companyId,
+    },
+  });
+});
+
 // Enhanced attendance controller object
 const enhancedAttendanceController = {
   getAttendanceByDateRange,
@@ -485,6 +509,7 @@ const enhancedAttendanceController = {
   getAttendanceByPayrollDefinition,
   getRecentAttendance,
   getEmployeeAttendanceByDateRange,
+  getPayrollDefinitionSummaryById,
 };
 
 export default enhancedAttendanceController;

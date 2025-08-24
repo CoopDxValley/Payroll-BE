@@ -2001,6 +2001,120 @@ const getEmployeeAttendanceByDateRange = async (query: {
   };
 };
 
+// Get payroll definition summary by ID with department names
+const getPayrollDefinitionSummaryById = async (query: {
+  payrollDefinitionId: string;
+  companyId?: string;
+}) => {
+  console.log("=== Getting Payroll Definition Summary by ID ===");
+
+  // Get the specific payroll definition
+  const payrollDef = await prisma.payrollDefinition.findFirst({
+    where: {
+      id: query.payrollDefinitionId,
+      companyId: query.companyId,
+    },
+  });
+
+  if (!payrollDef) {
+    throw new Error(`Payroll definition with ID ${query.payrollDefinitionId} not found for the company`);
+  }
+
+  console.log(`Using payroll definition: ${payrollDef.payrollName}`);
+  console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
+
+  // Get all employees for the company with department and shift info
+  const employees = await prisma.employee.findMany({
+    where: {
+      companyId: query.companyId,
+    },
+    include: {
+      departmentHistory: {
+        where: { toDate: null }, // Only active department
+        include: {
+          department: true,
+        },
+        take: 1,
+      },
+      employeeShifts: {
+        where: { isActive: true },
+        include: {
+          shift: {
+            select: {
+              id: true,
+              name: true,
+              shiftType: true,
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+  });
+
+  // Get all work sessions for the payroll period
+  const workSessions = await prisma.workSession.findMany({
+    where: {
+      deviceUserId: { in: employees.map(emp => emp.deviceUserId).filter((id): id is string => id !== null) },
+      date: {
+        gte: payrollDef.startDate,
+        lte: payrollDef.endDate,
+      },
+    },
+    include: {
+      OvertimeTable: true,
+    },
+  });
+
+  // Calculate summary for each employee
+  const employeesSummary = employees.map(employee => {
+    const employeeSessions = workSessions.filter(session => session.deviceUserId === employee.deviceUserId);
+    
+    let totalWorkingHours = 0;
+    let overtimeHours = 0;
+    let deductibleHours = 0;
+
+    employeeSessions.forEach(session => {
+      if (session.punchIn && session.punchOut) {
+        const durationMinutes = Math.round((new Date(session.punchOut).getTime() - new Date(session.punchIn).getTime()) / (1000 * 60));
+        totalWorkingHours += durationMinutes / 60;
+      }
+
+      // Calculate overtime
+      session.OvertimeTable.forEach(overtime => {
+        if (overtime.punchIn && overtime.punchOut) {
+          const overtimeMinutes = Math.round((new Date(overtime.punchOut).getTime() - new Date(overtime.punchIn).getTime()) / (1000 * 60));
+          overtimeHours += overtimeMinutes / 60;
+        }
+      });
+    });
+
+    const netHoursWorked = totalWorkingHours + overtimeHours - deductibleHours;
+
+    return {
+      id: employee.id,
+      name: employee.name,
+      departmentName: employee.departmentHistory[0]?.department?.deptName || "Unassigned",
+      shiftType: employee.employeeShifts[0]?.shift?.shiftType || "Unassigned",
+      totalWorkingHours: +(totalWorkingHours).toFixed(2),
+      overtimeHours: +(overtimeHours).toFixed(2),
+      deductibleHours: +(deductibleHours).toFixed(2),
+      netHoursWorked: +(netHoursWorked).toFixed(2),
+    };
+  });
+
+  return {
+    payrollDefinition: {
+      id: payrollDef.id,
+      payrollName: payrollDef.payrollName,
+      startDate: payrollDef.startDate,
+      endDate: payrollDef.endDate,
+      status: payrollDef.status,
+    },
+    employees: employeesSummary,
+  };
+};
+
 const enhancedAttendanceService = {
   getAttendanceByDateRange,
   getTodaysAttendance,
@@ -2013,6 +2127,7 @@ const enhancedAttendanceService = {
   getAttendanceByPayrollDefinition,
   getRecentAttendance,
   getEmployeeAttendanceByDateRange,
+  getPayrollDefinitionSummaryById,
 };
 
 export default enhancedAttendanceService;

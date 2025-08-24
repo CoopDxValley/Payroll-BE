@@ -133,6 +133,14 @@ const getEmployeeAttendanceByDateRangeValidation = {
   query: z.object({}), // No query parameters needed
 };
 
+// Validation for getting payroll definition summary by ID
+const getPayrollDefinitionSummaryByIdValidation = {
+  params: z.object({
+    payrollDefinitionId: z.string().uuid("Invalid payroll definition ID"),
+  }),
+  query: z.object({}), // No query parameters needed
+};
+
 // Export all validation schemas
 export default {
   // Enhanced Attendance Endpoints
@@ -146,4 +154,5 @@ export default {
   getAttendanceByPayrollDefinition: getAttendanceByPayrollDefinitionValidation,
   getRecentAttendance: getRecentAttendanceValidation,
   getEmployeeAttendanceByDateRange: getEmployeeAttendanceByDateRangeValidation,
+  getPayrollDefinitionSummaryById: getPayrollDefinitionSummaryByIdValidation,
 };
