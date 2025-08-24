@@ -376,6 +376,31 @@ const getCurrentMonthPayroll = async (companyId: string) => {
 const getPayrollByPayrollDefinitionId = async (payrollDefinitionId: string) => {
   const payrolls = await prisma.payroll.findMany({
     where: { payrollDefinitionId },
+    include: {
+      employee: {
+        select: {
+          id: true,
+          name: true,
+          payrollInfo: {
+            select: {
+              employmentType: true,
+              basicSalary: true,
+              tinNumber: true,
+            },
+          },
+          gradeHistory: {
+            where: { toDate: null },
+            select: {
+              grade: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   });
   return payrolls;
 };
