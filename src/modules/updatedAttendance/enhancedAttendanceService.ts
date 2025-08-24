@@ -2023,7 +2023,7 @@ const getPayrollDefinitionSummaryById = async (query: {
   console.log(`Using payroll definition: ${payrollDef.payrollName}`);
   console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
 
-  // Get all employees for the company with department info
+  // Get all employees for the company with department and shift info
   const employees = await prisma.employee.findMany({
     where: {
       companyId: query.companyId,
@@ -2033,6 +2033,19 @@ const getPayrollDefinitionSummaryById = async (query: {
         where: { toDate: null }, // Only active department
         include: {
           department: true,
+        },
+        take: 1,
+      },
+      employeeShifts: {
+        where: { isActive: true },
+        include: {
+          shift: {
+            select: {
+              id: true,
+              name: true,
+              shiftType: true,
+            },
+          },
         },
         take: 1,
       },
@@ -2082,6 +2095,7 @@ const getPayrollDefinitionSummaryById = async (query: {
       id: employee.id,
       name: employee.name,
       departmentName: employee.departmentHistory[0]?.department?.deptName || "Unassigned",
+      shiftType: employee.employeeShifts[0]?.shift?.shiftType || "Unassigned",
       totalWorkingHours: +(totalWorkingHours).toFixed(2),
       overtimeHours: +(overtimeHours).toFixed(2),
       deductibleHours: +(deductibleHours).toFixed(2),
