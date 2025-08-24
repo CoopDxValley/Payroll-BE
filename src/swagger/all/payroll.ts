@@ -151,7 +151,7 @@
  *                         description: The ID of the payroll record
  *                       status:
  *                         type: string
- *                         enum: [PENDING, APPROVED, PAID, FAILED]
+ *                         enum: [CREATED, APPROVED, PAID, FAILED]
  *                         description: Status of the payroll
  *                       createdAt:
  *                         type: string
@@ -192,10 +192,40 @@
  *                       employerPensionAmount:
  *                         type: number
  *                         format: decimal
+ *                       employee:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                           payrollInfo:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               tinNumber:
+ *                                 type: string
+ *                               basicSalary:
+ *                                 type: number
+ *                                 format: decimal
+ *                               employmentType:
+ *                                 type: string
+ *                                 enum: [FULL_TIME, PART_TIME, CONTRACT, INTERN]
+ *                           gradeHistory:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 grade:
+ *                                   type: object
+ *                                   properties:
+ *                                     name:
+ *                                       type: string
  *       401:
  *         description: Unauthorized - Missing or invalid token
  *       404:
- *         description: Payroll records not found for the current month
+ *         description: Payroll records not found for the given payroll definition
  */
 
 /**
