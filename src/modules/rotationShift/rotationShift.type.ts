@@ -64,6 +64,25 @@ export interface BulkCreateAssignmentsRequest {
   }>;
 }
 
+export interface BulkUpdateAssignmentsRequest {
+  scheduleId: string;
+  assignments: Array<{
+    employeeId: string;
+    date: string; // Format: "YYYY-MM-DD"
+    shiftTypeId?: string | null; // null = OFF day, uuid = actual shift type
+  }>;
+}
+
+export interface BulkUpdateAssignmentsResult {
+  scheduleId: string;
+  totalAssignments: number;
+  updatedAssignments: number;
+  createdAssignments: number;
+  deletedAssignments: number;
+  message: string;
+  assignments: EmployeeShiftAssignmentWithRelations[];
+}
+
 // ==================== RESPONSE TYPES ====================
 
 export interface ShiftScheduleWithRelations extends ShiftSchedule {
@@ -79,7 +98,8 @@ export interface ShiftScheduleWithRelations extends ShiftSchedule {
   assignments?: EmployeeShiftAssignmentWithRelations[];
 }
 
-export interface EmployeeShiftAssignmentWithRelations extends EmployeeShiftAssignment {
+export interface EmployeeShiftAssignmentWithRelations
+  extends EmployeeShiftAssignment {
   employee: {
     id: string;
     name: string;
@@ -151,23 +171,63 @@ export interface DeleteResult {
 
 export interface IRotationShiftService {
   // Shift Schedule methods
-  createShiftSchedule(data: CreateShiftScheduleRequest & { companyId: string }): Promise<ShiftScheduleWithRelations>;
-  getShiftSchedules(companyId: string, filters?: ShiftScheduleFilters): Promise<ShiftScheduleWithRelations[]>;
-  getShiftScheduleById(id: string, companyId: string): Promise<ShiftScheduleWithRelations>;
-  updateShiftSchedule(id: string, companyId: string, data: UpdateShiftScheduleRequest): Promise<ShiftScheduleWithRelations>;
-  approveShiftSchedule(id: string, companyId: string): Promise<ShiftScheduleWithRelations>;
+  createShiftSchedule(
+    data: CreateShiftScheduleRequest & { companyId: string }
+  ): Promise<ShiftScheduleWithRelations>;
+  getShiftSchedules(
+    companyId: string,
+    filters?: ShiftScheduleFilters
+  ): Promise<ShiftScheduleWithRelations[]>;
+  getShiftScheduleById(
+    id: string,
+    companyId: string
+  ): Promise<ShiftScheduleWithRelations>;
+  updateShiftSchedule(
+    id: string,
+    companyId: string,
+    data: UpdateShiftScheduleRequest
+  ): Promise<ShiftScheduleWithRelations>;
+  approveShiftSchedule(
+    id: string,
+    companyId: string
+  ): Promise<ShiftScheduleWithRelations>;
   deleteShiftSchedule(id: string, companyId: string): Promise<DeleteResult>;
 
   // Employee Shift Assignment methods
-  createEmployeeShiftAssignment(data: CreateEmployeeShiftAssignmentRequest & { companyId: string }): Promise<EmployeeShiftAssignmentWithRelations>;
-  getEmployeeShiftAssignments(companyId: string, filters?: EmployeeShiftAssignmentFilters): Promise<EmployeeShiftAssignmentWithRelations[]>;
-  updateEmployeeShiftAssignment(id: string, companyId: string, data: UpdateEmployeeShiftAssignmentRequest): Promise<EmployeeShiftAssignmentWithRelations>;
-  approveEmployeeShiftAssignment(id: string, companyId: string): Promise<EmployeeShiftAssignmentWithRelations>;
-  deleteEmployeeShiftAssignment(id: string, companyId: string): Promise<DeleteResult>;
+  createEmployeeShiftAssignment(
+    data: CreateEmployeeShiftAssignmentRequest & { companyId: string }
+  ): Promise<EmployeeShiftAssignmentWithRelations>;
+  getEmployeeShiftAssignments(
+    companyId: string,
+    filters?: EmployeeShiftAssignmentFilters
+  ): Promise<EmployeeShiftAssignmentWithRelations[]>;
+  updateEmployeeShiftAssignment(
+    id: string,
+    companyId: string,
+    data: UpdateEmployeeShiftAssignmentRequest
+  ): Promise<EmployeeShiftAssignmentWithRelations>;
+  approveEmployeeShiftAssignment(
+    id: string,
+    companyId: string
+  ): Promise<EmployeeShiftAssignmentWithRelations>;
+  deleteEmployeeShiftAssignment(
+    id: string,
+    companyId: string
+  ): Promise<DeleteResult>;
 
   // Bulk operations
-  bulkCreateAssignments(data: BulkCreateAssignmentsRequest & { companyId: string }): Promise<BulkCreateAssignmentsResult>;
-  getEmployeeRotationSummary(employeeId: string, companyId: string, startDate: Date, endDate: Date): Promise<EmployeeRotationSummary>;
+  bulkCreateAssignments(
+    data: BulkCreateAssignmentsRequest & { companyId: string }
+  ): Promise<BulkCreateAssignmentsResult>;
+  bulkUpdateAssignments(
+    data: BulkUpdateAssignmentsRequest & { companyId: string }
+  ): Promise<BulkUpdateAssignmentsResult>;
+  getEmployeeRotationSummary(
+    employeeId: string,
+    companyId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<EmployeeRotationSummary>;
 }
 
 // ==================== VALIDATION TYPES ====================
@@ -211,4 +271,4 @@ export interface ScheduleOverview {
   totalAssignments: number;
   totalHours: number;
   status: ShiftScheduleStatus;
-} 
+}

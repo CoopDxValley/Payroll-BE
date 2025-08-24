@@ -97,6 +97,7 @@ export const getEmployeesSchema = {
       sortType: z.enum(["asc", "desc"]).optional(),
       limit: z.coerce.number().int().optional(),
       page: z.coerce.number().int().optional(),
+      type: z.enum(["FIXED_WEEKLY", "ROTATING"]).optional(),
     })
     .strict(),
 };

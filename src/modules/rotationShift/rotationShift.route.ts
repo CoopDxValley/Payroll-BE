@@ -8,21 +8,17 @@ const router = express.Router();
 
 // ==================== SHIFT SCHEDULE ROUTES ====================
 // Get employee rotation summary
-router
-  .route("/employees/summary/:employeeId")
-  .get(
-    auth(),
-    // validate(rotationShiftValidation.getEmployeeRotationSummary),
-    rotationShiftController.getEmployeeRotationSummary
-  );
+router.route("/employees/summary/:employeeId").get(
+  auth(),
+  // validate(rotationShiftValidation.getEmployeeRotationSummary),
+  rotationShiftController.getEmployeeRotationSummary
+);
 
-  router
-  .route("/employees/summary")
-  .get(
-    auth(),
-    // validate(rotationShiftValidation.getEmployeeRotationSummary),
-    rotationShiftController.getAllEmployeeRotationSummaries 
-  );
+router.route("/employees/summary").get(
+  auth(),
+  // validate(rotationShiftValidation.getEmployeeRotationSummary),
+  rotationShiftController.getAllEmployeeRotationSummaries
+);
 // Create new shift schedule
 router
   .route("/schedules")
@@ -125,6 +121,15 @@ router
     auth(),
     validate(rotationShiftValidation.bulkCreateAssignments),
     rotationShiftController.bulkCreateAssignments
+  );
+
+// Bulk update assignments
+router
+  .route("/assignments/update/bulk")
+  .post(
+    auth(),
+    validate(rotationShiftValidation.bulkUpdateAssignments),
+    rotationShiftController.bulkUpdateAssignments
   );
 
 // // Get employee rotation summary

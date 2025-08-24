@@ -2,10 +2,7 @@ import { Response } from "express";
 import httpStatus from "http-status";
 import { CustomRequest } from "../../middlewares/validate";
 import catchAsync from "../../utils/catch-async";
-import {
-  createPayrollInput,
-  getPayrollByPayrollDefinitionId,
-} from "./payroll.type";
+import { createPayrollInput, getPayrollByPayrollDefinitionId } from "./payroll.type";
 import { AuthEmployee } from "../auth/auth.type";
 import payrollService from "./payroll.services";
 
@@ -26,7 +23,7 @@ const createPayroll = catchAsync<
 
     res
       .status(httpStatus.CREATED)
-      .send({ message: "Payroll Create Successfully", data: payroll });
+      .send({ message: "Payroll Create Successfully", data: { payroll } });
   }
 );
 

@@ -1,7 +1,11 @@
 import prisma from "../../client";
 import httpStatus from "http-status";
 import ApiError from "../../utils/api-error";
-import { IWorkSessionWithRelations, OvertimeType, OvertimeStatus } from "./updatedAttendance.type";
+import {
+  IWorkSessionWithRelations,
+  OvertimeType,
+  OvertimeStatus,
+} from "./updatedAttendance.type";
 import {
   formatTime,
   formatDate,
@@ -284,7 +288,9 @@ const processFixedWeeklyOvertime = async (
     return;
   }
 
-  console.log(`Shift day: ${shiftDay.dayType}, ${shiftDay.startTime} - ${shiftDay.endTime}`);
+  console.log(
+    `Shift day: ${shiftDay.dayType}, ${shiftDay.startTime} - ${shiftDay.endTime}`
+  );
 
   // Check if it's a REST_DAY or HOLIDAY
   if (shiftDay.dayType === "REST_DAY") {
@@ -392,11 +398,11 @@ const processRotationOvertime = async (
   const { startTime, endTime } = assignment.RotatingShiftType;
 
   // Validate shift times
-  if (!startTime || typeof startTime !== 'string') {
+  if (!startTime || typeof startTime !== "string") {
     console.log(`Invalid startTime in rotation assignment: ${startTime}`);
     return;
   }
-  if (!endTime || typeof endTime !== 'string') {
+  if (!endTime || typeof endTime !== "string") {
     console.log(`Invalid endTime in rotation assignment: ${endTime}`);
     return;
   }
@@ -435,8 +441,14 @@ const processRotationOvertime = async (
   );
   const lateThreshold = addGracePeriod(shiftEndTime, effectiveGracePeriod);
 
-  console.log(`Rotation overtime with grace period: ${effectiveGracePeriod} minutes`);
-  console.log(`Early threshold: ${formatTime(earlyThreshold)}, Late threshold: ${formatTime(lateThreshold)}`);
+  console.log(
+    `Rotation overtime with grace period: ${effectiveGracePeriod} minutes`
+  );
+  console.log(
+    `Early threshold: ${formatTime(
+      earlyThreshold
+    )}, Late threshold: ${formatTime(lateThreshold)}`
+  );
 
   // Early arrival overtime (only if beyond grace period)
   if (punchInTime && punchInTime < earlyThreshold) {
@@ -466,7 +478,9 @@ const processRotationOvertime = async (
 };
 
 // Process individual attendance record
-const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionWithRelations> => {
+const processSingleAttendanceRecord = async (
+  record: any
+): Promise<IWorkSessionWithRelations> => {
   console.log(`=== Processing Single Attendance Record ===`);
   console.log(`DeviceUserId: ${record.deviceUserId}, Date: ${record.date}`);
 
@@ -503,7 +517,7 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
     if (!existingSession || !existingSession.punchIn) {
       // No session or no punch-in yet = PUNCH IN
       const localDateTime = createStableDateTime(date, checkTime);
-      
+
       processedData = {
         deviceUserId,
         date,
@@ -514,11 +528,11 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
     } else if (!existingSession.punchOut) {
       // Session exists with punch-in but no punch-out = PUNCH OUT
       const localDateTime = createStableDateTime(date, checkTime);
-      
+
       // Update existing session
       const punchInTime = existingSession.punchIn;
       const punchOutTime = localDateTime;
-      
+
       // Calculate duration
       const duration = calculateDuration(punchInTime, punchOutTime);
 
@@ -534,8 +548,91 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
           dateOnly,
           prisma
         );
-        normalizedPunchIn = normalizationResult.normalizedPunchIn || punchInTime;
-        normalizedPunchOut = normalizationResult.normalizedPunchOut || punchOutTime;
+        normalizedPunchIn =
+          normalizationResult.normalizedPunchIn || punchInTime;
+        normalizedPunchOut =
+          normalizationResult.normalizedPunchOut || punchOutTime;
+      }
+
+      // Calculate deducted minutes for session update (break time + attendance penalties for FIXED_WEEKLY shifts)
+      let dedutedMinutes = 0;
+      if (shiftId && normalizedPunchIn && normalizedPunchOut) {
+        // Get shift day info for deductible calculations
+        const dateObj = new Date(dateOnly);
+        const jsDay = dateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const dayNumber = jsDay === 0 ? 7 : jsDay; // Convert to 1-7 format (1 = Monday, 7 = Sunday)
+
+        const shiftDay = await prisma.shiftDay.findFirst({
+          where: {
+            shiftId,
+            dayNumber: dayNumber,
+          },
+        });
+
+        if (shiftDay) {
+          // Start with break time
+          dedutedMinutes = shiftDay.breakTime || 0;
+
+          // For FIXED_WEEKLY shifts, add attendance penalties (late arrival + early departure)
+          if (
+            activeShift.shift.shiftType === "FIXED_WEEKLY" &&
+            punchInTime &&
+            punchOutTime
+          ) {
+            const gracePeriodMinutes = shiftDay.gracePeriod || 0;
+
+            // Extract time strings from shift DateTime objects and create them on the work date
+            const shiftStartTimeStr = formatTime(new Date(shiftDay.startTime));
+            const shiftEndTimeStr = formatTime(new Date(shiftDay.endTime));
+
+            if (shiftStartTimeStr && shiftEndTimeStr) {
+              const workDateStr = date; // Use the work date string (YYYY-MM-DD format)
+              const shiftStartTime = createStableDateTime(
+                workDateStr,
+                shiftStartTimeStr
+              );
+              const shiftEndTime = createStableDateTime(
+                workDateStr,
+                shiftEndTimeStr
+              );
+
+              // Calculate late arrival penalty (beyond grace period)
+              if (punchInTime > shiftStartTime) {
+                const lateArrivalMinutes = Math.round(
+                  (punchInTime.getTime() - shiftStartTime.getTime()) /
+                    (1000 * 60)
+                );
+                // Only count as deductible if beyond grace period
+                if (lateArrivalMinutes > gracePeriodMinutes) {
+                  dedutedMinutes += lateArrivalMinutes - gracePeriodMinutes;
+                }
+              }
+
+              // Calculate early departure penalty (beyond grace period)
+              if (punchOutTime < shiftEndTime) {
+                const earlyDepartureMinutes = Math.round(
+                  (shiftEndTime.getTime() - punchOutTime.getTime()) /
+                    (1000 * 60)
+                );
+                // Only count as deductible if beyond grace period
+                if (earlyDepartureMinutes > gracePeriodMinutes) {
+                  dedutedMinutes += earlyDepartureMinutes - gracePeriodMinutes;
+                }
+              }
+
+              console.log(
+                "=== Bulk Update Deductible Minutes Calculation (FIXED_WEEKLY) ==="
+              );
+              console.log("Break time:", shiftDay.breakTime || 0);
+              console.log("Grace period:", gracePeriodMinutes);
+              console.log("Shift start:", formatTime(shiftStartTime));
+              console.log("Shift end:", formatTime(shiftEndTime));
+              console.log("Actual punch in:", formatTime(punchInTime));
+              console.log("Actual punch out:", formatTime(punchOutTime));
+              console.log("Total deductible minutes:", dedutedMinutes);
+            }
+          }
+        }
       }
 
       // Update the work session
@@ -544,7 +641,14 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
         data: {
           punchOut: normalizedPunchOut,
           punchOutSource: deviceIp ? "device" : "manual",
-          duration: (normalizedPunchIn && normalizedPunchOut) ? calculateDuration(normalizedPunchIn as Date, normalizedPunchOut as Date) : null,
+          duration:
+            normalizedPunchIn && normalizedPunchOut
+              ? calculateDuration(
+                  normalizedPunchIn as Date,
+                  normalizedPunchOut as Date
+                )
+              : null,
+          dedutedMinutes,
         },
         include: {
           shift: {
@@ -560,7 +664,10 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
 
       // Process overtime using ACTUAL punch times (not normalized)
       if (activeShift.shift.shiftType === "ROTATING") {
-        const assignment = await getRotatingShiftAssignment(employee.id, dateOnly);
+        const assignment = await getRotatingShiftAssignment(
+          employee.id,
+          dateOnly
+        );
         await processRotationOvertime(
           existingSession.id,
           deviceUserId,
@@ -613,7 +720,10 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
   let punchOutTime: Date | null = null;
 
   if (processedData.punchIn) {
-    if (typeof processedData.punchIn === 'string' && processedData.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)) {
+    if (
+      typeof processedData.punchIn === "string" &&
+      processedData.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)
+    ) {
       // Time-only string - combine with date
       punchInTime = createStableDateTime(date, processedData.punchIn);
     } else {
@@ -622,7 +732,10 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
   }
 
   if (processedData.punchOut) {
-    if (typeof processedData.punchOut === 'string' && processedData.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)) {
+    if (
+      typeof processedData.punchOut === "string" &&
+      processedData.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)
+    ) {
       // Time-only string - combine with date
       punchOutTime = createStableDateTime(date, processedData.punchOut);
     } else {
@@ -663,6 +776,85 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
     normalizedPunchOut = normalizationResult.normalizedPunchOut;
   }
 
+  // Calculate deducted minutes (break time + attendance penalties for FIXED_WEEKLY shifts)
+  let dedutedMinutes = 0;
+  if (shiftId && normalizedPunchIn && normalizedPunchOut) {
+    // Get shift day info for deductible calculations
+    const dateObj = new Date(dateOnly);
+    const jsDay = dateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayNumber = jsDay === 0 ? 7 : jsDay; // Convert to 1-7 format (1 = Monday, 7 = Sunday)
+
+    const shiftDay = await prisma.shiftDay.findFirst({
+      where: {
+        shiftId,
+        dayNumber: dayNumber,
+      },
+    });
+
+    if (shiftDay) {
+      // Start with break time
+      dedutedMinutes = shiftDay.breakTime || 0;
+
+      // For FIXED_WEEKLY shifts, add attendance penalties (late arrival + early departure)
+      if (
+        activeShift.shift.shiftType === "FIXED_WEEKLY" &&
+        punchInTime &&
+        punchOutTime
+      ) {
+        const gracePeriodMinutes = shiftDay.gracePeriod || 0;
+
+        // Extract time strings from shift DateTime objects and create them on the work date
+        const shiftStartTimeStr = formatTime(new Date(shiftDay.startTime));
+        const shiftEndTimeStr = formatTime(new Date(shiftDay.endTime));
+
+        if (shiftStartTimeStr && shiftEndTimeStr) {
+          const workDateStr = date; // Use the work date string (YYYY-MM-DD format)
+          const shiftStartTime = createStableDateTime(
+            workDateStr,
+            shiftStartTimeStr
+          );
+          const shiftEndTime = createStableDateTime(
+            workDateStr,
+            shiftEndTimeStr
+          );
+
+          // Calculate late arrival penalty (beyond grace period)
+          if (punchInTime > shiftStartTime) {
+            const lateArrivalMinutes = Math.round(
+              (punchInTime.getTime() - shiftStartTime.getTime()) / (1000 * 60)
+            );
+            // Only count as deductible if beyond grace period
+            if (lateArrivalMinutes > gracePeriodMinutes) {
+              dedutedMinutes += lateArrivalMinutes - gracePeriodMinutes;
+            }
+          }
+
+          // Calculate early departure penalty (beyond grace period)
+          if (punchOutTime < shiftEndTime) {
+            const earlyDepartureMinutes = Math.round(
+              (shiftEndTime.getTime() - punchOutTime.getTime()) / (1000 * 60)
+            );
+            // Only count as deductible if beyond grace period
+            if (earlyDepartureMinutes > gracePeriodMinutes) {
+              dedutedMinutes += earlyDepartureMinutes - gracePeriodMinutes;
+            }
+          }
+
+          console.log(
+            "=== Bulk Deductible Minutes Calculation (FIXED_WEEKLY) ==="
+          );
+          console.log("Break time:", shiftDay.breakTime || 0);
+          console.log("Grace period:", gracePeriodMinutes);
+          console.log("Shift start:", formatTime(shiftStartTime));
+          console.log("Shift end:", formatTime(shiftEndTime));
+          console.log("Actual punch in:", formatTime(punchInTime));
+          console.log("Actual punch out:", formatTime(punchOutTime));
+          console.log("Total deductible minutes:", dedutedMinutes);
+        }
+      }
+    }
+  }
+
   // Create WorkSession with normalized times
   const workSession = await prismaWithModels.workSession.create({
     data: {
@@ -672,10 +864,14 @@ const processSingleAttendanceRecord = async (record: any): Promise<IWorkSessionW
       punchInSource: processedData.punchInSource || "manual",
       punchOut: normalizedPunchOut,
       punchOutSource: processedData.punchOutSource || "manual",
-      duration: normalizedPunchIn && normalizedPunchOut ? calculateDuration(normalizedPunchIn, normalizedPunchOut) : null,
+      duration:
+        normalizedPunchIn && normalizedPunchOut
+          ? calculateDuration(normalizedPunchIn, normalizedPunchOut)
+          : null,
       shiftId,
       earlyMinutes,
       lateMinutes,
+      dedutedMinutes,
     },
     include: {
       shift: {

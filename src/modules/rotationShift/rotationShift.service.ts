@@ -842,37 +842,271 @@ const bulkCreateAssignments = async (data: {
     );
   }
 
-  // Check for existing assignments
-  const dates = assignments.map((a) => new Date(a.date));
-  const existingAssignments = await prisma.employeeShiftAssignment.findMany({
-    where: {
-      employeeId: { in: employeeIds },
-      date: { in: dates },
-    },
+  // Upsert each assignment
+  const results = await Promise.all(
+    assignments.map((assignment) =>
+      prisma.employeeShiftAssignment.upsert({
+        where: {
+          employeeId_date: {
+            employeeId: assignment.employeeId,
+            date: new Date(assignment.date),
+          },
+        },
+        update: {
+          shiftTypeId: assignment.shiftTypeId,
+          hours: assignment.shiftTypeId ? 12 : 0,
+        },
+        create: {
+          employeeId: assignment.employeeId,
+          scheduleId,
+          date: new Date(assignment.date),
+          shiftTypeId: assignment.shiftTypeId,
+          hours: assignment.shiftTypeId ? 12 : 0,
+          isApproved: false,
+        },
+      })
+    )
+  );
+  return {
+    message: `${results.length} assignments have been successfully created or updated.`,
+    count: results.length,
+  };
+
+  // return {
+  //   message: `${results.length} assignments upserted successfully`,
+  //   count: results.length,
+  // };
+};
+
+// const bulkCreateAssignments = async (data: {
+//   scheduleId: string;
+//   assignments: Array<{
+//     employeeId: string;
+//     date: string; // Format: "YYYY-MM-DD"
+//     shiftTypeId?: string; // null = OFF day, uuid = actual shift type
+//   }>;
+//   companyId: string;
+// }) => {
+//   const { scheduleId, assignments, companyId } = data;
+
+//   // Verify schedule exists and belongs to company
+//   const schedule = await prisma.shiftSchedule.findFirst({
+//     where: { id: scheduleId, companyId },
+//   });
+
+//   if (!schedule) {
+//     throw new ApiError(httpStatus.NOT_FOUND, "Shift schedule not found");
+//   }
+
+//   if (schedule.isApproved) {
+//     throw new ApiError(
+//       httpStatus.BAD_REQUEST,
+//       "Cannot modify approved schedule"
+//     );
+//   }
+
+//   // Validate all employees belong to company
+//   const employeeIds = [...new Set(assignments.map((a) => a.employeeId))];
+//   const employees = await prisma.employee.findMany({
+//     where: { id: { in: employeeIds }, companyId },
+//     select: { id: true },
+//   });
+
+//   if (employees.length !== employeeIds.length) {
+//     throw new ApiError(
+//       httpStatus.BAD_REQUEST,
+//       "Some employees not found or don't belong to company"
+//     );
+//   }
+
+//   // Check for existing assignments
+//   const dates = assignments.map((a) => new Date(a.date));
+//   const existingAssignments = await prisma.employeeShiftAssignment.findMany({
+//     where: {
+//       employeeId: { in: employeeIds },
+//       date: { in: dates },
+//     },
+//   });
+
+//   if (existingAssignments.length > 0) {
+//     throw new ApiError(
+//       httpStatus.CONFLICT,
+//       "Some assignments already exist for the specified dates"
+//     );
+//   }
+
+//   // Create all assignments
+//   const createdAssignments = await prisma.employeeShiftAssignment.createMany({
+//     data: assignments.map((assignment) => ({
+//       employeeId: assignment.employeeId,
+//       scheduleId,
+//       date: new Date(assignment.date),
+//       shiftTypeId: assignment.shiftTypeId,
+//       hours: assignment.shiftTypeId ? 12 : 0, // Will be updated with actual duration later
+//       isApproved: false,
+//     })),
+//   });
+
+//   return {
+//     message: `${createdAssignments.count} assignments created successfully`,
+//     count: createdAssignments.count,
+//   };
+// };
+
+const bulkUpdateAssignments = async (data: {
+  scheduleId: string;
+  assignments: Array<{
+    employeeId: string;
+    date: string; // Format: "YYYY-MM-DD"
+    shiftTypeId?: string | null; // null = OFF day, uuid = actual shift type
+  }>;
+  companyId: string;
+}) => {
+  const { scheduleId, assignments, companyId } = data;
+
+  console.log("=== Bulk Update Assignments ===");
+  console.log("Schedule ID:", scheduleId);
+  console.log("Company ID:", companyId);
+  console.log("Assignments count:", assignments.length);
+
+  // Verify schedule exists and belongs to company
+  const schedule = await prisma.shiftSchedule.findFirst({
+    where: { id: scheduleId, companyId },
   });
 
-  if (existingAssignments.length > 0) {
+  if (!schedule) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Shift schedule not found");
+  }
+
+  if (schedule.isApproved) {
     throw new ApiError(
-      httpStatus.CONFLICT,
-      "Some assignments already exist for the specified dates"
+      httpStatus.BAD_REQUEST,
+      "Cannot modify approved schedule"
     );
   }
 
-  // Create all assignments
-  const createdAssignments = await prisma.employeeShiftAssignment.createMany({
-    data: assignments.map((assignment) => ({
-      employeeId: assignment.employeeId,
-      scheduleId,
-      date: new Date(assignment.date),
-      shiftTypeId: assignment.shiftTypeId,
-      hours: assignment.shiftTypeId ? 12 : 0, // Will be updated with actual duration later
-      isApproved: false,
-    })),
+  // Validate all employees belong to company
+  const employeeIds = [...new Set(assignments.map((a) => a.employeeId))];
+  const employees = await prisma.employee.findMany({
+    where: { id: { in: employeeIds }, companyId },
+    select: { id: true },
   });
 
+  if (employees.length !== employeeIds.length) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Some employees not found or don't belong to company"
+    );
+  }
+
+  // Validate shift types belong to company (for non-null shiftTypeIds)
+  const shiftTypeIds = assignments
+    .map((a) => a.shiftTypeId)
+    .filter((id): id is string => id !== null && id !== undefined);
+
+  if (shiftTypeIds.length > 0) {
+    const shiftTypes = await prisma.rotatingShiftType.findMany({
+      where: { id: { in: shiftTypeIds }, companyId },
+      select: { id: true },
+    });
+
+    if (shiftTypes.length !== [...new Set(shiftTypeIds)].length) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Some shift types not found or don't belong to company"
+      );
+    }
+  }
+
+  let updatedCount = 0;
+  let createdCount = 0;
+  const resultAssignments = [];
+
+  // Process each assignment using upsert
+  for (const assignment of assignments) {
+    const assignmentDate = new Date(assignment.date);
+
+    // Check if assignment already exists
+    const existingAssignment = await prisma.employeeShiftAssignment.findUnique({
+      where: {
+        employeeId_date: {
+          employeeId: assignment.employeeId,
+          date: assignmentDate,
+        },
+      },
+    });
+
+    const upsertData = {
+      employeeId: assignment.employeeId,
+      scheduleId,
+      date: assignmentDate,
+      shiftTypeId: assignment.shiftTypeId,
+      hours: assignment.shiftTypeId ? 12 : 0, // Default hours, can be adjusted later
+      isApproved: false, // Reset approval status on update
+    };
+
+    // Upsert the assignment
+    const result = await prisma.employeeShiftAssignment.upsert({
+      where: {
+        employeeId_date: {
+          employeeId: assignment.employeeId,
+          date: assignmentDate,
+        },
+      },
+      update: {
+        scheduleId,
+        shiftTypeId: assignment.shiftTypeId,
+        hours: assignment.shiftTypeId ? 12 : 0,
+        isApproved: false, // Reset approval status on update
+      },
+      create: upsertData,
+      include: {
+        employee: {
+          select: {
+            id: true,
+            name: true,
+            deviceUserId: true,
+          },
+        },
+        RotatingShiftType: {
+          select: {
+            id: true,
+            name: true,
+            startTime: true,
+            endTime: true,
+            duration: true,
+          },
+        },
+        schedule: {
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
+      },
+    });
+
+    if (existingAssignment) {
+      updatedCount++;
+    } else {
+      createdCount++;
+    }
+
+    resultAssignments.push(result);
+  }
+
+  console.log(`Updated: ${updatedCount}, Created: ${createdCount}`);
+
   return {
-    message: `${createdAssignments.count} assignments created successfully`,
-    count: createdAssignments.count,
+    scheduleId,
+    totalAssignments: assignments.length,
+    updatedAssignments: updatedCount,
+    createdAssignments: createdCount,
+    deletedAssignments: 0, // Not implemented in this version
+    message: `Successfully processed ${assignments.length} assignments: ${createdCount} created, ${updatedCount} updated`,
+    assignments: resultAssignments,
   };
 };
 
@@ -945,7 +1179,7 @@ const getAllEmployeeRotationSummaries = async (
           id: true,
           name: true,
           username: true,
-          email:true
+          email: true,
         },
       },
     },
@@ -958,10 +1192,7 @@ const getAllEmployeeRotationSummaries = async (
         lte: new Date(endDate),
       },
     },
-    orderBy: [
-      { employeeId: "asc" },
-      { date: "asc" },
-    ],
+    orderBy: [{ employeeId: "asc" }, { date: "asc" }],
   });
 
   // Group by employeeId
@@ -977,7 +1208,7 @@ const getAllEmployeeRotationSummaries = async (
     }
 
     acc[a.employeeId].totalDays += 1;
-    acc[a.employeeId].totalHours += (a.hours || 0);
+    acc[a.employeeId].totalHours += a.hours || 0;
     acc[a.employeeId].assignments.push({
       date: a.date,
       shiftTypeId: a.shiftTypeId,
@@ -1064,6 +1295,7 @@ export default {
 
   // Bulk operations
   bulkCreateAssignments,
+  bulkUpdateAssignments,
   getEmployeeRotationSummary,
-  getAllEmployeeRotationSummaries
+  getAllEmployeeRotationSummaries,
 };

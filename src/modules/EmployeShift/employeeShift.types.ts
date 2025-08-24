@@ -50,7 +50,7 @@ export interface BulkAssignShiftRequest {
   shiftId: string;
   employeeIds: string[];
   startDate?: string; // Optional - defaults to today if not provided
-  endDate?: string;   // Optional - not used in bulk operations (set to null)
+  endDate?: string; // Optional - not used in bulk operations (set to null)
 }
 
 export interface BulkUnassignShiftRequest {
@@ -95,4 +95,78 @@ export interface ShiftDetailsData {
   patternDays: ShiftDayData[];
   createdAt: Date;
   updatedAt: Date;
-} 
+}
+
+// Types for rotation shift assignments
+export interface RotatingShiftTypeData {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+}
+
+export interface ShiftAssignmentData {
+  id: string;
+  date: Date;
+  hours: number;
+  shiftType: RotatingShiftTypeData | null;
+  isApproved: boolean;
+  schedule: {
+    id: string;
+    name: string;
+    startDate: Date;
+    endDate: Date;
+  } | null;
+}
+
+export interface RotationData {
+  totalDays: number;
+  activeDays: number;
+  offDays: number;
+  recentAssignments: ShiftAssignmentData[];
+  allAssignments: ShiftAssignmentData[];
+}
+
+export interface FixedWeeklyShiftAssignment {
+  startDate: Date;
+  endDate: Date | null;
+  isActive: boolean;
+  shift: {
+    id: string;
+    name: string;
+    shiftType: string;
+    patternDays: any[];
+  };
+}
+
+export interface EmployeeWithShiftData {
+  id: string;
+  name: string;
+  username: string;
+  phoneNumber: string;
+  deviceUserId: string;
+  employeeIdNumber: string;
+  gender: string;
+  currentPosition: {
+    id: string;
+    positionName: string;
+  } | null;
+  currentGrade: {
+    id: string;
+    name: string;
+  } | null;
+  // For ROTATION shifts
+  rotationData?: RotationData;
+  // For FIXED_WEEKLY shifts
+  shiftAssignment?: FixedWeeklyShiftAssignment;
+}
+
+export interface GetEmployeesByShiftResponse {
+  shiftId: string;
+  shiftType: "FIXED_WEEKLY" | "ROTATING";
+  scheduleId: string | null;
+  totalEmployees: number;
+  totalAssignments?: number; // Only for ROTATION shifts
+  employees: EmployeeWithShiftData[];
+}

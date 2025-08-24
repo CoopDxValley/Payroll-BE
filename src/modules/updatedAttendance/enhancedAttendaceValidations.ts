@@ -12,18 +12,27 @@ export const getTodaysAttendanceValidation = {
 
 // Date range attendance validation
 export const getAttendanceByDateRangeValidation = {
-  query: z.object({
-    startDate: z.string().min(1, "Start date is required"),
-    endDate: z.string().min(1, "End date is required"),
-    deviceUserId: z.string().optional(),
-    shiftId: z.string().optional(),
-  }).refine((data) => {
-    const startDate = new Date(data.startDate);
-    const endDate = new Date(data.endDate);
-    return !isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && startDate <= endDate;
-  }, {
-    message: "Start date must be before or equal to end date",
-  }),
+  query: z
+    .object({
+      startDate: z.string().min(1, "Start date is required"),
+      endDate: z.string().min(1, "End date is required"),
+      deviceUserId: z.string().optional(),
+      shiftId: z.string().optional(),
+    })
+    .refine(
+      (data) => {
+        const startDate = new Date(data.startDate);
+        const endDate = new Date(data.endDate);
+        return (
+          !isNaN(startDate.getTime()) &&
+          !isNaN(endDate.getTime()) &&
+          startDate <= endDate
+        );
+      },
+      {
+        message: "Start date must be before or equal to end date",
+      }
+    ),
 };
 
 // Weekly attendance validation
@@ -39,6 +48,7 @@ export const getMonthlyAttendanceValidation = {
   query: z.object({
     deviceUserId: z.string().optional(),
     shiftId: z.string().optional(),
+    departmentId: z.string().optional(),
   }),
 };
 
@@ -52,31 +62,57 @@ export const getYearlyAttendanceValidation = {
 
 // Attendance by specific date validation
 export const getAttendanceByDateValidation = {
-  query: z.object({
-    date: z.string().min(1, "Date is required"),
-    deviceUserId: z.string().optional(),
-    shiftId: z.string().optional(),
-  }).refine((data) => {
-    const date = new Date(data.date);
-    return !isNaN(date.getTime());
-  }, {
-    message: "Invalid date format",
-  }),
+  query: z
+    .object({
+      date: z.string().min(1, "Date is required"),
+      deviceUserId: z.string().optional(),
+      shiftId: z.string().optional(),
+    })
+    .refine(
+      (data) => {
+        const date = new Date(data.date);
+        return !isNaN(date.getTime());
+      },
+      {
+        message: "Invalid date format",
+      }
+    ),
 };
 
 // Attendance summary validation
 export const getAttendanceSummaryValidation = {
+  query: z
+    .object({
+      startDate: z.string().min(1, "Start date is required"),
+      endDate: z.string().min(1, "End date is required"),
+      deviceUserId: z.string().optional(),
+      shiftId: z.string().optional(),
+    })
+    .refine(
+      (data) => {
+        const startDate = new Date(data.startDate);
+        const endDate = new Date(data.endDate);
+        return (
+          !isNaN(startDate.getTime()) &&
+          !isNaN(endDate.getTime()) &&
+          startDate <= endDate
+        );
+      },
+      {
+        message: "Start date must be before or equal to end date",
+      }
+    ),
+};
+
+// Validation for getting attendance by payroll definition
+const getAttendanceByPayrollDefinitionValidation = {
+  params: z.object({
+    payrollDefinitionId: z.string().uuid("Invalid payroll definition ID"),
+  }),
   query: z.object({
-    startDate: z.string().min(1, "Start date is required"),
-    endDate: z.string().min(1, "End date is required"),
     deviceUserId: z.string().optional(),
-    shiftId: z.string().optional(),
-  }).refine((data) => {
-    const startDate = new Date(data.startDate);
-    const endDate = new Date(data.endDate);
-    return !isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && startDate <= endDate;
-  }, {
-    message: "Start date must be before or equal to end date",
+    shiftId: z.string().uuid("Invalid shift ID").optional(),
+    departmentId: z.string().uuid("Invalid department ID").optional(),
   }),
 };
 
@@ -90,4 +126,5 @@ export default {
   getYearlyAttendance: getYearlyAttendanceValidation,
   getAttendanceByDate: getAttendanceByDateValidation,
   getAttendanceSummary: getAttendanceSummaryValidation,
+  getAttendanceByPayrollDefinition: getAttendanceByPayrollDefinitionValidation,
 };

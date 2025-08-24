@@ -6,6 +6,7 @@ import overtimeManagementService from "./overtimeManagement.service";
 
 import catchAsync from "../../utils/catch-async";
 import { AuthEmployee } from "../auth/auth.type";
+import prisma from "../../client";
 
 // Enhanced Overtime Controllers
 
@@ -164,9 +165,44 @@ const getMonthlyOvertime = catchAsync(async (req: Request, res: Response) => {
     companyId
   );
 
+  // get payroll-defined month range
+  const getCurrentMonth = async (companyId: string) => {
+    const now = new Date();
+    const startOfMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0)
+    );
+    const endOfMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)
+    );
+
+    const def = await prisma.payrollDefinition.findFirst({
+      where: {
+        companyId,
+        startDate: { gte: startOfMonth },
+        endDate: { lte: endOfMonth },
+      },
+      orderBy: { startDate: "desc" },
+    });
+
+    return def;
+  };
+
+  const def = await getCurrentMonth(companyId);
+
+  console.log(def);
+
+  // fall back to calendar month if payrollDefinition not found
   const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const startDate =
+    def?.startDate ?? new Date(today.getFullYear(), today.getMonth(), 1);
+  const endDate =
+    def?.endDate ?? new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  console.log(startDate);
+  console.log(endDate);
+  // const today = new Date();
+  // const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  // const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   res.status(httpStatus.OK).json({
     success: true,
@@ -174,8 +210,8 @@ const getMonthlyOvertime = catchAsync(async (req: Request, res: Response) => {
     data: result,
     meta: {
       monthRange: {
-        startDate: startOfMonth.toISOString().split("T")[0],
-        endDate: endOfMonth.toISOString().split("T")[0],
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
       },
       totalRecords: result.length,
       filters: {
