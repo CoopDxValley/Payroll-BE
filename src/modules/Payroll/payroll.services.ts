@@ -498,51 +498,54 @@ const getPayrollPayment = async (companyId: string) => {
   const currentPayrollDefinition =
     await payrolldefinitionService.getCurrentMonth(companyId);
 
-  if (!currentPayrollDefinition) {
+  if (
+    !currentPayrollDefinition ||
+    !currentPayrollDefinition.payrollDefinition
+  ) {
     throw new ApiError(
       httpStatus.NOT_FOUND,
       "Current payroll definition not found"
     );
   }
 
-  // const payrollPayments = await prisma.payroll.findMany({
-  //   where: {
-  //     payrollDefinitionId: currentPayrollDefinition.id,
-  //     status: "CREATED",
-  //   },
-  //   select: {
-  //     totalAllowance: true,
-  //     totalDeduction: true,
-  //     taxableIncome: true,
-  //     grossSalary: true,
-  //     netSalary: true,
-  //     employee: {
-  //       select: {
-  //         id: true,
-  //         name: true,
-  //         payrollInfo: {
-  //           select: {
-  //             basicSalary: true,
-  //             employmentType: true,
-  //             tinNumber: true,
-  //           },
-  //         },
-  //         gradeHistory: {
-  //           where: { toDate: null },
-  //           select: {
-  //             grade: {
-  //               select: {
-  //                 name: true,
-  //               },
-  //             },
-  //           },
-  //         },
-  //       },
-  //     },
-  //   },
-  // });
+  const payrollPayments = await prisma.payroll.findMany({
+    where: {
+      payrollDefinitionId: currentPayrollDefinition.payrollDefinition.id,
+      status: "CREATED",
+    },
+    select: {
+      totalAllowance: true,
+      totalDeduction: true,
+      taxableIncome: true,
+      grossSalary: true,
+      netSalary: true,
+      employee: {
+        select: {
+          id: true,
+          name: true,
+          payrollInfo: {
+            select: {
+              basicSalary: true,
+              employmentType: true,
+              tinNumber: true,
+            },
+          },
+          gradeHistory: {
+            where: { toDate: null },
+            select: {
+              grade: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
 
-  // return payrollPayments;
+  return payrollPayments;
 };
 
 export default {
