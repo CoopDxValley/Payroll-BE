@@ -56,6 +56,15 @@ router
     enhancedAttendanceController.getMonthlyAttendance
   );
 
+// Attendance by payroll definition
+router
+  .route("/payroll-definition/:payrollDefinitionId")
+  .get(
+    auth(),
+    validate(enhancedAttendanceValidation.getAttendanceByPayrollDefinition),
+    enhancedAttendanceController.getAttendanceByPayrollDefinition
+  );
+
 // Yearly attendance
 router
   .route("/current-year")

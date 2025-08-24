@@ -1467,6 +1467,57 @@ const transformWorkSessionForResponse = (
 };
 
 // Enhanced attendance service object
+// Get attendance by specific payroll definition
+const getAttendanceByPayrollDefinition = async (query: {
+  payrollDefinitionId: string;
+  deviceUserId?: string;
+  shiftId?: string;
+  departmentId?: string;
+  companyId?: string;
+}): Promise<EnhancedSession[]> => {
+  console.log("=== Getting Attendance by Payroll Definition ===");
+
+  // Fetch the specific payroll definition
+  const payrollDef = await prisma.payrollDefinition.findFirst({
+    where: {
+      id: query.payrollDefinitionId,
+      companyId: query.companyId,
+    },
+  });
+
+  if (!payrollDef) {
+    throw new Error(`Payroll definition with ID ${query.payrollDefinitionId} not found for the company`);
+  }
+
+  console.log(`Using payroll definition: ${payrollDef.payrollName}`);
+  console.log(`Date range: ${payrollDef.startDate} to ${payrollDef.endDate}`);
+
+  // Get basic attendance data for the payroll definition's date range
+  const sessions = await getAttendanceByDateRange({
+    startDate: payrollDef.startDate.toISOString().split("T")[0],
+    endDate: payrollDef.endDate.toISOString().split("T")[0],
+    deviceUserId: query.deviceUserId,
+    shiftId: query.shiftId,
+    companyId: query.companyId,
+    departmentId: query.departmentId,
+  });
+
+  // Add payroll definition info to each session
+  const enhancedSessions = sessions.map((session) => ({
+    ...session,
+    payrollDefinition: {
+      id: payrollDef.id,
+      name: payrollDef.payrollName,
+      startDate: payrollDef.startDate,
+      endDate: payrollDef.endDate,
+      payPeriod: payrollDef.payPeriod,
+    },
+  }));
+
+  console.log(`Enhanced ${enhancedSessions.length} sessions with payroll definition data`);
+  return enhancedSessions;
+};
+
 const enhancedAttendanceService = {
   getAttendanceByDateRange,
   getTodaysAttendance,
@@ -1476,6 +1527,7 @@ const enhancedAttendanceService = {
   getAttendanceByDate,
   getAttendanceSummary,
   getPayrollDefinitionSummary,
+  getAttendanceByPayrollDefinition,
 };
 
 export default enhancedAttendanceService;
