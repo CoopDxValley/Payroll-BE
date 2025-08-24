@@ -472,6 +472,32 @@ const getEmployeeAttendanceByDateRange = catchAsync(async (req: Request, res: Re
   });
 });
 
+// Get employee attendance by payroll definition ID
+const getEmployeeAttendanceByPayrollDefinition = catchAsync(async (req: Request, res: Response) => {
+  console.log("=== Enhanced Attendance Controller: Employee Attendance by Payroll Definition ===");
+
+  const authEmployee = req.employee as AuthEmployee;
+  const companyId = authEmployee.companyId;
+  const { employeeId, payrollDefinitionId } = req.params;
+
+  const result = await enhancedAttendanceService.getEmployeeAttendanceByPayrollDefinition({
+    employeeId: employeeId as string,
+    payrollDefinitionId: payrollDefinitionId as string,
+    companyId: companyId,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Employee attendance by payroll definition retrieved successfully",
+    data: result,
+    meta: {
+      employeeId,
+      payrollDefinitionId,
+      companyId,
+    },
+  });
+});
+
 // Get payroll definition summary by ID
 const getPayrollDefinitionSummaryById = catchAsync(async (req: Request, res: Response) => {
   console.log("=== Enhanced Attendance Controller: Payroll Definition Summary by ID ===");
@@ -509,6 +535,7 @@ const enhancedAttendanceController = {
   getAttendanceByPayrollDefinition,
   getRecentAttendance,
   getEmployeeAttendanceByDateRange,
+  getEmployeeAttendanceByPayrollDefinition,
   getPayrollDefinitionSummaryById,
 };
 

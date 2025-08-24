@@ -74,13 +74,15 @@ router
     enhancedAttendanceController.getRecentAttendance
   );
 
-// Employee attendance by current month payroll definition
+// Employee attendance by payroll definition ID
 router
-  .route("/current-month/employee/:employeeId")
+  .route("/month/employee/:employeeId/:payrollDefinitionId")
   .get(
     auth(),
-    validate(enhancedAttendanceValidation.getEmployeeAttendanceByDateRange),
-    enhancedAttendanceController.getEmployeeAttendanceByDateRange
+    validate(
+      enhancedAttendanceValidation.getEmployeeAttendanceByPayrollDefinition
+    ),
+    enhancedAttendanceController.getEmployeeAttendanceByPayrollDefinition
   );
 
 // Yearly attendance

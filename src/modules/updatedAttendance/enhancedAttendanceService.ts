@@ -2001,6 +2001,165 @@ const getEmployeeAttendanceByDateRange = async (query: {
   };
 };
 
+// Get employee attendance by payroll definition ID
+const getEmployeeAttendanceByPayrollDefinition = async (query: {
+  employeeId: string;
+  payrollDefinitionId: string;
+  companyId?: string;
+}) => {
+  console.log("=== Enhanced Attendance Service: Employee Attendance by Payroll Definition ===");
+  console.log("Employee ID:", query.employeeId);
+  console.log("Payroll Definition ID:", query.payrollDefinitionId);
+  console.log("Company ID:", query.companyId);
+
+  // Get the specific payroll definition
+  const payrollDef = await prisma.payrollDefinition.findUnique({
+    where: {
+      id: query.payrollDefinitionId,
+      companyId: query.companyId,
+    },
+  });
+
+  if (!payrollDef) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Payroll definition not found");
+  }
+
+  console.log("Found payroll definition:", payrollDef.payrollName);
+  console.log("Date range:", payrollDef.startDate, "to", payrollDef.endDate);
+
+  // Get employee details
+  const employee = await prisma.employee.findUnique({
+    where: {
+      id: query.employeeId,
+      companyId: query.companyId,
+    },
+    include: {
+      departmentHistory: {
+        where: { toDate: null },
+        include: {
+          department: true,
+        },
+        take: 1,
+      },
+      positionHistory: {
+        where: { toDate: null },
+        include: {
+          position: true,
+        },
+        take: 1,
+      },
+    },
+  });
+
+  if (!employee) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Employee not found");
+  }
+
+  // Generate all dates in the payroll period
+  const dates: Date[] = [];
+  const currentDate = new Date(payrollDef.startDate);
+  const endDate = new Date(payrollDef.endDate);
+
+  while (currentDate <= endDate) {
+    dates.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Get work sessions for this employee in the payroll period
+  const workSessions = await prisma.workSession.findMany({
+    where: {
+      deviceUserId: employee.deviceUserId || "",
+      date: {
+        gte: payrollDef.startDate,
+        lte: payrollDef.endDate,
+      },
+    },
+    include: {
+      shift: true,
+      OvertimeTable: true,
+    },
+    orderBy: {
+      date: "asc",
+    },
+  });
+
+  // Create a map for quick lookup
+  const sessionMap = new Map();
+  workSessions.forEach((session) => {
+    const dateKey = session.date.toISOString().split("T")[0];
+    sessionMap.set(dateKey, session);
+  });
+
+  // Build attendance info for each date
+  const attendanceInfo = dates.map((date) => {
+    const dateKey = date.toISOString().split("T")[0];
+    const session = sessionMap.get(dateKey);
+
+    if (session) {
+      // Calculate duration
+      let durationMinutes = 0;
+      let durationHours = 0;
+      let durationFormatted = "";
+
+      if (session.punchIn && session.punchOut) {
+        const punchIn = new Date(session.punchIn);
+        const punchOut = new Date(session.punchOut);
+        durationMinutes = Math.round((punchOut.getTime() - punchIn.getTime()) / (1000 * 60));
+        durationHours = +(durationMinutes / 60).toFixed(2);
+        durationFormatted = formatDuration(durationMinutes);
+      }
+
+      return {
+        id: session.id || "",
+        date: date.toISOString(),
+        punchIn: session.punchIn ? formatTime(session.punchIn) : "",
+        punchOut: session.punchOut ? formatTime(session.punchOut) : "",
+        punchInSource: session.punchInSource || "",
+        punchOutSource: session.punchOutSource || "",
+        durationMinutes: durationMinutes || "",
+        durationHours: durationHours || "",
+        durationFormatted: durationFormatted || "",
+      };
+    } else {
+      // No attendance data for this date
+      return {
+        id: "",
+        date: date.toISOString(),
+        punchIn: "",
+        punchOut: "",
+        punchInSource: "",
+        punchOutSource: "",
+        durationMinutes: "",
+        durationHours: "",
+        durationFormatted: "",
+      };
+    }
+  });
+
+  return {
+    employee: {
+      id: employee.id,
+      name: employee.name,
+      username: employee.username,
+      phoneNumber: employee.phoneNumber,
+      deviceUserId: employee.deviceUserId,
+      employeeIdNumber: employee.employeeIdNumber,
+      gender: employee.gender,
+      currentPosition: employee.positionHistory[0]?.position?.positionName || null,
+      currentGrade: employee.positionHistory[0]?.position?.positionName || null,
+      departmentName: employee.departmentHistory[0]?.department?.deptName || null,
+    },
+    payrollDefinition: {
+      id: payrollDef.id,
+      payrollName: payrollDef.payrollName,
+      startDate: payrollDef.startDate,
+      endDate: payrollDef.endDate,
+      status: payrollDef.status,
+    },
+    attendanceInfo,
+  };
+};
+
 // Get payroll definition summary by ID with department names
 const getPayrollDefinitionSummaryById = async (query: {
   payrollDefinitionId: string;
@@ -2127,6 +2286,7 @@ const enhancedAttendanceService = {
   getAttendanceByPayrollDefinition,
   getRecentAttendance,
   getEmployeeAttendanceByDateRange,
+  getEmployeeAttendanceByPayrollDefinition,
   getPayrollDefinitionSummaryById,
 };
 
