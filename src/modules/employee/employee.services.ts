@@ -294,7 +294,7 @@ export const queryEmployee = async (
                 id: true,
                 name: true,
                 shiftType: true,
-                // isActive: true,
+                isActive: true,
               },
             },
           },

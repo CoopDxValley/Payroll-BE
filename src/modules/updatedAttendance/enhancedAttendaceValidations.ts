@@ -104,6 +104,18 @@ export const getAttendanceSummaryValidation = {
     ),
 };
 
+// Validation for getting attendance by payroll definition
+const getAttendanceByPayrollDefinitionValidation = {
+  params: z.object({
+    payrollDefinitionId: z.string().uuid("Invalid payroll definition ID"),
+  }),
+  query: z.object({
+    deviceUserId: z.string().optional(),
+    shiftId: z.string().uuid("Invalid shift ID").optional(),
+    departmentId: z.string().uuid("Invalid department ID").optional(),
+  }),
+};
+
 // Export all validation schemas
 export default {
   // Enhanced Attendance Endpoints
@@ -114,4 +126,5 @@ export default {
   getYearlyAttendance: getYearlyAttendanceValidation,
   getAttendanceByDate: getAttendanceByDateValidation,
   getAttendanceSummary: getAttendanceSummaryValidation,
+  getAttendanceByPayrollDefinition: getAttendanceByPayrollDefinitionValidation,
 };
