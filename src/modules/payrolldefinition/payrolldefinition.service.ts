@@ -94,16 +94,46 @@ const getCurrentMonth = async (companyId: string) => {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)
   );
 
-  const def = await prisma.payrollDefinition.findFirst({
+  const payrollDefinition = await prisma.payrollDefinition.findFirst({
     where: {
       companyId,
       startDate: { gte: startOfMonth },
       endDate: { lte: endOfMonth },
     },
+    include: {
+      Payroll: true,
+    },
     orderBy: { startDate: "desc" },
   });
 
-  return def;
+  if (!payrollDefinition) {
+    return {
+      payrollDefinition: null,
+      totalEmployees: 0,
+      createdEmployees: 0,
+      uncreatedEmployees: 0,
+    };
+  }
+
+  // total employees for company
+  const totalEmployees = await prisma.employee.count({
+    where: { companyId },
+  });
+
+  // employees already included in payroll
+  const processedEmployees = payrollDefinition.Payroll.length;
+
+  // employees not yet created in payroll
+  const unprocessedEmployees = totalEmployees - processedEmployees;
+
+  //TODO: Implement payroll setup retrieval with approval
+  const { Payroll, ...payrollDef } = payrollDefinition;
+  return {
+    payrollDefinition: payrollDef,
+    totalEmployees,
+    processedEmployees,
+    unprocessedEmployees,
+  };
 };
 
 const getLatest = async (companyId: string) => {

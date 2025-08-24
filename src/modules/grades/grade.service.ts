@@ -95,7 +95,18 @@ const getAllGrades = async (companyId: string) => {
       isActive: true,
     },
     include: {
-      company: true,
+      allowances: {
+        select: {
+          amount: true,
+          allowanceDefinition: { select: { name: true } },
+        },
+      },
+      deductions: {
+        select: {
+          amount: true,
+          deductionDefinition: { select: { name: true } },
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",

@@ -1332,9 +1332,15 @@ const updateWorkSession = async (
     if (data.punchIn !== undefined) {
       if (data.punchIn === null || data.punchIn === "") {
         actualPunchInForCalculations = null;
-      } else if (typeof data.punchIn === "string" && data.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      } else if (
+        typeof data.punchIn === "string" &&
+        data.punchIn.match(/^\d{2}:\d{2}:\d{2}$/)
+      ) {
         const workSessionDateStr = workSession.date.toISOString().split("T")[0];
-        actualPunchInForCalculations = createStableDateTime(workSessionDateStr, data.punchIn);
+        actualPunchInForCalculations = createStableDateTime(
+          workSessionDateStr,
+          data.punchIn
+        );
       } else {
         actualPunchInForCalculations = parseDateTime(data.punchIn);
       }
@@ -1345,9 +1351,15 @@ const updateWorkSession = async (
     if (data.punchOut !== undefined) {
       if (data.punchOut === null || data.punchOut === "") {
         actualPunchOutForCalculations = null;
-      } else if (typeof data.punchOut === "string" && data.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      } else if (
+        typeof data.punchOut === "string" &&
+        data.punchOut.match(/^\d{2}:\d{2}:\d{2}$/)
+      ) {
         const workSessionDateStr = workSession.date.toISOString().split("T")[0];
-        actualPunchOutForCalculations = createStableDateTime(workSessionDateStr, data.punchOut);
+        actualPunchOutForCalculations = createStableDateTime(
+          workSessionDateStr,
+          data.punchOut
+        );
       } else {
         actualPunchOutForCalculations = parseDateTime(data.punchOut);
       }
@@ -1356,8 +1368,14 @@ const updateWorkSession = async (
     }
 
     console.log("=== ACTUAL Times for Calculations ===");
-    console.log("Actual punch in for calculations:", formatTime(actualPunchInForCalculations));
-    console.log("Actual punch out for calculations:", formatTime(actualPunchOutForCalculations));
+    console.log(
+      "Actual punch in for calculations:",
+      formatTime(actualPunchInForCalculations)
+    );
+    console.log(
+      "Actual punch out for calculations:",
+      formatTime(actualPunchOutForCalculations)
+    );
   }
 
   // Calculate deducted minutes and process overtime BEFORE database update

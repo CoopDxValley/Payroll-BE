@@ -1486,7 +1486,9 @@ const getAttendanceByPayrollDefinition = async (query: {
   });
 
   if (!payrollDef) {
-    throw new Error(`Payroll definition with ID ${query.payrollDefinitionId} not found for the company`);
+    throw new Error(
+      `Payroll definition with ID ${query.payrollDefinitionId} not found for the company`
+    );
   }
 
   console.log(`Using payroll definition: ${payrollDef.payrollName}`);

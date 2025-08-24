@@ -185,5 +185,5 @@ const getShifts = {
 export default {
   createShift,
   updateShift,
-  getShifts
+  getShifts,
 };

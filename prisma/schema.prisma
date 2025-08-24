@@ -1304,4 +1304,3 @@ enum OvertimeType {
   EXTENDED_SHIFT   // Beyond max shift hours
   UNSCHEDULED      // No shift scheduled
 }
-

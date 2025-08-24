@@ -140,6 +140,13 @@ const createEmployee = async (
   } catch (err: any) {
     console.log(err);
     if (err.code === "P2002") {
+      const targets = err.meta?.target;
+      if (Array.isArray(targets)) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${targets.join(", ")} already exist`
+        );
+      }
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         `${err.target} already exists`
@@ -464,18 +471,39 @@ async function getEmployeeHistory(employeeId: string) {
 }
 
 async function bulkCreateEmployees(
-  data: CreateEmployeeInput[],
+  employees: { row: number; data: CreateEmployeeInput }[],
   companyId: string
 ) {
-  for (const emp of data) {
-    const { payrollInfo, personalInfo, emergencyContacts } = emp;
-    await createEmployee({
-      companyId,
-      personalInfo,
-      payrollInfo,
-      emergencyContacts,
-    });
+  const results = await Promise.allSettled(
+    employees.map((emp) =>
+      createEmployee({
+        companyId,
+        personalInfo: emp.data.personalInfo,
+        payrollInfo: emp.data.payrollInfo,
+        emergencyContacts: emp.data.emergencyContacts,
+      }).then((employee) => ({ row: emp.row, employee }))
+    )
+  );
+
+  const successes: { row: number; employee: Employee }[] = [];
+  const failures: { row: number; error: string }[] = [];
+
+  console.log("Bulk employee creation results:", results);
+
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      successes.push(result.value);
+    } else {
+      failures.push({
+        row: result.reason?.row ?? "unknown",
+        error:
+          result.reason?.message ??
+          (typeof result.reason === "string" ? result.reason : "Unknown error"),
+      });
+    }
   }
+
+  return { successes, failures };
 }
 
 export default {

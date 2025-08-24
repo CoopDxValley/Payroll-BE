@@ -385,35 +385,40 @@ const getPayrollDefinitionSummary = catchAsync(
 );
 
 // Get attendance by payroll definition
-const getAttendanceByPayrollDefinition = catchAsync(async (req: Request, res: Response) => {
-  console.log("=== Enhanced Attendance Controller: By Payroll Definition ===");
+const getAttendanceByPayrollDefinition = catchAsync(
+  async (req: Request, res: Response) => {
+    console.log(
+      "=== Enhanced Attendance Controller: By Payroll Definition ==="
+    );
 
-  const authEmployee = req.employee as AuthEmployee;
-  const companyId = authEmployee.companyId;
-  const { payrollDefinitionId } = req.params;
-  const { deviceUserId, shiftId, departmentId } = req.query;
+    const authEmployee = req.employee as AuthEmployee;
+    const companyId = authEmployee.companyId;
+    const { payrollDefinitionId } = req.params;
+    const { deviceUserId, shiftId, departmentId } = req.query;
 
-  const result = await enhancedAttendanceService.getAttendanceByPayrollDefinition({
-    payrollDefinitionId: payrollDefinitionId as string,
-    deviceUserId: deviceUserId as string,
-    shiftId: shiftId as string,
-    departmentId: departmentId as string,
-    companyId: companyId,
-  });
+    const result =
+      await enhancedAttendanceService.getAttendanceByPayrollDefinition({
+        payrollDefinitionId: payrollDefinitionId as string,
+        deviceUserId: deviceUserId as string,
+        shiftId: shiftId as string,
+        departmentId: departmentId as string,
+        companyId: companyId,
+      });
 
-  res.status(200).json({
-    success: true,
-    message: "Attendance retrieved successfully by payroll definition",
-    data: result,
-    meta: {
-      payrollDefinitionId,
-      deviceUserId,
-      shiftId,
-      departmentId,
-      companyId,
-    },
-  });
-});
+    res.status(200).json({
+      success: true,
+      message: "Attendance retrieved successfully by payroll definition",
+      data: result,
+      meta: {
+        payrollDefinitionId,
+        deviceUserId,
+        shiftId,
+        departmentId,
+        companyId,
+      },
+    });
+  }
+);
 
 // Get recent attendance (last 5 days from current month payroll)
 const getRecentAttendance = catchAsync(async (req: Request, res: Response) => {
