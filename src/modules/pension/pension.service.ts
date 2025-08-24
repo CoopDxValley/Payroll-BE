@@ -2,6 +2,7 @@ import httpStatus from "http-status";
 import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import { CreatePensionInput, UpdatePensionInput } from "./pension.type";
+import { Prisma } from "@prisma/client";
 
 const getDefaultPension = async () => {
   return await prisma.pension.findMany({ where: { isDefault: true } });
@@ -31,12 +32,14 @@ const getCompanyPension = async (companyId: string) => {
 };
 
 const addCompanyPension = async (
-  data: CreatePensionInput & { companyId: string }
+  data: CreatePensionInput & { companyId: string },
+  tx: Prisma.TransactionClient = prisma
 ) => {
   const { companyId, ...pensionData } = data;
-  const existing = await prisma.companyPensionRule.findFirst({
+  const existing = await tx.companyPensionRule.findFirst({
     where: {
       companyId: data.companyId,
+      isActive: true,
       pension: {
         employeeContribution: data.employeeContribution,
         employerContribution: data.employerContribution,
@@ -49,13 +52,13 @@ const addCompanyPension = async (
       "Pension rule already exists for this contribution range"
     );
   }
-  const newPension = await prisma.pension.create({
+  const newPension = await tx.pension.create({
     data: {
       ...pensionData,
     },
   });
 
-  const companyPensionRule = await prisma.companyPensionRule.create({
+  const companyPensionRule = await tx.companyPensionRule.create({
     data: {
       companyId: data.companyId,
       pensionId: newPension.id,
@@ -198,19 +201,26 @@ const update = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Pension rule not found");
   }
 
-  const updatedRule = await prisma.companyPensionRule.update({
-    where: { id: ruleId },
-    data: {
-      isActive: false,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.companyPensionRule.update({
+      where: { id: ruleId },
+      data: {
+        isActive: false,
+      },
+    });
+
+    const createdRule = await addCompanyPension(
+      {
+        ...data,
+        companyId: existingRule.companyId,
+      },
+      tx
+    );
+
+    return createdRule;
   });
 
-  const createdRule = await addCompanyPension({
-    ...data,
-    companyId: existingRule.companyId,
-  });
-
-  return createdRule;
+  return result;
 };
 
 export default {
