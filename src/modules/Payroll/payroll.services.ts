@@ -66,11 +66,11 @@ const getCurrentMonthPayroll = async (companyId: string) => {
     );
   }
 
-  const payrolls = await prisma.payroll.findMany({
-    where: { payrollDefinitionId: currentPayrollDefinition.id },
-  });
+  // const payrolls = await prisma.payroll.findMany({
+  //   where: { payrollDefinitionId: currentPayrollDefinition.id },
+  // });
 
-  return payrolls;
+  // return payrolls;
 };
 
 const getPayrollByPayrollDefinitionId = async (payrollDefinitionId: string) => {
@@ -114,94 +114,87 @@ const getNonPayrollEmployee = async (payrollDefinitionId: string) => {
 };
 
 const getPayrollSetup = async (companyId: string) => {
-  const currentPayrollDefinition =
-    await payrolldefinitionService.getCurrentMonth(companyId);
-
-  if (!currentPayrollDefinition) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      "Current payroll definition not found"
-    );
-  }
-
-  //TODO: Implement payroll setup retrieval with approval
-  const Processedpayroll = await prisma.payroll.findMany({
-    where: {
-      payrollDefinitionId: currentPayrollDefinition.id,
-      status: "PENDING",
-    },
-  });
-  const totalProcessedAmount = Processedpayroll.reduce(
-    (acc, curr) => acc + curr.grossSalary.toNumber(),
-    0
-  );
-  const UnprocessedPayroll = await prisma.payroll.findMany({
-    where: {
-      payrollDefinitionId: currentPayrollDefinition.id,
-      status: "CREATED",
-    },
-  });
-
-  const totalUnprocessedAmount = UnprocessedPayroll.reduce(
-    (acc, curr) => acc + curr.grossSalary.toNumber(),
-    0
-  );
-
-  return {
-    processed: {
-      count: Processedpayroll.length,
-      totalAmount: totalProcessedAmount,
-    },
-    unprocessed: {
-      count: UnprocessedPayroll.length,
-      totalAmount: totalUnprocessedAmount,
-    },
-  };
+  // const currentPayrollDefinition =
+  //   await payrolldefinitionService.getCurrentMonth(companyId);
+  // if (!currentPayrollDefinition) {
+  //   throw new ApiError(
+  //     httpStatus.NOT_FOUND,
+  //     "Current payroll definition not found"
+  //   );
+  // }
+  // //TODO: Implement payroll setup retrieval with approval
+  // const Processedpayroll = await prisma.payroll.findMany({
+  //   where: {
+  //     payrollDefinitionId: currentPayrollDefinition.,
+  //     status: "PENDING",
+  //   },
+  // });
+  // const totalProcessedAmount = Processedpayroll.reduce(
+  //   (acc, curr) => acc + curr.grossSalary.toNumber(),
+  //   0
+  // );
+  // const UnprocessedPayroll = await prisma.payroll.findMany({
+  //   where: {
+  //     payrollDefinitionId: currentPayrollDefinition.id,
+  //     status: "CREATED",
+  //   },
+  // });
+  // const totalUnprocessedAmount = UnprocessedPayroll.reduce(
+  //   (acc, curr) => acc + curr.grossSalary.toNumber(),
+  //   0
+  // );
+  // return {
+  //   processed: {
+  //     count: Processedpayroll.length,
+  //     totalAmount: totalProcessedAmount,
+  //   },
+  //   unprocessed: {
+  //     count: UnprocessedPayroll.length,
+  //     totalAmount: totalUnprocessedAmount,
+  //   },
+  // };
 };
 
 const getPayrollProcess = async (companyId: string, id: string) => {
-  const definition = await payrolldefinitionService.getCurrentMonth(companyId);
-
-  if (!definition || definition.id !== id) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      "Payroll definition not found for the current month"
-    );
-  }
-
-  const data = await prisma.payroll.findMany({
-    where: { payrollDefinitionId: { not: definition.id } },
-    select: {
-      employee: {
-        select: {
-          id: true,
-          name: true,
-          payrollInfo: {
-            select: {
-              employmentType: true,
-              basicSalary: true,
-              tinNumber: true,
-            },
-          },
-          gradeHistory: {
-            where: { toDate: null },
-            select: {
-              grade: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return data;
+  // const definition = await payrolldefinitionService.getCurrentMonth(companyId);
+  // if (!definition || definition.id !== id) {
+  //   throw new ApiError(
+  //     httpStatus.NOT_FOUND,
+  //     "Payroll definition not found for the current month"
+  //   );
+  // }
+  // const data = await prisma.payroll.findMany({
+  //   where: { payrollDefinitionId: { not: definition.id } },
+  //   select: {
+  //     employee: {
+  //       select: {
+  //         id: true,
+  //         name: true,
+  //         payrollInfo: {
+  //           select: {
+  //             employmentType: true,
+  //             basicSalary: true,
+  //             tinNumber: true,
+  //           },
+  //         },
+  //         gradeHistory: {
+  //           where: { toDate: null },
+  //           select: {
+  //             grade: {
+  //               select: {
+  //                 name: true,
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   },
+  // });
+  // return data;
 };
 
-const payrollPayment = async (companyId: string) => {
+const getPayrollPayment = async (companyId: string) => {
   const currentPayrollDefinition =
     await payrolldefinitionService.getCurrentMonth(companyId);
 
@@ -212,43 +205,44 @@ const payrollPayment = async (companyId: string) => {
     );
   }
 
-  const payrollPayments = await prisma.payroll.findMany({
-    where: {
-      payrollDefinitionId: currentPayrollDefinition.id,
-    },
-    select: {
-      totalAllowance: true,
-      totalDeduction: true,
-      taxableIncome: true,
-      grossSalary: true,
-      netSalary: true,
-      employee: {
-        select: {
-          id: true,
-          name: true,
-          payrollInfo: {
-            select: {
-              basicSalary: true,
-              employmentType: true,
-              tinNumber: true,
-            },
-          },
-          gradeHistory: {
-            where: { toDate: null },
-            select: {
-              grade: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  // const payrollPayments = await prisma.payroll.findMany({
+  //   where: {
+  //     payrollDefinitionId: currentPayrollDefinition.id,
+  //     status: "CREATED",
+  //   },
+  //   select: {
+  //     totalAllowance: true,
+  //     totalDeduction: true,
+  //     taxableIncome: true,
+  //     grossSalary: true,
+  //     netSalary: true,
+  //     employee: {
+  //       select: {
+  //         id: true,
+  //         name: true,
+  //         payrollInfo: {
+  //           select: {
+  //             basicSalary: true,
+  //             employmentType: true,
+  //             tinNumber: true,
+  //           },
+  //         },
+  //         gradeHistory: {
+  //           where: { toDate: null },
+  //           select: {
+  //             grade: {
+  //               select: {
+  //                 name: true,
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   },
+  // });
 
-  return payrollPayments;
+  // return payrollPayments;
 };
 
 export default {
@@ -258,5 +252,5 @@ export default {
   getNonPayrollEmployee,
   getPayrollSetup,
   getPayrollProcess,
-  payrollPayment,
+  getPayrollPayment,
 };
