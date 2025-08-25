@@ -4,6 +4,7 @@ import prisma from "../../client";
 import ApiError from "../../utils/api-error";
 import { CreateCompanyInput, UpdateCompanyInput } from "./company.type";
 import taxslabService from "../taxslab/taxslab.service";
+import { encryptPassword } from "../../utils/encryption";
 
 /**
  * Create a company
@@ -44,6 +45,44 @@ export const createCompany = async (
     },
   });
   await taxslabService.assignDefaultTaxRulesToCompany(company.id);
+
+  const hashedPassword = await encryptPassword("ZuquallaAdmin@123");
+
+  const employee = await prisma.employee.create({
+    data: {
+      name: "zuquall Admin",
+      username: "zuquall.admin",
+      phoneNumber: phoneNumber,
+      password: hashedPassword,
+      companyId: company.id,
+      gender: "MALE",
+    },
+  });
+
+  const adminRole = await prisma.role.create({
+    data: {
+      name: "Admin",
+      companyId: company.id,
+    },
+  });
+
+  const permissions = await prisma.permission.findMany();
+
+  await prisma.rolePermission.createMany({
+    data: permissions.map((p) => ({
+      roleId: adminRole.id,
+      permissionId: p.id,
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.employeeRoleHistory.create({
+    data: {
+      employeeId: employee.id,
+      roleId: adminRole.id,
+      fromDate: new Date(),
+    },
+  });
 
   return company;
 };

@@ -1,4 +1,3 @@
-// prisma/seed.ts
 import { Gender, PrismaClient, ProvidentFundType } from "@prisma/client";
 import config from "../src/config/config";
 import { generateRandomPassword } from "../src/utils/helper";
@@ -281,7 +280,7 @@ async function seedDefaultTaxslabProvidentFund() {
   const defaultProvidentFund = [
     {
       employerContribution: 11,
-      employeeContribution: 4,
+      employeeContribution: 7,
       isDefault: true,
     },
   ];
@@ -289,7 +288,7 @@ async function seedDefaultTaxslabProvidentFund() {
   const defaultPension = [
     {
       employerContribution: 11,
-      employeeContribution: 4,
+      employeeContribution: 7,
       isDefault: true,
     },
   ];
@@ -322,12 +321,12 @@ async function seedDefaultTaxslabProvidentFund() {
 
 async function main() {
   await seedPermissions();
-  const permissions = await getPermissions();
-  const company = await seedCompany();
-  const role = await seedRoles(company.id, permissions);
-  const { department, position } = await seedDepartmentAndPosition(company.id);
-  await seedEmployee(company.id, department.id, position.id, role.id);
-  await seedGrade(company.id);
+  // const permissions = await getPermissions();
+  // const company = await seedCompany();
+  // const role = await seedRoles(company.id, permissions);
+  // const { department, position } = await seedDepartmentAndPosition(company.id);
+  // await seedEmployee(company.id, department.id, position.id, role.id);
+  // await seedGrade(company.id);
   await seedDefaultTaxslabProvidentFund();
 
   console.log("🌱 Seeding completed!");
